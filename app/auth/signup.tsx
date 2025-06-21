@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react-native';
+import { storage } from '@/src/utils/storage';
 
 export default function SignupScreen() {
   const { theme } = useTheme();
@@ -25,6 +26,21 @@ export default function SignupScreen() {
 
   const { signup, confirmSignup } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    // Pre-fill the name from onboarding data
+    const loadPreferredName = async () => {
+      try {
+        const preferredName = await storage.getItem<string>('preferredName');
+        if (preferredName && typeof preferredName === 'string') {
+          setName(preferredName);
+        }
+      } catch (error) {
+        console.error('Error loading preferred name:', error);
+      }
+    };
+
+    loadPreferredName();
+  }, []);
 
   const handleSignup = async () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -66,6 +82,8 @@ export default function SignupScreen() {
     setIsLoading(true);
     try {
       await confirmSignup(email.trim(), confirmationCode.trim());
+      // Clear the preferred name after successful signup
+      await storage.removeItem('preferredName');
       Alert.alert('Success', 'Account confirmed successfully! Please sign in.');
       router.replace('/auth/login');
     } catch (error: any) {
@@ -262,7 +280,7 @@ export default function SignupScreen() {
 
           <View style={styles.loginContainer}>
             <Text style={[styles.loginText, { color: theme.colors.subtitle }]}>
-              Already have an account?{' '}
+              Already have an account?
             </Text>
             <TouchableOpacity onPress={() => router.push('/auth/login')}>
               <Text style={[styles.loginLink, { color: theme.colors.primary }]}>

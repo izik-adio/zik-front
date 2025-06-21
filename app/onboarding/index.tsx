@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { storage } from '@/src/utils/storage';
-import Animated, { FadeIn, FadeOut, SlideInRight, SlideOutLeft } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  SlideInRight,
+  SlideOutLeft,
+} from 'react-native-reanimated';
 import { WelcomeScreen } from '@/components/onboarding/WelcomeScreen';
 import { IntroScreen } from '@/components/onboarding/IntroScreen';
 import { ProfileSetupScreen } from '@/components/onboarding/ProfileSetupScreen';
@@ -29,7 +34,28 @@ export default function OnboardingScreen() {
 
   const handleNext = async (data?: any) => {
     if (data) {
-      setUserData(prev => ({ ...prev, ...data }));
+      // Only extract the properties we actually need to avoid circular references
+      const cleanData: any = {};
+
+      if (data.name && typeof data.name === 'string') {
+        cleanData.name = data.name.trim();
+      }
+
+      if (data.firstQuest && typeof data.firstQuest === 'string') {
+        cleanData.firstQuest = data.firstQuest.trim();
+      }
+
+      const updatedUserData = { ...userData, ...cleanData };
+      setUserData(updatedUserData);
+
+      // Store the preferred name immediately when it's provided
+      if (cleanData.name) {
+        try {
+          await storage.setItem('preferredName', cleanData.name);
+        } catch (error) {
+          console.error('Error storing preferred name:', error);
+        }
+      }
     }
 
     if (currentStep < steps.length - 1) {
@@ -42,8 +68,14 @@ export default function OnboardingScreen() {
   const completeOnboarding = async () => {
     try {
       await storage.setItem('hasOnboarded', 'true');
-      await storage.setItem('onboardingData', userData);
-      router.replace('/(tabs)');
+      // Store only serializable data - avoid storing entire userData object
+      if (userData.name) {
+        await storage.setItem('preferredName', userData.name);
+      }
+      if (userData.firstQuest) {
+        await storage.setItem('firstQuest', userData.firstQuest);
+      }
+      router.replace('/auth/login');
     } catch (error) {
       console.error('Error completing onboarding:', error);
     }
@@ -58,7 +90,7 @@ export default function OnboardingScreen() {
           <Animated.View
             style={[
               styles.progressFill,
-              { width: `${((currentStep + 1) / steps.length) * 100}%` }
+              { width: `${((currentStep + 1) / steps.length) * 100}%` },
             ]}
           />
         </View>
@@ -70,10 +102,7 @@ export default function OnboardingScreen() {
         exiting={SlideOutLeft.springify()}
         style={styles.stepContainer}
       >
-        <CurrentStepComponent
-          onNext={handleNext}
-          userData={userData}
-        />
+        <CurrentStepComponent onNext={handleNext} userData={userData} />
       </Animated.View>
     </SafeAreaView>
   );

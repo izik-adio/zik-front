@@ -3,7 +3,31 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const storage = {
   async setItem(key: string, value: any): Promise<void> {
     try {
-      const jsonValue = JSON.stringify(value);
+      // Create a safe copy of the value to avoid circular references
+      let safeValue = value;
+
+      // If it's an object, create a clean copy with only serializable properties
+      if (typeof value === 'object' && value !== null) {
+        safeValue = JSON.parse(
+          JSON.stringify(value, (key, val) => {
+            // Skip functions, undefined, and symbols
+            if (
+              typeof val === 'function' ||
+              typeof val === 'undefined' ||
+              typeof val === 'symbol'
+            ) {
+              return undefined;
+            }
+            // Skip properties that start with _ (often internal properties)
+            if (typeof key === 'string' && key.startsWith('_')) {
+              return undefined;
+            }
+            return val;
+          })
+        );
+      }
+
+      const jsonValue = JSON.stringify(safeValue);
       await AsyncStorage.setItem(key, jsonValue);
     } catch (error) {
       console.error('Error storing data:', error);
@@ -37,5 +61,5 @@ export const storage = {
       console.error('Error clearing storage:', error);
       throw error;
     }
-  }
+  },
 };

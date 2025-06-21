@@ -56,10 +56,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       const { tokens, user: userData } = await cognitoService.signIn(email, password);
-      
+
       await storage.setItem('authTokens', tokens);
       await storage.setItem('userData', userData);
-      
+
       setUser(userData);
     } catch (error) {
       throw error;

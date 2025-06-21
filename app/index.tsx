@@ -20,16 +20,21 @@ export default function App() {
   const checkOnboardingStatus = async () => {
     try {
       await SplashScreen.hideAsync();
+
+      // Check if user has completed onboarding first
+      const hasOnboarded = await storage.getItem('hasOnboarded');
+
+      if (hasOnboarded !== 'true') {
+        // First time user - show onboarding regardless of auth status
+        router.replace('/onboarding');
+        return;
+      }
+
+      // User has completed onboarding, check auth status
       if (isAuthenticated) {
-        const hasOnboarded = await storage.getItem('hasOnboarded');
-        if (hasOnboarded === 'true') {
-          router.replace('/(tabs)');
-        } else {
-          router.replace('/onboarding');
-        }
+        router.replace('/(tabs)');
       } else {
         router.replace('/auth/login');
-        await SplashScreen.hideAsync();
       }
     } catch (error) {
       router.replace('/auth/login');

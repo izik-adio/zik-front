@@ -126,7 +126,7 @@ export default function ProfileScreen() {
       >
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
           Profile
-        </Text>{' '}
+        </Text>
         {!isEditing ? (
           <TouchableOpacity
             style={styles.editButton}
@@ -151,7 +151,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </View>{' '}
+      </View>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View
           style={[styles.profileCard, { backgroundColor: theme.colors.card }]}
@@ -165,7 +165,7 @@ export default function ProfileScreen() {
             >
               <User size={48} color={theme.colors.primary} />
             </View>
-          </View>{' '}
+          </View>
           <View style={styles.profileInfo}>
             <View style={styles.field}>
               <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>
@@ -239,7 +239,7 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
               )}
-            </View>{' '}
+            </View>
             {profile?.createdAt && (
               <View style={styles.field}>
                 <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>
@@ -251,14 +251,13 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
-        </View>{' '}
+        </View>
         <View
           style={[
             styles.actionsCard,
             { backgroundColor: theme.colors.cardBackground },
           ]}
         >
-          {' '}
           <TouchableOpacity
             style={[
               styles.themeButton,
