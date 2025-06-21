@@ -1,6 +1,19 @@
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, withSpring, useAnimatedStyle } from 'react-native-reanimated';
-import { CheckCircle, Circle, Brain, Droplets, Heart, Target, Clock } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  withSpring,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
+import {
+  CheckCircle,
+  Circle,
+  Brain,
+  Droplets,
+  Heart,
+  Target,
+  Clock,
+} from 'lucide-react-native';
+import { useTheme } from '@/src/context/ThemeContext';
 
 interface QuestCardProps {
   quest: {
@@ -14,7 +27,12 @@ interface QuestCardProps {
   onToggle: () => void;
 }
 
-export function QuestCard({ quest, completed = false, onToggle }: QuestCardProps) {
+export function QuestCard({
+  quest,
+  completed = false,
+  onToggle,
+}: QuestCardProps) {
+  const { theme } = useTheme();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -29,50 +47,83 @@ export function QuestCard({ quest, completed = false, onToggle }: QuestCardProps
   };
 
   const getIcon = () => {
-    const iconProps = { size: 24, color: completed ? '#94a3b8' : '#14b8a6' };
+    const iconProps = {
+      size: 24,
+      color: completed ? theme.colors.subtitle : theme.colors.primary,
+    };
     switch (quest.icon) {
-      case 'brain': return <Brain {...iconProps} />;
-      case 'droplets': return <Droplets {...iconProps} />;
-      case 'heart': return <Heart {...iconProps} />;
-      case 'target': return <Target {...iconProps} />;
-      default: return <Target {...iconProps} />;
+      case 'brain':
+        return <Brain {...iconProps} />;
+      case 'droplets':
+        return <Droplets {...iconProps} />;
+      case 'heart':
+        return <Heart {...iconProps} />;
+      case 'target':
+        return <Target {...iconProps} />;
+      default:
+        return <Target {...iconProps} />;
     }
   };
 
   return (
     <Animated.View style={animatedStyle}>
       <TouchableOpacity
-        style={[styles.card, completed && styles.completedCard]}
+        style={[
+          styles.card,
+          { backgroundColor: theme.colors.card },
+          completed && [
+            styles.completedCard,
+            { backgroundColor: theme.colors.background },
+          ],
+        ]}
         onPress={handlePress}
         activeOpacity={0.8}
       >
         <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            {getIcon()}
-          </View>
-          
+          <View style={styles.iconContainer}>{getIcon()}</View>
+
           <View style={styles.textContainer}>
-            <Text style={[styles.title, completed && styles.completedTitle]}>
+            <Text
+              style={[
+                styles.title,
+                { color: theme.colors.text },
+                completed && [
+                  styles.completedTitle,
+                  { color: theme.colors.subtitle },
+                ],
+              ]}
+            >
               {quest.title}
             </Text>
             <View style={styles.details}>
               <View style={styles.timeContainer}>
-                <Clock size={14} color="#64748b" />
-                <Text style={styles.time}>{quest.time}</Text>
+                <Clock size={14} color={theme.colors.subtitle} />
+                <Text style={[styles.time, { color: theme.colors.subtitle }]}>
+                  {quest.time}
+                </Text>
               </View>
               {quest.isEpic && (
-                <View style={styles.epicBadge}>
-                  <Text style={styles.epicText}>Epic Quest</Text>
+                <View
+                  style={[
+                    styles.epicBadge,
+                    { backgroundColor: theme.colors.warning + '20' },
+                  ]}
+                >
+                  <Text
+                    style={[styles.epicText, { color: theme.colors.warning }]}
+                  >
+                    Epic Quest
+                  </Text>
                 </View>
               )}
             </View>
           </View>
-          
+
           <TouchableOpacity style={styles.checkbox} onPress={handlePress}>
             {completed ? (
-              <CheckCircle size={24} color="#14b8a6" />
+              <CheckCircle size={24} color={theme.colors.primary} />
             ) : (
-              <Circle size={24} color="#e2e8f0" />
+              <Circle size={24} color={theme.colors.border} />
             )}
           </TouchableOpacity>
         </View>

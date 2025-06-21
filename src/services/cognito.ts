@@ -23,30 +23,42 @@ interface UserAttributes {
 }
 
 class CognitoService {
-  private cognitoIdentityServiceProvider: AWS.CognitoIdentityServiceProvider;
+  private cognitoIdentityServiceProvider?: AWS.CognitoIdentityServiceProvider;
   private config: CognitoConfig;
   private isDevMode: boolean;
-
   constructor() {
-    this.isDevMode = process.env.EXPO_PUBLIC_DEV_MODE === 'true';
-    
+    this.isDevMode =
+      process.env.EXPO_PUBLIC_DEV_MODE === 'true' ||
+      !process.env.EXPO_PUBLIC_USER_POOL_ID;
+
     this.config = {
       region: process.env.EXPO_PUBLIC_AWS_REGION || 'us-east-1',
       userPoolId: process.env.EXPO_PUBLIC_USER_POOL_ID || '',
       clientId: process.env.EXPO_PUBLIC_CLIENT_ID || '',
     };
 
-    // Only initialize AWS if not in dev mode and on web platform
-    if (!this.isDevMode && Platform.OS === 'web') {
+    // Initialize AWS for all platforms except when in dev mode
+    if (!this.isDevMode) {
       AWS.config.update({
         region: this.config.region,
       });
 
-      this.cognitoIdentityServiceProvider = new AWS.CognitoIdentityServiceProvider();
+      this.cognitoIdentityServiceProvider =
+        new AWS.CognitoIdentityServiceProvider();
     }
   }
 
-  async signUp(email: string, password: string, name: string): Promise<{ requiresConfirmation: boolean }> {
+  private ensureServiceInitialized(): void {
+    if (!this.isDevMode && !this.cognitoIdentityServiceProvider) {
+      throw new Error('Cognito service not properly initialized');
+    }
+  }
+
+  async signUp(
+    email: string,
+    password: string,
+    name: string
+  ): Promise<{ requiresConfirmation: boolean }> {
     if (this.isDevMode) {
       // Mock response for development
       return { requiresConfirmation: false };
@@ -88,8 +100,10 @@ class CognitoService {
       throw new Error(error.message || 'Confirmation failed');
     }
   }
-
-  async signIn(email: string, password: string): Promise<{ tokens: AuthTokens; user: UserAttributes }> {
+  async signIn(
+    email: string,
+    password: string
+  ): Promise<{ tokens: AuthTokens; user: UserAttributes }> {
     if (this.isDevMode) {
       // Mock response for development
       const mockTokens: AuthTokens = {
@@ -99,15 +113,17 @@ class CognitoService {
         TokenType: 'Bearer',
         ExpiresIn: 3600,
       };
-      
+
       const mockUser: UserAttributes = {
         userId: 'mock-user-id',
         userName: 'Demo User',
         email: email,
       };
-      
+
       return { tokens: mockTokens, user: mockUser };
     }
+
+    this.ensureServiceInitialized();
 
     const params = {
       ClientId: this.config.clientId,
@@ -119,8 +135,10 @@ class CognitoService {
     };
 
     try {
-      const result = await this.cognitoIdentityServiceProvider.initiateAuth(params).promise();
-      
+      const result = await this.cognitoIdentityServiceProvider!.initiateAuth(
+        params
+      ).promise();
+
       if (!result.AuthenticationResult) {
         throw new Error('Authentication failed');
       }
@@ -146,13 +164,19 @@ class CognitoService {
     };
 
     try {
-      await this.cognitoIdentityServiceProvider.forgotPassword(params).promise();
+      await this.cognitoIdentityServiceProvider
+        .forgotPassword(params)
+        .promise();
     } catch (error: any) {
       throw new Error(error.message || 'Forgot password request failed');
     }
   }
 
-  async confirmForgotPassword(email: string, confirmationCode: string, newPassword: string): Promise<void> {
+  async confirmForgotPassword(
+    email: string,
+    confirmationCode: string,
+    newPassword: string
+  ): Promise<void> {
     if (this.isDevMode) {
       // Mock response for development
       return;
@@ -166,13 +190,17 @@ class CognitoService {
     };
 
     try {
-      await this.cognitoIdentityServiceProvider.confirmForgotPassword(params).promise();
+      await this.cognitoIdentityServiceProvider
+        .confirmForgotPassword(params)
+        .promise();
     } catch (error: any) {
       throw new Error(error.message || 'Password reset failed');
     }
   }
 
-  async refreshTokens(refreshToken: string): Promise<{ tokens: AuthTokens; user: UserAttributes }> {
+  async refreshTokens(
+    refreshToken: string
+  ): Promise<{ tokens: AuthTokens; user: UserAttributes }> {
     if (this.isDevMode) {
       // Mock response for development
       const mockTokens: AuthTokens = {
@@ -182,13 +210,13 @@ class CognitoService {
         TokenType: 'Bearer',
         ExpiresIn: 3600,
       };
-      
+
       const mockUser: UserAttributes = {
         userId: 'mock-user-id',
         userName: 'Demo User',
         email: 'demo@example.com',
       };
-      
+
       return { tokens: mockTokens, user: mockUser };
     }
 
@@ -201,8 +229,10 @@ class CognitoService {
     };
 
     try {
-      const result = await this.cognitoIdentityServiceProvider.initiateAuth(params).promise();
-      
+      const result = await this.cognitoIdentityServiceProvider
+        .initiateAuth(params)
+        .promise();
+
       if (!result.AuthenticationResult) {
         throw new Error('Token refresh failed');
       }
@@ -211,7 +241,7 @@ class CognitoService {
         ...result.AuthenticationResult,
         RefreshToken: refreshToken, // Refresh token is not returned in refresh response
       } as AuthTokens;
-      
+
       const user = this.decodeIdToken(tokens.IdToken);
 
       return { tokens, user };
@@ -235,11 +265,17 @@ class CognitoService {
     };
 
     try {
-      const result = await this.cognitoIdentityServiceProvider.getUser(params).promise();
-      
-      const email = result.UserAttributes?.find(attr => attr.Name === 'email')?.Value || '';
-      const name = result.UserAttributes?.find(attr => attr.Name === 'name')?.Value || '';
-      
+      const result = await this.cognitoIdentityServiceProvider
+        .getUser(params)
+        .promise();
+
+      const email =
+        result.UserAttributes?.find((attr) => attr.Name === 'email')?.Value ||
+        '';
+      const name =
+        result.UserAttributes?.find((attr) => attr.Name === 'name')?.Value ||
+        '';
+
       return {
         userId: result.Username || '',
         userName: name,

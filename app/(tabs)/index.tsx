@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  TouchableOpacity,
+} from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useAuth } from '@/src/context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
 import { goalsApi, Goal } from '@/src/api/goals';
 import { storage } from '@/src/utils/storage';
 import { GreetingHeader } from '@/components/today/GreetingHeader';
@@ -13,10 +21,11 @@ import { AddTaskModal } from '@/components/today/AddTaskModal';
 
 export default function TodayScreen() {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
-  const [localQuests, setLocalQuests] = useState([]);
-  const [completedQuests, setCompletedQuests] = useState([]);
+  const [localQuests, setLocalQuests] = useState<any[]>([]);
+  const [completedQuests, setCompletedQuests] = useState<any[]>([]);
 
   // Fetch goals from API
   const { data: goals = [], isLoading } = useQuery({
@@ -35,7 +44,7 @@ export default function TodayScreen() {
 
   // Update goal mutation
   const updateGoalMutation = useMutation({
-    mutationFn: ({ goalId, data }: { goalId: string; data: any }) => 
+    mutationFn: ({ goalId, data }: { goalId: string; data: any }) =>
       goalsApi.updateGoal(goalId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
@@ -49,20 +58,38 @@ export default function TodayScreen() {
     try {
       const savedQuests = await storage.getItem('dailyQuests');
       const savedCompleted = await storage.getItem('completedQuests');
-      
-      if (savedQuests) {
+
+      if (savedQuests && Array.isArray(savedQuests)) {
         setLocalQuests(savedQuests);
       } else {
         // Default quests
         const defaultQuests = [
-          { id: '1', title: 'Morning meditation', time: '10 min', icon: 'brain', isEpic: false },
-          { id: '2', title: 'Drink 8 glasses of water', time: 'All day', icon: 'droplets', isEpic: false },
-          { id: '3', title: 'Practice gratitude', time: '5 min', icon: 'heart', isEpic: true },
+          {
+            id: '1',
+            title: 'Morning meditation',
+            time: '10 min',
+            icon: 'brain',
+            isEpic: false,
+          },
+          {
+            id: '2',
+            title: 'Drink 8 glasses of water',
+            time: 'All day',
+            icon: 'droplets',
+            isEpic: false,
+          },
+          {
+            id: '3',
+            title: 'Practice gratitude',
+            time: '5 min',
+            icon: 'heart',
+            isEpic: true,
+          },
         ];
         setLocalQuests(defaultQuests);
       }
-      
-      if (savedCompleted) {
+
+      if (savedCompleted && Array.isArray(savedCompleted)) {
         setCompletedQuests(savedCompleted);
       }
     } catch (error) {
@@ -71,15 +98,18 @@ export default function TodayScreen() {
   };
 
   const toggleQuest = async (questId: string) => {
-    const quest = localQuests.find(q => q.id === questId);
+    const quest = localQuests.find((q) => q.id === questId);
     if (!quest) return;
 
-    const newQuests = localQuests.filter(q => q.id !== questId);
-    const newCompleted = [...completedQuests, { ...quest, completedAt: new Date().toISOString() }];
-    
+    const newQuests = localQuests.filter((q) => q.id !== questId);
+    const newCompleted = [
+      ...completedQuests,
+      { ...quest, completedAt: new Date().toISOString() },
+    ];
+
     setLocalQuests(newQuests);
     setCompletedQuests(newCompleted);
-    
+
     try {
       await storage.setItem('dailyQuests', newQuests);
       await storage.setItem('completedQuests', newCompleted);
@@ -109,10 +139,10 @@ export default function TodayScreen() {
         icon: 'target',
         isEpic,
       };
-      
+
       const updatedQuests = [...localQuests, newQuest];
       setLocalQuests(updatedQuests);
-      
+
       try {
         await storage.setItem('dailyQuests', updatedQuests);
       } catch (error) {
@@ -122,11 +152,11 @@ export default function TodayScreen() {
   };
 
   const toggleGoal = async (goalId: string) => {
-    const goal = goals.find(g => g.goalId === goalId);
+    const goal = goals.find((g) => g.goalId === goalId);
     if (!goal) return;
 
     const newStatus = goal.status === 'completed' ? 'active' : 'completed';
-    
+
     try {
       await updateGoalMutation.mutateAsync({
         goalId,
@@ -138,7 +168,7 @@ export default function TodayScreen() {
   };
 
   // Convert goals to quest format for display
-  const goalQuests = goals.map(goal => ({
+  const goalQuests = goals.map((goal) => ({
     id: goal.goalId,
     title: goal.title,
     time: 'Ongoing',
@@ -147,22 +177,33 @@ export default function TodayScreen() {
   }));
 
   const allQuests = [...localQuests, ...goalQuests];
-  const activeGoals = goals.filter(g => g.status !== 'completed');
-  const completedGoals = goals.filter(g => g.status === 'completed');
+  const activeGoals = goals.filter((g) => g.status !== 'completed');
+  const completedGoals = goals.filter((g) => g.status === 'completed');
 
-  const completionRate = allQuests.length > 0 ? 
-    ((completedQuests.length + completedGoals.length) / (allQuests.length + completedQuests.length + completedGoals.length)) * 100 : 0;
+  const completionRate =
+    allQuests.length > 0
+      ? ((completedQuests.length + completedGoals.length) /
+          (allQuests.length + completedQuests.length + completedGoals.length)) *
+        100
+      : 0;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       <ScrollView showsVerticalScrollIndicator={false}>
-        <GreetingHeader userName={user?.userName || 'Friend'} completionRate={completionRate} />
-        
+        <GreetingHeader
+          userName={user?.userName || 'Friend'}
+          completionRate={completionRate}
+        />
+
         <View style={styles.content}>
           <WellnessCard />
-          
+
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Today's Quests</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              Today's Quests
+            </Text>
             {localQuests.map((quest) => (
               <Animated.View
                 key={quest.id}
@@ -194,10 +235,12 @@ export default function TodayScreen() {
               </Animated.View>
             ))}
           </View>
-          
+
           {(completedQuests.length > 0 || completedGoals.length > 0) && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Completed</Text>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                Completed
+              </Text>
               {completedQuests.map((quest) => (
                 <QuestCard
                   key={quest.id}
@@ -224,15 +267,15 @@ export default function TodayScreen() {
           )}
         </View>
       </ScrollView>
-      
+
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         onPress={() => setShowAddModal(true)}
         activeOpacity={0.8}
       >
         <Plus size={24} color="#ffffff" />
       </TouchableOpacity>
-      
+
       <AddTaskModal
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -245,7 +288,6 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   content: {
     padding: 20,
@@ -257,7 +299,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 18,
-    color: '#1e293b',
     marginBottom: 12,
   },
   fab: {
@@ -267,7 +308,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#14b8a6',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,

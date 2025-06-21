@@ -9,7 +9,7 @@ interface WelcomeScreenProps {
 export function WelcomeScreen({ onNext }: WelcomeScreenProps) {
   return (
     <View style={styles.container}>
-      <Animated.View 
+      <Animated.View
         style={styles.logoContainer}
         entering={FadeInUp.delay(300).springify()}
       >
@@ -17,20 +17,23 @@ export function WelcomeScreen({ onNext }: WelcomeScreenProps) {
           <Sparkles size={48} color="#14b8a6" />
         </View>
         <Text style={styles.appName}>Zik</Text>
-        <Text style={styles.tagline}>Gamified Serenity</Text>
+        <Text style={styles.tagline}>Your Path, Illuminated</Text>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={styles.content}
         entering={FadeInDown.delay(600).springify()}
       >
-        <Text style={styles.welcome}>Welcome to your journey of growth and mindfulness</Text>
+        <Text style={styles.welcome}>
+          Welcome to your journey of growth and mindfulness
+        </Text>
         <Text style={styles.description}>
-          Transform your daily habits into epic quests and discover the power of consistent progress.
+          Transform your daily habits into epic quests and discover the power of
+          consistent progress.
         </Text>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={styles.buttonContainer}
         entering={FadeInUp.delay(900).springify()}
       >

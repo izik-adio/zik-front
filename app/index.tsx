@@ -2,11 +2,14 @@ import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '@/src/context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
+import { storage } from '@/src/utils/storage';
 import * as SplashScreen from 'expo-splash-screen';
 
 export default function App() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!isLoading) {
@@ -16,9 +19,8 @@ export default function App() {
 
   const checkOnboardingStatus = async () => {
     try {
-        await SplashScreen.hideAsync();
+      await SplashScreen.hideAsync();
       if (isAuthenticated) {
-        const { storage } = await import('@/src/utils/storage');
         const hasOnboarded = await storage.getItem('hasOnboarded');
         if (hasOnboarded === 'true') {
           router.replace('/(tabs)');
@@ -37,15 +39,23 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loading}>Loading...</Text>
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <Text style={[styles.loading, { color: theme.colors.text }]}>
+          Loading...
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.loading}>Loading...</Text>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <Text style={[styles.loading, { color: theme.colors.text }]}>
+        Loading...
+      </Text>
     </View>
   );
 }
@@ -55,11 +65,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
   },
   loading: {
     fontFamily: 'Inter-Medium',
     fontSize: 16,
-    color: '#64748b',
   },
 });

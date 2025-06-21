@@ -31,7 +31,7 @@ export default function OnboardingScreen() {
     if (data) {
       setUserData(prev => ({ ...prev, ...data }));
     }
-    
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -63,14 +63,14 @@ export default function OnboardingScreen() {
           />
         </View>
       </View>
-      
+
       <Animated.View
         key={currentStep}
         entering={SlideInRight.springify()}
         exiting={SlideOutLeft.springify()}
         style={styles.stepContainer}
       >
-        <CurrentStepComponent 
+        <CurrentStepComponent
           onNext={handleNext}
           userData={userData}
         />

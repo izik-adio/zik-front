@@ -1,7 +1,16 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  Alert,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react-native';
 
 export default function LoginScreen() {
@@ -15,6 +24,7 @@ export default function LoginScreen() {
   const [resetStep, setResetStep] = useState<'email' | 'code'>('email');
 
   const { login, forgotPassword, confirmForgotPassword } = useAuth();
+  const { theme } = useTheme();
   const router = useRouter();
 
   const handleLogin = async () => {
@@ -28,7 +38,10 @@ export default function LoginScreen() {
       await login(email.trim(), password);
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'An error occurred during login');
+      Alert.alert(
+        'Login Failed',
+        error.message || 'An error occurred during login'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -79,10 +92,9 @@ export default function LoginScreen() {
         <View style={styles.content}>
           <Text style={styles.title}>Reset Password</Text>
           <Text style={styles.subtitle}>
-            {resetStep === 'email' 
+            {resetStep === 'email'
               ? 'Enter your email to receive a reset code'
-              : 'Enter the code sent to your email and your new password'
-            }
+              : 'Enter the code sent to your email and your new password'}
           </Text>
 
           {resetStep === 'email' ? (

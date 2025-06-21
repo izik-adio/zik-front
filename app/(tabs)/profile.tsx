@@ -1,13 +1,33 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Mail, CreditCard as Edit3, LogOut, Save, X } from 'lucide-react-native';
+import {
+  User,
+  Mail,
+  CreditCard as Edit3,
+  LogOut,
+  Save,
+  X,
+  Moon,
+  Sun,
+} from 'lucide-react-native';
 import { useAuth } from '@/src/context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
 import { profileApi } from '@/src/api/profile';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const { theme, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
@@ -19,13 +39,15 @@ export default function ProfileScreen() {
     queryKey: ['profile'],
     queryFn: profileApi.getProfile,
     enabled: !!user,
-    initialData: user ? {
-      userId: user.userId,
-      userName: user.userName,
-      email: user.email,
-      createdAt: '',
-      updatedAt: '',
-    } : undefined,
+    initialData: user
+      ? {
+          userId: user.userId,
+          userName: user.userName,
+          email: user.email,
+          createdAt: '',
+          updatedAt: '',
+        }
+      : undefined,
   });
 
   // Update profile mutation
@@ -64,43 +86,53 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            router.replace('/auth/login');
-          },
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          router.replace('/auth/login');
         },
-      ]
-    );
+      },
+    ]);
   };
-
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading profile...</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.subtitle }]}>
+            Loading profile...
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
-
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.colors.card,
+            borderBottomColor: theme.colors.border,
+          },
+        ]}
+      >
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+          Profile
+        </Text>{' '}
         {!isEditing ? (
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => setIsEditing(true)}
           >
-            <Edit3 size={20} color="#14b8a6" />
+            <Edit3 size={20} color={theme.colors.primary} />
           </TouchableOpacity>
         ) : (
           <View style={styles.editActions}>
@@ -108,83 +140,162 @@ export default function ProfileScreen() {
               style={styles.cancelButton}
               onPress={handleCancel}
             >
-              <X size={20} color="#ef4444" />
+              <X size={20} color={theme.colors.error} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.saveButton}
               onPress={handleSave}
               disabled={updateProfileMutation.isPending}
             >
-              <Save size={20} color="#14b8a6" />
+              <Save size={20} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
         )}
-      </View>
-
+      </View>{' '}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.profileCard}>
+        <View
+          style={[styles.profileCard, { backgroundColor: theme.colors.card }]}
+        >
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <User size={48} color="#14b8a6" />
+            <View
+              style={[
+                styles.avatar,
+                { backgroundColor: theme.colors.primary + '20' },
+              ]}
+            >
+              <User size={48} color={theme.colors.primary} />
             </View>
-          </View>
-
+          </View>{' '}
           <View style={styles.profileInfo}>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Name</Text>
+              <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>
+                Name
+              </Text>
               {isEditing ? (
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: theme.colors.inputBackground,
+                      borderColor: theme.colors.inputBorder,
+                      color: theme.colors.text,
+                    },
+                  ]}
                   value={editName}
                   onChangeText={setEditName}
                   placeholder="Enter your name"
+                  placeholderTextColor={theme.colors.subtitle}
                   autoCapitalize="words"
                 />
               ) : (
-                <View style={styles.fieldValue}>
-                  <User size={20} color="#64748b" />
-                  <Text style={styles.fieldText}>{profile?.userName || 'Not set'}</Text>
+                <View
+                  style={[
+                    styles.fieldValue,
+                    { backgroundColor: theme.colors.background },
+                  ]}
+                >
+                  <User size={20} color={theme.colors.subtitle} />
+                  <Text
+                    style={[styles.fieldText, { color: theme.colors.text }]}
+                  >
+                    {profile?.userName || 'Not set'}
+                  </Text>
                 </View>
               )}
             </View>
-
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Email</Text>
+              <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>
+                Email
+              </Text>
               {isEditing ? (
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: theme.colors.inputBackground,
+                      borderColor: theme.colors.inputBorder,
+                      color: theme.colors.text,
+                    },
+                  ]}
                   value={editEmail}
                   onChangeText={setEditEmail}
                   placeholder="Enter your email"
+                  placeholderTextColor={theme.colors.subtitle}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
               ) : (
-                <View style={styles.fieldValue}>
-                  <Mail size={20} color="#64748b" />
-                  <Text style={styles.fieldText}>{profile?.email || 'Not set'}</Text>
+                <View
+                  style={[
+                    styles.fieldValue,
+                    { backgroundColor: theme.colors.background },
+                  ]}
+                >
+                  <Mail size={20} color={theme.colors.subtitle} />
+                  <Text
+                    style={[styles.fieldText, { color: theme.colors.text }]}
+                  >
+                    {profile?.email || 'Not set'}
+                  </Text>
                 </View>
               )}
-            </View>
-
+            </View>{' '}
             {profile?.createdAt && (
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Member Since</Text>
-                <Text style={styles.fieldText}>
+                <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>
+                  Member Since
+                </Text>
+                <Text style={[styles.fieldText, { color: theme.colors.text }]}>
                   {new Date(profile.createdAt).toLocaleDateString()}
                 </Text>
               </View>
             )}
           </View>
-        </View>
-
-        <View style={styles.actionsCard}>
+        </View>{' '}
+        <View
+          style={[
+            styles.actionsCard,
+            { backgroundColor: theme.colors.cardBackground },
+          ]}
+        >
+          {' '}
           <TouchableOpacity
-            style={styles.logoutButton}
+            style={[
+              styles.themeButton,
+              {
+                backgroundColor: theme.colors.primary + '20',
+                borderColor: theme.colors.primary + '40',
+              },
+            ]}
+            onPress={toggleTheme}
+          >
+            {isDark ? (
+              <Sun size={20} color={theme.colors.primary} />
+            ) : (
+              <Moon size={20} color={theme.colors.primary} />
+            )}
+            <Text
+              style={[styles.themeButtonText, { color: theme.colors.text }]}
+            >
+              {isDark ? 'Light Mode' : 'Dark Mode'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.logoutButton,
+              {
+                backgroundColor: theme.colors.error + '20',
+                borderColor: theme.colors.error + '40',
+              },
+            ]}
             onPress={handleLogout}
           >
-            <LogOut size={20} color="#ef4444" />
-            <Text style={styles.logoutButtonText}>Logout</Text>
+            <LogOut size={20} color={theme.colors.error} />
+            <Text
+              style={[styles.logoutButtonText, { color: theme.colors.error }]}
+            >
+              Logout
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -195,21 +306,17 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',
     fontSize: 24,
-    color: '#1e293b',
   },
   editButton: {
     padding: 8,
@@ -236,14 +343,11 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: 'Inter-Medium',
     fontSize: 16,
-    color: '#64748b',
   },
   profileCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 24,
     marginBottom: 20,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -257,7 +361,6 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#f0fdfa',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -270,7 +373,6 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 14,
-    color: '#1e293b',
   },
   fieldValue: {
     flexDirection: 'row',
@@ -278,35 +380,42 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#f8fafc',
     borderRadius: 12,
   },
   fieldText: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#1e293b',
     flex: 1,
   },
   input: {
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#1e293b',
   },
   actionsCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    gap: 16,
+  },
+  themeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  themeButtonText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 16,
   },
   logoutButton: {
     flexDirection: 'row',
@@ -315,13 +424,10 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: '#fef2f2',
     borderWidth: 1,
-    borderColor: '#fecaca',
   },
   logoutButtonText: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
-    color: '#ef4444',
   },
 });

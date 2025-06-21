@@ -1,13 +1,19 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
+import { useTheme } from '@/src/context/ThemeContext';
 
 interface GreetingHeaderProps {
   userName: string;
   completionRate: number;
 }
 
-export function GreetingHeader({ userName, completionRate }: GreetingHeaderProps) {
+export function GreetingHeader({
+  userName,
+  completionRate,
+}: GreetingHeaderProps) {
+  const { theme } = useTheme();
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -28,22 +34,37 @@ export function GreetingHeader({ userName, completionRate }: GreetingHeaderProps
   const normalizedRadius = radius - strokeWidth * 2;
   const circumference = normalizedRadius * 2 * Math.PI;
   const strokeDasharray = `${circumference} ${circumference}`;
-  const strokeDashoffset = circumference - (completionRate / 100) * circumference;
-
+  const strokeDashoffset =
+    circumference - (completionRate / 100) * circumference;
   return (
-    <Animated.View style={styles.container} entering={FadeInUp.delay(200)}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.card,
+          borderBottomColor: theme.colors.border,
+        },
+      ]}
+      entering={FadeInUp.delay(200)}
+    >
       <View style={styles.content}>
         <View style={styles.textContainer}>
-          <Text style={styles.greeting}>
+          <Text style={[styles.greeting, { color: theme.colors.text }]}>
             {getGreeting()}, {userName}!
           </Text>
-          <Text style={styles.date}>{getDate()}</Text>
+          <Text style={[styles.date, { color: theme.colors.subtitle }]}>
+            {getDate()}
+          </Text>
         </View>
-        
+
         <View style={styles.progressContainer}>
-          <Svg width={radius * 2} height={radius * 2} style={styles.progressRing}>
+          <Svg
+            width={radius * 2}
+            height={radius * 2}
+            style={styles.progressRing}
+          >
             <Circle
-              stroke="#e2e8f0"
+              stroke={theme.colors.border}
               fill="transparent"
               cx={radius}
               cy={radius}
@@ -51,7 +72,7 @@ export function GreetingHeader({ userName, completionRate }: GreetingHeaderProps
               strokeWidth={strokeWidth}
             />
             <Circle
-              stroke="#14b8a6"
+              stroke={theme.colors.primary}
               fill="transparent"
               cx={radius}
               cy={radius}
@@ -63,7 +84,9 @@ export function GreetingHeader({ userName, completionRate }: GreetingHeaderProps
               transform={`rotate(-90 ${radius} ${radius})`}
             />
           </Svg>
-          <Text style={styles.progressText}>{Math.round(completionRate)}%</Text>
+          <Text style={[styles.progressText, { color: theme.colors.primary }]}>
+            {Math.round(completionRate)}%
+          </Text>
         </View>
       </View>
     </Animated.View>
@@ -72,11 +95,9 @@ export function GreetingHeader({ userName, completionRate }: GreetingHeaderProps
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
     paddingHorizontal: 20,
     paddingVertical: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
   },
   content: {
     flexDirection: 'row',
@@ -89,13 +110,11 @@ const styles = StyleSheet.create({
   greeting: {
     fontFamily: 'Inter-Bold',
     fontSize: 24,
-    color: '#1e293b',
     marginBottom: 4,
   },
   date: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#64748b',
   },
   progressContainer: {
     position: 'relative',
@@ -109,6 +128,5 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontFamily: 'Inter-SemiBold',
     fontSize: 14,
-    color: '#14b8a6',
   },
 });

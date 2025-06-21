@@ -1,6 +1,16 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, SafeAreaView, Switch } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  SafeAreaView,
+  Switch,
+} from 'react-native';
 import { X } from 'lucide-react-native';
+import { useTheme } from '@/src/context/ThemeContext';
 
 interface AddTaskModalProps {
   visible: boolean;
@@ -9,6 +19,7 @@ interface AddTaskModalProps {
 }
 
 export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
+  const { theme } = useTheme();
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('');
   const [isEpic, setIsEpic] = useState(false);
@@ -37,20 +48,42 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Add New Quest</Text>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.colors.card,
+              borderBottomColor: theme.colors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Add New Quest
+          </Text>
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <X size={24} color="#64748b" />
+            <X size={24} color={theme.colors.subtitle} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.content}>
           <View style={styles.field}>
-            <Text style={styles.label}>Quest Title</Text>
+            <Text style={[styles.label, { color: theme.colors.text }]}>
+              Quest Title
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.colors.inputBackground,
+                  borderColor: theme.colors.inputBorder,
+                  color: theme.colors.text,
+                },
+              ]}
               placeholder="What do you want to accomplish?"
+              placeholderTextColor={theme.colors.subtitle}
               value={title}
               onChangeText={setTitle}
               autoFocus
@@ -59,10 +92,20 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Estimated Time</Text>
+            <Text style={[styles.label, { color: theme.colors.text }]}>
+              Estimated Time
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.colors.inputBackground,
+                  borderColor: theme.colors.inputBorder,
+                  color: theme.colors.text,
+                },
+              ]}
               placeholder="e.g., 30 min, 2 hours, All day"
+              placeholderTextColor={theme.colors.subtitle}
               value={time}
               onChangeText={setTime}
               returnKeyType="done"
@@ -72,30 +115,67 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
 
           <View style={styles.switchContainer}>
             <View style={styles.switchText}>
-              <Text style={styles.switchLabel}>Epic Quest</Text>
-              <Text style={styles.switchDescription}>
+              <Text style={[styles.switchLabel, { color: theme.colors.text }]}>
+                Epic Quest
+              </Text>
+              <Text
+                style={[
+                  styles.switchDescription,
+                  { color: theme.colors.subtitle },
+                ]}
+              >
                 Mark as a long-term goal with milestones
               </Text>
             </View>
             <Switch
               value={isEpic}
               onValueChange={setIsEpic}
-              trackColor={{ false: '#e2e8f0', true: '#a7f3d0' }}
-              thumbColor={isEpic ? '#14b8a6' : '#f4f4f5'}
+              trackColor={{
+                false: theme.colors.border,
+                true: theme.colors.primary + '50',
+              }}
+              thumbColor={isEpic ? theme.colors.primary : theme.colors.card}
             />
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+        <View
+          style={[
+            styles.footer,
+            {
+              backgroundColor: theme.colors.card,
+              borderTopColor: theme.colors.border,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+            onPress={handleClose}
+          >
+            <Text
+              style={[styles.cancelButtonText, { color: theme.colors.text }]}
+            >
+              Cancel
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.addButton, !title.trim() && styles.addButtonDisabled]}
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              { backgroundColor: theme.colors.primary },
+              !title.trim() && [
+                styles.addButtonDisabled,
+                { backgroundColor: theme.colors.border },
+              ],
+            ]}
             onPress={handleAdd}
             disabled={!title.trim()}
           >
-            <Text style={[styles.addButtonText, !title.trim() && styles.addButtonTextDisabled]}>
+            <Text
+              style={[
+                styles.addButtonText,
+                !title.trim() && styles.addButtonTextDisabled,
+              ]}
+            >
               Add Quest
             </Text>
           </TouchableOpacity>
@@ -108,7 +188,6 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   header: {
     flexDirection: 'row',
@@ -116,13 +195,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',
     fontSize: 20,
-    color: '#1e293b',
   },
   closeButton: {
     padding: 8,
@@ -137,29 +213,23 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
-    color: '#1e293b',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#1e293b',
   },
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   switchText: {
     flex: 1,
@@ -168,13 +238,11 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
-    color: '#1e293b',
     marginBottom: 4,
   },
   switchDescription: {
     fontFamily: 'Inter-Regular',
     fontSize: 14,
-    color: '#64748b',
     lineHeight: 20,
   },
   footer: {
@@ -182,31 +250,25 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
   },
   cancelButtonText: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
-    color: '#64748b',
   },
   addButton: {
     flex: 1,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#14b8a6',
   },
-  addButtonDisabled: {
-    backgroundColor: '#e2e8f0',
-  },
+  addButtonDisabled: {},
   addButtonText: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,

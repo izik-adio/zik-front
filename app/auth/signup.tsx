@@ -1,10 +1,20 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  Alert,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/context/AuthContext';
+import { useTheme } from '@/src/context/ThemeContext';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react-native';
 
 export default function SignupScreen() {
+  const { theme } = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,10 +42,16 @@ export default function SignupScreen() {
       const result = await signup(email.trim(), password, name.trim());
       if (result.requiresConfirmation) {
         setShowConfirmation(true);
-        Alert.alert('Success', 'Please check your email for a confirmation code');
+        Alert.alert(
+          'Success',
+          'Please check your email for a confirmation code'
+        );
       }
     } catch (error: any) {
-      Alert.alert('Signup Failed', error.message || 'An error occurred during signup');
+      Alert.alert(
+        'Signup Failed',
+        error.message || 'An error occurred during signup'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -53,7 +69,10 @@ export default function SignupScreen() {
       Alert.alert('Success', 'Account confirmed successfully! Please sign in.');
       router.replace('/auth/login');
     } catch (error: any) {
-      Alert.alert('Confirmation Failed', error.message || 'Invalid confirmation code');
+      Alert.alert(
+        'Confirmation Failed',
+        error.message || 'Invalid confirmation code'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -61,18 +80,32 @@ export default function SignupScreen() {
 
   if (showConfirmation) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
         <View style={styles.content}>
-          <Text style={styles.title}>Confirm Your Email</Text>
-          <Text style={styles.subtitle}>
-            We've sent a 6-digit code to {email}. Enter it below to confirm your account.
+          <Text style={[styles.title, { color: theme.colors.text }]}>
+            Confirm Your Email
+          </Text>
+          <Text style={[styles.subtitle, { color: theme.colors.subtitle }]}>
+            We've sent a 6-digit code to {email}. Enter it below to confirm your
+            account.
           </Text>
 
           <View style={styles.form}>
-            <View style={styles.inputContainer}>
+            <View
+              style={[
+                styles.inputContainer,
+                {
+                  backgroundColor: theme.colors.inputBackground,
+                  borderColor: theme.colors.inputBorder,
+                },
+              ]}
+            >
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.colors.text }]}
                 placeholder="Confirmation Code"
+                placeholderTextColor={theme.colors.subtitle}
                 value={confirmationCode}
                 onChangeText={setConfirmationCode}
                 keyboardType="number-pad"
@@ -82,11 +115,18 @@ export default function SignupScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
+              style={[
+                styles.button,
+                { backgroundColor: theme.colors.primary },
+                isLoading && [
+                  styles.buttonDisabled,
+                  { backgroundColor: theme.colors.border },
+                ],
+              ]}
               onPress={handleConfirmSignup}
               disabled={isLoading}
             >
-              <Text style={styles.buttonText}>
+              <Text style={[styles.buttonText, { color: '#ffffff' }]}>
                 {isLoading ? 'Confirming...' : 'Confirm Account'}
               </Text>
             </TouchableOpacity>
@@ -95,7 +135,9 @@ export default function SignupScreen() {
               style={styles.linkButton}
               onPress={() => setShowConfirmation(false)}
             >
-              <Text style={styles.linkText}>Back to Signup</Text>
+              <Text style={[styles.linkText, { color: theme.colors.primary }]}>
+                Back to Signup
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -104,17 +146,36 @@ export default function SignupScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       <View style={styles.content}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join Zik and start your journey</Text>
+        <Text style={[styles.title, { color: theme.colors.text }]}>
+          Create Account
+        </Text>
+        <Text style={[styles.subtitle, { color: theme.colors.subtitle }]}>
+          Join Zik and start your journey
+        </Text>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <User size={20} color="#64748b" style={styles.inputIcon} />
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                borderColor: theme.colors.inputBorder,
+              },
+            ]}
+          >
+            <User
+              size={20}
+              color={theme.colors.subtitle}
+              style={styles.inputIcon}
+            />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme.colors.text }]}
               placeholder="Full Name"
+              placeholderTextColor={theme.colors.subtitle}
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
@@ -122,11 +183,24 @@ export default function SignupScreen() {
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Mail size={20} color="#64748b" style={styles.inputIcon} />
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                borderColor: theme.colors.inputBorder,
+              },
+            ]}
+          >
+            <Mail
+              size={20}
+              color={theme.colors.subtitle}
+              style={styles.inputIcon}
+            />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme.colors.text }]}
               placeholder="Email"
+              placeholderTextColor={theme.colors.subtitle}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -135,11 +209,24 @@ export default function SignupScreen() {
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Lock size={20} color="#64748b" style={styles.inputIcon} />
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                borderColor: theme.colors.inputBorder,
+              },
+            ]}
+          >
+            <Lock
+              size={20}
+              color={theme.colors.subtitle}
+              style={styles.inputIcon}
+            />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme.colors.text }]}
               placeholder="Password"
+              placeholderTextColor={theme.colors.subtitle}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -149,27 +236,38 @@ export default function SignupScreen() {
               onPress={() => setShowPassword(!showPassword)}
             >
               {showPassword ? (
-                <EyeOff size={20} color="#64748b" />
+                <EyeOff size={20} color={theme.colors.subtitle} />
               ) : (
-                <Eye size={20} color="#64748b" />
+                <Eye size={20} color={theme.colors.subtitle} />
               )}
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              { backgroundColor: theme.colors.primary },
+              isLoading && [
+                styles.buttonDisabled,
+                { backgroundColor: theme.colors.border },
+              ],
+            ]}
             onPress={handleSignup}
             disabled={isLoading}
           >
-            <Text style={styles.buttonText}>
+            <Text style={[styles.buttonText, { color: '#ffffff' }]}>
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </Text>
           </TouchableOpacity>
 
           <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
+            <Text style={[styles.loginText, { color: theme.colors.subtitle }]}>
+              Already have an account?{' '}
+            </Text>
             <TouchableOpacity onPress={() => router.push('/auth/login')}>
-              <Text style={styles.loginLink}>Sign In</Text>
+              <Text style={[styles.loginLink, { color: theme.colors.primary }]}>
+                Sign In
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -181,7 +279,6 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   content: {
     flex: 1,
@@ -191,14 +288,12 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: 'Inter-Bold',
     fontSize: 32,
-    color: '#1e293b',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#64748b',
     textAlign: 'center',
     marginBottom: 40,
   },
@@ -208,9 +303,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -222,25 +315,22 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#1e293b',
   },
   eyeIcon: {
     padding: 4,
   },
   button: {
-    backgroundColor: '#14b8a6',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 20,
   },
   buttonDisabled: {
-    backgroundColor: '#94a3b8',
+    opacity: 0.6,
   },
   buttonText: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
-    color: '#ffffff',
   },
   loginContainer: {
     flexDirection: 'row',
@@ -251,12 +341,10 @@ const styles = StyleSheet.create({
   loginText: {
     fontFamily: 'Inter-Regular',
     fontSize: 14,
-    color: '#64748b',
   },
   loginLink: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 14,
-    color: '#14b8a6',
   },
   linkButton: {
     alignItems: 'center',
@@ -265,6 +353,5 @@ const styles = StyleSheet.create({
   linkText: {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
-    color: '#14b8a6',
   },
 });

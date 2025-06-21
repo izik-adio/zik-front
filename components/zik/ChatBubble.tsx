@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Sparkles } from 'lucide-react-native';
+import { useTheme } from '@/src/context/ThemeContext';
 
 interface ChatBubbleProps {
   message: {
@@ -12,18 +13,46 @@ interface ChatBubbleProps {
 }
 
 export function ChatBubble({ message, isTyping = false }: ChatBubbleProps) {
+  const { theme } = useTheme();
+
   return (
-    <View style={[styles.container, message.isUser ? styles.userContainer : styles.zikContainer]}>
+    <View
+      style={[
+        styles.container,
+        message.isUser ? styles.userContainer : styles.zikContainer,
+      ]}
+    >
       {!message.isUser && (
-        <View style={styles.avatar}>
-          <Sparkles size={16} color="#14b8a6" />
+        <View
+          style={[
+            styles.avatar,
+            { backgroundColor: theme.colors.primary + '20' },
+          ]}
+        >
+          <Sparkles size={16} color={theme.colors.primary} />
         </View>
       )}
-      
-      <View style={[styles.bubble, message.isUser ? styles.userBubble : styles.zikBubble]}>
-        <Text style={[styles.text, message.isUser ? styles.userText : styles.zikText]}>
+
+      <View
+        style={[
+          styles.bubble,
+          message.isUser
+            ? [styles.userBubble, { backgroundColor: theme.colors.primary }]
+            : [styles.zikBubble, { backgroundColor: theme.colors.card }],
+        ]}
+      >
+        <Text
+          style={[
+            styles.text,
+            message.isUser
+              ? styles.userText
+              : [styles.zikText, { color: theme.colors.text }],
+          ]}
+        >
           {isTyping ? (
-            <Text style={styles.typingText}>●●●</Text>
+            <Text style={[styles.typingText, { color: theme.colors.subtitle }]}>
+              ●●●
+            </Text>
           ) : (
             message.text
           )}
@@ -49,7 +78,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f0fdfa',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -62,13 +90,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   userBubble: {
-    backgroundColor: '#14b8a6',
     borderBottomRightRadius: 4,
   },
   zikBubble: {
-    backgroundColor: '#ffffff',
     borderBottomLeftRadius: 4,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -80,13 +105,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   userText: {
-    color: '#ffffff',
+    color: 'white',
   },
-  zikText: {
-    color: '#1e293b',
-  },
+  zikText: {},
   typingText: {
-    color: '#64748b',
     fontFamily: 'Inter-Bold',
   },
 });

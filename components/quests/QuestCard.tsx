@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CheckCircle, Circle, Trophy } from 'lucide-react-native';
+import { useTheme } from '@/src/context/ThemeContext';
 
 interface QuestCardProps {
   quest: {
@@ -18,52 +19,101 @@ interface QuestCardProps {
   onMilestoneToggle: (milestoneId: string) => void;
 }
 
-export function QuestCard({ quest, completed = false, onMilestoneToggle }: QuestCardProps) {
+export function QuestCard({
+  quest,
+  completed = false,
+  onMilestoneToggle,
+}: QuestCardProps) {
+  const { theme } = useTheme();
+
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'wellness': return '#14b8a6';
-      case 'fitness': return '#f97316';
-      case 'learning': return '#8b5cf6';
-      case 'creativity': return '#ec4899';
-      default: return '#64748b';
+      case 'wellness':
+        return '#14b8a6';
+      case 'fitness':
+        return '#f97316';
+      case 'learning':
+        return '#8b5cf6';
+      case 'creativity':
+        return '#ec4899';
+      default:
+        return '#64748b';
     }
   };
 
   return (
-    <View style={[styles.card, completed && styles.completedCard]}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: completed ? theme.colors.card : theme.colors.card,
+          borderColor: theme.colors.border,
+          shadowColor: theme.colors.text,
+          opacity: completed ? 0.8 : 1,
+        },
+      ]}
+    >
       <View style={styles.header}>
         <View style={styles.titleContainer}>
-          <Text style={[styles.title, completed && styles.completedTitle]}>
+          <Text
+            style={[
+              styles.title,
+              { color: completed ? theme.colors.subtitle : theme.colors.text },
+            ]}
+          >
             {quest.title}
           </Text>
           {completed && (
-            <Trophy size={20} color="#f97316" style={styles.trophy} />
+            <Trophy
+              size={20}
+              color={theme.colors.warning}
+              style={styles.trophy}
+            />
           )}
         </View>
-        <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(quest.category) + '20' }]}>
-          <Text style={[styles.categoryText, { color: getCategoryColor(quest.category) }]}>
+        <View
+          style={[
+            styles.categoryBadge,
+            { backgroundColor: getCategoryColor(quest.category) + '20' },
+          ]}
+        >
+          <Text
+            style={[
+              styles.categoryText,
+              { color: getCategoryColor(quest.category) },
+            ]}
+          >
             {quest.category}
           </Text>
         </View>
       </View>
 
-      <Text style={[styles.description, completed && styles.completedDescription]}>
+      <Text
+        style={[
+          styles.description,
+          { color: completed ? theme.colors.subtitle : theme.colors.subtitle },
+        ]}
+      >
         {quest.description}
       </Text>
 
       <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View 
+        <View
+          style={[styles.progressBar, { backgroundColor: theme.colors.border }]}
+        >
+          <View
             style={[
-              styles.progressFill, 
-              { 
+              styles.progressFill,
+              {
                 width: `${quest.progress}%`,
-                backgroundColor: getCategoryColor(quest.category)
-              }
-            ]} 
+                backgroundColor: getCategoryColor(quest.category),
+              },
+            ]}
           />
         </View>
-        <Text style={styles.progressText}>{quest.progress}%</Text>
+        <Text style={[styles.progressText, { color: theme.colors.text }]}>
+          {quest.progress}%
+        </Text>
       </View>
 
       <View style={styles.milestones}>
@@ -75,14 +125,23 @@ export function QuestCard({ quest, completed = false, onMilestoneToggle }: Quest
             disabled={completed}
           >
             {milestone.completed ? (
-              <CheckCircle size={20} color="#14b8a6" />
+              <CheckCircle size={20} color={theme.colors.primary} />
             ) : (
-              <Circle size={20} color="#e2e8f0" />
+              <Circle size={20} color={theme.colors.border} />
             )}
-            <Text style={[
-              styles.milestoneText,
-              milestone.completed && styles.completedMilestoneText
-            ]}>
+            <Text
+              style={[
+                styles.milestoneText,
+                {
+                  color: milestone.completed
+                    ? theme.colors.subtitle
+                    : theme.colors.text,
+                  textDecorationLine: milestone.completed
+                    ? 'line-through'
+                    : 'none',
+                },
+              ]}
+            >
               {milestone.title}
             </Text>
           </TouchableOpacity>
@@ -94,21 +153,14 @@ export function QuestCard({ quest, completed = false, onMilestoneToggle }: Quest
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  completedCard: {
-    backgroundColor: '#f8fafc',
-    opacity: 0.8,
   },
   header: {
     flexDirection: 'row',
@@ -125,10 +177,6 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: 'Inter-Bold',
     fontSize: 18,
-    color: '#1e293b',
-  },
-  completedTitle: {
-    color: '#94a3b8',
   },
   trophy: {
     marginLeft: 4,
@@ -146,12 +194,8 @@ const styles = StyleSheet.create({
   description: {
     fontFamily: 'Inter-Regular',
     fontSize: 14,
-    color: '#64748b',
     marginBottom: 16,
     lineHeight: 20,
-  },
-  completedDescription: {
-    color: '#94a3b8',
   },
   progressContainer: {
     flexDirection: 'row',
@@ -162,7 +206,6 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: 8,
-    backgroundColor: '#e2e8f0',
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -173,7 +216,6 @@ const styles = StyleSheet.create({
   progressText: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 14,
-    color: '#1e293b',
     minWidth: 40,
     textAlign: 'right',
   },
@@ -188,11 +230,6 @@ const styles = StyleSheet.create({
   milestoneText: {
     fontFamily: 'Inter-Regular',
     fontSize: 14,
-    color: '#1e293b',
     flex: 1,
-  },
-  completedMilestoneText: {
-    color: '#94a3b8',
-    textDecorationLine: 'line-through',
   },
 });

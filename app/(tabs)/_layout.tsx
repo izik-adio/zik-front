@@ -1,15 +1,23 @@
 import { Tabs } from 'expo-router';
-import { SquareCheck as CheckSquare, Sparkles, Mountain, User } from 'lucide-react-native';
+import {
+  SquareCheck as CheckSquare,
+  Sparkles,
+  Mountain,
+  User,
+} from 'lucide-react-native';
+import { useTheme } from '@/src/context/ThemeContext';
 
 export default function TabLayout() {
+  const { theme } = useTheme();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: theme.colors.card,
           borderTopWidth: 1,
-          borderTopColor: '#e2e8f0',
+          borderTopColor: theme.colors.border,
           paddingBottom: 8,
           paddingTop: 8,
           height: 80,
@@ -19,8 +27,8 @@ export default function TabLayout() {
           fontSize: 12,
           marginTop: 4,
         },
-        tabBarActiveTintColor: '#14b8a6',
-        tabBarInactiveTintColor: '#64748b',
+        tabBarActiveTintColor: theme.colors.tabIconSelected,
+        tabBarInactiveTintColor: theme.colors.tabIconDefault,
       }}
     >
       <Tabs.Screen
@@ -54,9 +62,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ size, color }) => (
-            <User size={size} color={color} />
-          ),
+          tabBarIcon: ({ size, color }) => <User size={size} color={color} />,
         }}
       />
     </Tabs>

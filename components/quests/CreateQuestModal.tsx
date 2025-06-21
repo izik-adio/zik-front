@@ -1,6 +1,16 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, SafeAreaView, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+} from 'react-native';
 import { X, Plus, Minus } from 'lucide-react-native';
+import { useTheme } from '@/src/context/ThemeContext';
 
 interface CreateQuestModalProps {
   visible: boolean;
@@ -8,7 +18,12 @@ interface CreateQuestModalProps {
   onCreate: (questData: any) => void;
 }
 
-export function CreateQuestModal({ visible, onClose, onCreate }: CreateQuestModalProps) {
+export function CreateQuestModal({
+  visible,
+  onClose,
+  onCreate,
+}: CreateQuestModalProps) {
+  const { theme } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('wellness');
@@ -27,15 +42,15 @@ export function CreateQuestModal({ visible, onClose, onCreate }: CreateQuestModa
 
   const handleCreate = () => {
     if (!title.trim() || !description.trim()) return;
-    
-    const validMilestones = milestones.filter(m => m.title.trim());
+
+    const validMilestones = milestones.filter((m) => m.title.trim());
     if (validMilestones.length === 0) return;
 
     const questData = {
       title: title.trim(),
       description: description.trim(),
       category,
-      milestones: validMilestones.map(m => ({
+      milestones: validMilestones.map((m) => ({
         ...m,
         title: m.title.trim(),
       })),
@@ -58,27 +73,33 @@ export function CreateQuestModal({ visible, onClose, onCreate }: CreateQuestModa
   };
 
   const updateMilestone = (id: string, title: string) => {
-    setMilestones(prev => 
-      prev.map(m => m.id === id ? { ...m, title } : m)
+    setMilestones((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, title } : m))
     );
   };
 
   const addMilestone = () => {
     const newId = (milestones.length + 1).toString();
-    setMilestones(prev => [...prev, { id: newId, title: '', completed: false }]);
+    setMilestones((prev) => [
+      ...prev,
+      { id: newId, title: '', completed: false },
+    ]);
   };
 
   const removeMilestone = (id: string) => {
     if (milestones.length > 1) {
-      setMilestones(prev => prev.filter(m => m.id !== id));
+      setMilestones((prev) => prev.filter((m) => m.id !== id));
     }
   };
 
   const getCategoryColor = (categoryId: string) => {
-    return categories.find(c => c.id === categoryId)?.color || '#64748b';
+    return categories.find((c) => c.id === categoryId)?.color || '#64748b';
   };
 
-  const isFormValid = title.trim() && description.trim() && milestones.some(m => m.title.trim());
+  const isFormValid =
+    title.trim() &&
+    description.trim() &&
+    milestones.some((m) => m.title.trim());
 
   return (
     <Modal
@@ -87,20 +108,42 @@ export function CreateQuestModal({ visible, onClose, onCreate }: CreateQuestModa
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Create Epic Quest</Text>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View
+          style={[
+            styles.header,
+            {
+              borderBottomColor: theme.colors.border,
+              backgroundColor: theme.colors.card,
+            },
+          ]}
+        >
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Create Epic Quest
+          </Text>
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <X size={24} color="#64748b" />
+            <X size={24} color={theme.colors.subtitle} />
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.field}>
-            <Text style={styles.label}>Quest Title</Text>
+            <Text style={[styles.label, { color: theme.colors.text }]}>
+              Quest Title
+            </Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.colors.inputBackground,
+                  borderColor: theme.colors.inputBorder,
+                  color: theme.colors.text,
+                },
+              ]}
               placeholder="What's your epic quest?"
+              placeholderTextColor={theme.colors.subtitle}
               value={title}
               onChangeText={setTitle}
               autoFocus
@@ -108,10 +151,21 @@ export function CreateQuestModal({ visible, onClose, onCreate }: CreateQuestModa
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Description</Text>
+            <Text style={[styles.label, { color: theme.colors.text }]}>
+              Description
+            </Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[
+                styles.input,
+                styles.textArea,
+                {
+                  backgroundColor: theme.colors.inputBackground,
+                  borderColor: theme.colors.inputBorder,
+                  color: theme.colors.text,
+                },
+              ]}
               placeholder="Describe your journey..."
+              placeholderTextColor={theme.colors.subtitle}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -121,7 +175,9 @@ export function CreateQuestModal({ visible, onClose, onCreate }: CreateQuestModa
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Category</Text>
+            <Text style={[styles.label, { color: theme.colors.text }]}>
+              Category
+            </Text>
             <View style={styles.categoryContainer}>
               {categories.map((cat) => (
                 <TouchableOpacity
@@ -129,7 +185,10 @@ export function CreateQuestModal({ visible, onClose, onCreate }: CreateQuestModa
                   style={[
                     styles.categoryChip,
                     { backgroundColor: cat.color + '20' },
-                    category === cat.id && { borderColor: cat.color, borderWidth: 2 }
+                    category === cat.id && {
+                      borderColor: cat.color,
+                      borderWidth: 2,
+                    },
                   ]}
                   onPress={() => setCategory(cat.id)}
                 >
@@ -143,25 +202,45 @@ export function CreateQuestModal({ visible, onClose, onCreate }: CreateQuestModa
 
           <View style={styles.field}>
             <View style={styles.milestonesHeader}>
-              <Text style={styles.label}>Milestones</Text>
-              <TouchableOpacity style={styles.addButton} onPress={addMilestone}>
-                <Plus size={16} color="#14b8a6" />
+              <Text style={[styles.label, { color: theme.colors.text }]}>
+                Milestones
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.addButton,
+                  { backgroundColor: theme.colors.primary + '20' },
+                ]}
+                onPress={addMilestone}
+              >
+                <Plus size={16} color={theme.colors.primary} />
               </TouchableOpacity>
             </View>
             {milestones.map((milestone, index) => (
               <View key={milestone.id} style={styles.milestoneItem}>
                 <TextInput
-                  style={[styles.input, styles.milestoneInput]}
+                  style={[
+                    styles.input,
+                    styles.milestoneInput,
+                    {
+                      backgroundColor: theme.colors.inputBackground,
+                      borderColor: theme.colors.inputBorder,
+                      color: theme.colors.text,
+                    },
+                  ]}
                   placeholder={`Milestone ${index + 1}`}
+                  placeholderTextColor={theme.colors.subtitle}
                   value={milestone.title}
                   onChangeText={(text) => updateMilestone(milestone.id, text)}
                 />
                 {milestones.length > 1 && (
                   <TouchableOpacity
-                    style={styles.removeButton}
+                    style={[
+                      styles.removeButton,
+                      { backgroundColor: theme.colors.error + '20' },
+                    ]}
                     onPress={() => removeMilestone(milestone.id)}
                   >
-                    <Minus size={16} color="#ef4444" />
+                    <Minus size={16} color={theme.colors.error} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -169,20 +248,52 @@ export function CreateQuestModal({ visible, onClose, onCreate }: CreateQuestModa
           </View>
         </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+        <View
+          style={[
+            styles.footer,
+            {
+              backgroundColor: theme.colors.card,
+              borderTopColor: theme.colors.border,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={[
+              styles.cancelButton,
+              { backgroundColor: theme.colors.border },
+            ]}
+            onPress={handleClose}
+          >
+            <Text
+              style={[
+                styles.cancelButtonText,
+                { color: theme.colors.subtitle },
+              ]}
+            >
+              Cancel
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.createButton,
               { backgroundColor: getCategoryColor(category) },
-              !isFormValid && styles.createButtonDisabled
+              !isFormValid && [
+                styles.createButtonDisabled,
+                { backgroundColor: theme.colors.border },
+              ],
             ]}
             onPress={handleCreate}
             disabled={!isFormValid}
           >
-            <Text style={[styles.createButtonText, !isFormValid && styles.createButtonTextDisabled]}>
+            <Text
+              style={[
+                styles.createButtonText,
+                !isFormValid && [
+                  styles.createButtonTextDisabled,
+                  { color: theme.colors.subtitle },
+                ],
+              ]}
+            >
               Create Quest
             </Text>
           </TouchableOpacity>

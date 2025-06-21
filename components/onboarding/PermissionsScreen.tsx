@@ -18,7 +18,7 @@ export function PermissionsScreen({ onNext }: PermissionsScreenProps) {
 
   return (
     <View style={styles.container}>
-      <Animated.View 
+      <Animated.View
         style={styles.header}
         entering={FadeInUp.delay(200).springify()}
       >
@@ -31,7 +31,7 @@ export function PermissionsScreen({ onNext }: PermissionsScreenProps) {
         </Text>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={styles.content}
         entering={FadeInUp.delay(400).springify()}
       >
@@ -55,14 +55,14 @@ export function PermissionsScreen({ onNext }: PermissionsScreenProps) {
         </Text>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={styles.buttonContainer}
         entering={FadeInUp.delay(600).springify()}
       >
         <TouchableOpacity style={styles.primaryButton} onPress={handleEnable}>
           <Text style={styles.primaryButtonText}>Enable Notifications</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.secondaryButton} onPress={handleMaybeLater}>
           <Text style={styles.secondaryButtonText}>Maybe Later</Text>
         </TouchableOpacity>
