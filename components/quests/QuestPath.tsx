@@ -15,13 +15,13 @@ export function QuestPath({ quests }: QuestPathProps) {
 
   const getPathColor = (progress: number) => {
     if (progress === 100) return theme.colors.success;
-    if (progress > 0) return theme.colors.warning;
+    if (progress > 0) return theme.colors.ctaPrimary;
     return theme.colors.border;
   };
 
   const getCircleColor = (progress: number) => {
     if (progress === 100) return theme.colors.success;
-    if (progress > 0) return theme.colors.warning;
+    if (progress > 0) return theme.colors.ctaPrimary;
     return theme.colors.border;
   };
 

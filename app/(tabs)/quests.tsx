@@ -17,6 +17,7 @@ import { storage } from '@/src/utils/storage';
 import { QuestPath } from '@/components/quests/QuestPath';
 import { QuestCard } from '@/components/quests/QuestCard';
 import { CreateQuestModal } from '@/components/quests/CreateQuestModal';
+import { EmptyStateCard } from '@/components/today/EmptyStateCard';
 
 export default function QuestsScreen() {
   const { user } = useAuth();
@@ -57,55 +58,8 @@ export default function QuestsScreen() {
       const saved = await storage.getItem('epicQuests');
       if (saved && Array.isArray(saved)) {
         setLocalQuests(saved);
-      } else {
-        // Default epic quests
-        const defaultQuests = [
-          {
-            id: '1',
-            title: 'Master Mindfulness',
-            description: 'Develop a consistent meditation practice',
-            milestones: [
-              {
-                id: '1',
-                title: 'Meditate for 7 days straight',
-                completed: true,
-              },
-              {
-                id: '2',
-                title: 'Try 3 different meditation styles',
-                completed: false,
-              },
-              { id: '3', title: 'Meditate for 30 minutes', completed: false },
-            ],
-            category: 'wellness',
-            progress: 33,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: '2',
-            title: 'Fitness Journey',
-            description: 'Build strength and endurance',
-            milestones: [
-              {
-                id: '1',
-                title: 'Work out 3 times this week',
-                completed: false,
-              },
-              {
-                id: '2',
-                title: 'Try a new sport or activity',
-                completed: false,
-              },
-              { id: '3', title: 'Run 5K without stopping', completed: false },
-            ],
-            category: 'fitness',
-            progress: 0,
-            createdAt: new Date().toISOString(),
-          },
-        ];
-        setLocalQuests(defaultQuests);
-        await storage.setItem('epicQuests', defaultQuests);
       }
+      // Don't set default epic quests for new users - they should see empty state instead
     } catch (error) {
       console.error('Error loading epic quests:', error);
     }
@@ -220,7 +174,7 @@ export default function QuestsScreen() {
         <TouchableOpacity
           style={[
             styles.createButton,
-            { backgroundColor: theme.colors.primary },
+            { backgroundColor: theme.colors.ctaPrimary },
           ]}
           onPress={() => setShowCreateModal(true)}
         >
@@ -270,19 +224,27 @@ export default function QuestsScreen() {
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             Active Quests
           </Text>
-          {activeQuests.map((quest, index) => (
-            <Animated.View
-              key={quest.id}
-              entering={FadeInUp.delay(index * 100)}
-            >
-              <QuestCard
-                quest={quest}
-                onMilestoneToggle={(milestoneId) =>
-                  updateQuestProgress(quest.id, milestoneId)
-                }
-              />
-            </Animated.View>
-          ))}
+
+          {activeQuests.length === 0 ? (
+            <EmptyStateCard
+              type="goals"
+              onAddPress={() => setShowCreateModal(true)}
+            />
+          ) : (
+            activeQuests.map((quest, index) => (
+              <Animated.View
+                key={quest.id}
+                entering={FadeInUp.delay(index * 100)}
+              >
+                <QuestCard
+                  quest={quest}
+                  onMilestoneToggle={(milestoneId) =>
+                    updateQuestProgress(quest.id, milestoneId)
+                  }
+                />
+              </Animated.View>
+            ))
+          )}
         </View>
 
         {completedQuests.length > 0 && (

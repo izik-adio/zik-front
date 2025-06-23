@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react-native';
+import { LogoImage } from '@/components/core/LogoImage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -88,10 +89,14 @@ export default function LoginScreen() {
 
   if (showForgotPassword) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
         <View style={styles.content}>
-          <Text style={styles.title}>Reset Password</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>
+            Reset Password
+          </Text>
+          <Text style={[styles.subtitle, { color: theme.colors.subtitle }]}>
             {resetStep === 'email'
               ? 'Enter your email to receive a reset code'
               : 'Enter the code sent to your email and your new password'}
@@ -99,11 +104,24 @@ export default function LoginScreen() {
 
           {resetStep === 'email' ? (
             <>
-              <View style={styles.inputContainer}>
-                <Mail size={20} color="#64748b" style={styles.inputIcon} />
+              <View
+                style={[
+                  styles.inputContainer,
+                  {
+                    backgroundColor: theme.colors.card,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+              >
+                <Mail
+                  size={20}
+                  color={theme.colors.subtitle}
+                  style={styles.inputIcon}
+                />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: theme.colors.text }]}
                   placeholder="Email"
+                  placeholderTextColor={theme.colors.subtitle}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -113,7 +131,14 @@ export default function LoginScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.button, isLoading && styles.buttonDisabled]}
+                style={[
+                  styles.button,
+                  { backgroundColor: theme.colors.ctaPrimary },
+                  isLoading && [
+                    styles.buttonDisabled,
+                    { backgroundColor: theme.colors.subtitle },
+                  ],
+                ]}
                 onPress={handleForgotPassword}
                 disabled={isLoading}
               >
@@ -124,21 +149,43 @@ export default function LoginScreen() {
             </>
           ) : (
             <>
-              <View style={styles.inputContainer}>
+              <View
+                style={[
+                  styles.inputContainer,
+                  {
+                    backgroundColor: theme.colors.card,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+              >
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: theme.colors.text }]}
                   placeholder="Reset Code"
+                  placeholderTextColor={theme.colors.subtitle}
                   value={resetCode}
                   onChangeText={setResetCode}
                   keyboardType="number-pad"
                 />
               </View>
 
-              <View style={styles.inputContainer}>
-                <Lock size={20} color="#64748b" style={styles.inputIcon} />
+              <View
+                style={[
+                  styles.inputContainer,
+                  {
+                    backgroundColor: theme.colors.card,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+              >
+                <Lock
+                  size={20}
+                  color={theme.colors.subtitle}
+                  style={styles.inputIcon}
+                />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: theme.colors.text }]}
                   placeholder="New Password"
+                  placeholderTextColor={theme.colors.subtitle}
                   value={newPassword}
                   onChangeText={setNewPassword}
                   secureTextEntry={!showPassword}
@@ -148,15 +195,22 @@ export default function LoginScreen() {
                   onPress={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff size={20} color="#64748b" />
+                    <EyeOff size={20} color={theme.colors.subtitle} />
                   ) : (
-                    <Eye size={20} color="#64748b" />
+                    <Eye size={20} color={theme.colors.subtitle} />
                   )}
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity
-                style={[styles.button, isLoading && styles.buttonDisabled]}
+                style={[
+                  styles.button,
+                  { backgroundColor: theme.colors.ctaPrimary },
+                  isLoading && [
+                    styles.buttonDisabled,
+                    { backgroundColor: theme.colors.subtitle },
+                  ],
+                ]}
                 onPress={handleResetPassword}
                 disabled={isLoading}
               >
@@ -176,7 +230,9 @@ export default function LoginScreen() {
               setNewPassword('');
             }}
           >
-            <Text style={styles.linkText}>Back to Login</Text>
+            <Text style={[styles.linkText, { color: theme.colors.ctaPrimary }]}>
+              Back to Login
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -184,17 +240,39 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+        <View style={styles.logo}>
+          <LogoImage size={80} style={{ marginBottom: 24 }} />
+        </View>
+        <Text style={[styles.title, { color: theme.colors.text }]}>
+          Welcome Back
+        </Text>
+        <Text style={[styles.subtitle, { color: theme.colors.subtitle }]}>
+          Sign in to continue your journey
+        </Text>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Mail size={20} color="#64748b" style={styles.inputIcon} />
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: theme.colors.card,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <Mail
+              size={20}
+              color={theme.colors.subtitle}
+              style={styles.inputIcon}
+            />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme.colors.text }]}
               placeholder="Email"
+              placeholderTextColor={theme.colors.subtitle}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -203,11 +281,24 @@ export default function LoginScreen() {
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Lock size={20} color="#64748b" style={styles.inputIcon} />
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: theme.colors.card,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <Lock
+              size={20}
+              color={theme.colors.subtitle}
+              style={styles.inputIcon}
+            />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme.colors.text }]}
               placeholder="Password"
+              placeholderTextColor={theme.colors.subtitle}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -217,9 +308,9 @@ export default function LoginScreen() {
               onPress={() => setShowPassword(!showPassword)}
             >
               {showPassword ? (
-                <EyeOff size={20} color="#64748b" />
+                <EyeOff size={20} color={theme.colors.subtitle} />
               ) : (
-                <Eye size={20} color="#64748b" />
+                <Eye size={20} color={theme.colors.subtitle} />
               )}
             </TouchableOpacity>
           </View>
@@ -228,11 +319,25 @@ export default function LoginScreen() {
             style={styles.forgotPassword}
             onPress={() => setShowForgotPassword(true)}
           >
-            <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
+            <Text
+              style={[
+                styles.forgotPasswordText,
+                { color: theme.colors.ctaPrimary },
+              ]}
+            >
+              Forgot your password?
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              { backgroundColor: theme.colors.ctaPrimary },
+              isLoading && [
+                styles.buttonDisabled,
+                { backgroundColor: theme.colors.subtitle },
+              ],
+            ]}
             onPress={handleLogin}
             disabled={isLoading}
           >
@@ -242,9 +347,15 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
+            <Text style={[styles.signupText, { color: theme.colors.subtitle }]}>
+              Don't have an account?{' '}
+            </Text>
             <TouchableOpacity onPress={() => router.push('/auth/signup')}>
-              <Text style={styles.signupLink}>Sign Up</Text>
+              <Text
+                style={[styles.signupLink, { color: theme.colors.ctaPrimary }]}
+              >
+                Sign Up
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -256,24 +367,24 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     padding: 20,
   },
+  logo: {
+    alignItems: 'center',
+  },
   title: {
     fontFamily: 'Inter-Bold',
     fontSize: 32,
-    color: '#1e293b',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#64748b',
     textAlign: 'center',
     marginBottom: 40,
   },
@@ -283,9 +394,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -297,7 +406,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#1e293b',
   },
   eyeIcon: {
     padding: 4,
@@ -308,17 +416,15 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
-    color: '#14b8a6',
   },
   button: {
-    backgroundColor: '#14b8a6',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 20,
   },
   buttonDisabled: {
-    backgroundColor: '#94a3b8',
+    opacity: 0.6,
   },
   buttonText: {
     fontFamily: 'Inter-SemiBold',
@@ -334,12 +440,10 @@ const styles = StyleSheet.create({
   signupText: {
     fontFamily: 'Inter-Regular',
     fontSize: 14,
-    color: '#64748b',
   },
   signupLink: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 14,
-    color: '#14b8a6',
   },
   linkButton: {
     alignItems: 'center',
@@ -348,6 +452,5 @@ const styles = StyleSheet.create({
   linkText: {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
-    color: '#14b8a6',
   },
 });

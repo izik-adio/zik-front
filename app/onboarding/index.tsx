@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#14b8a6',
+    backgroundColor: '#f97316',
     borderRadius: 2,
   },
   stepContainer: {

@@ -13,6 +13,7 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react-native';
 import { storage } from '@/src/utils/storage';
+import { LogoImage } from '@/components/core/LogoImage';
 
 export default function SignupScreen() {
   const { theme } = useTheme();
@@ -135,7 +136,7 @@ export default function SignupScreen() {
             <TouchableOpacity
               style={[
                 styles.button,
-                { backgroundColor: theme.colors.primary },
+                { backgroundColor: theme.colors.ctaPrimary },
                 isLoading && [
                   styles.buttonDisabled,
                   { backgroundColor: theme.colors.border },
@@ -153,7 +154,9 @@ export default function SignupScreen() {
               style={styles.linkButton}
               onPress={() => setShowConfirmation(false)}
             >
-              <Text style={[styles.linkText, { color: theme.colors.primary }]}>
+              <Text
+                style={[styles.linkText, { color: theme.colors.ctaPrimary }]}
+              >
                 Back to Signup
               </Text>
             </TouchableOpacity>
@@ -168,6 +171,9 @@ export default function SignupScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <View style={styles.content}>
+        <View style={styles.logo}>
+          <LogoImage size={80} style={{ marginBottom: 24 }} />
+        </View>
         <Text style={[styles.title, { color: theme.colors.text }]}>
           Create Account
         </Text>
@@ -264,7 +270,7 @@ export default function SignupScreen() {
           <TouchableOpacity
             style={[
               styles.button,
-              { backgroundColor: theme.colors.primary },
+              { backgroundColor: theme.colors.ctaPrimary },
               isLoading && [
                 styles.buttonDisabled,
                 { backgroundColor: theme.colors.border },
@@ -280,10 +286,12 @@ export default function SignupScreen() {
 
           <View style={styles.loginContainer}>
             <Text style={[styles.loginText, { color: theme.colors.subtitle }]}>
-              Already have an account?
+              Already have an account?{' '}
             </Text>
             <TouchableOpacity onPress={() => router.push('/auth/login')}>
-              <Text style={[styles.loginLink, { color: theme.colors.primary }]}>
+              <Text
+                style={[styles.loginLink, { color: theme.colors.ctaPrimary }]}
+              >
                 Sign In
               </Text>
             </TouchableOpacity>
@@ -302,6 +310,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
+  },
+  logo: {
+    alignItems: 'center',
   },
   title: {
     fontFamily: 'Inter-Bold',

@@ -161,7 +161,7 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
           <TouchableOpacity
             style={[
               styles.addButton,
-              { backgroundColor: theme.colors.primary },
+              { backgroundColor: theme.colors.ctaPrimary },
               !title.trim() && [
                 styles.addButtonDisabled,
                 { backgroundColor: theme.colors.border },

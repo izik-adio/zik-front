@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Bell, CheckCircle } from 'lucide-react-native';
+import { LogoImage } from '@/components/core/LogoImage';
 
 interface PermissionsScreenProps {
   onNext: () => void;
@@ -22,12 +23,13 @@ export function PermissionsScreen({ onNext }: PermissionsScreenProps) {
         style={styles.header}
         entering={FadeInUp.delay(200).springify()}
       >
-        <View style={styles.iconContainer}>
-          <Bell size={32} color="#14b8a6" />
+        <View style={styles.logoContainer}>
+          <LogoImage size={48} />
         </View>
         <Text style={styles.title}>Stay motivated with gentle reminders</Text>
         <Text style={styles.subtitle}>
-          I can send you friendly notifications to help you stay on track with your quests.
+          I can send you friendly notifications to help you stay on track with
+          your quests.
         </Text>
       </Animated.View>
 
@@ -63,7 +65,10 @@ export function PermissionsScreen({ onNext }: PermissionsScreenProps) {
           <Text style={styles.primaryButtonText}>Enable Notifications</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.secondaryButton} onPress={handleMaybeLater}>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={handleMaybeLater}
+        >
           <Text style={styles.secondaryButtonText}>Maybe Later</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -83,18 +88,10 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+  },
+  logoContainer: {
+    marginBottom: 16,
   },
   title: {
     fontFamily: 'Inter-Bold',
@@ -148,11 +145,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryButton: {
-    backgroundColor: '#14b8a6',
+    backgroundColor: '#f97316',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#14b8a6',
+    shadowColor: '#f97316',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

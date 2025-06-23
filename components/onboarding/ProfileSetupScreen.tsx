@@ -1,14 +1,23 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { User } from 'lucide-react-native';
+import { LogoImage } from '@/components/core/LogoImage';
 
 interface ProfileSetupScreenProps {
   onNext: (data: { name: string }) => void;
   userData: { name: string };
 }
 
-export function ProfileSetupScreen({ onNext, userData }: ProfileSetupScreenProps) {
+export function ProfileSetupScreen({
+  onNext,
+  userData,
+}: ProfileSetupScreenProps) {
   const [name, setName] = useState(userData.name || '');
 
   const handleNext = () => {
@@ -19,18 +28,18 @@ export function ProfileSetupScreen({ onNext, userData }: ProfileSetupScreenProps
 
   return (
     <View style={styles.container}>
-      <Animated.View 
+      <Animated.View
         style={styles.header}
         entering={FadeInUp.delay(200).springify()}
       >
-        <View style={styles.iconContainer}>
-          <User size={32} color="#14b8a6" />
+        <View style={styles.logoContainer}>
+          <LogoImage size={48} />
         </View>
         <Text style={styles.title}>Let's get to know you</Text>
         <Text style={styles.subtitle}>What should I call you?</Text>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={styles.content}
         entering={FadeInUp.delay(400).springify()}
       >
@@ -50,16 +59,21 @@ export function ProfileSetupScreen({ onNext, userData }: ProfileSetupScreenProps
         </Text>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={styles.buttonContainer}
         entering={FadeInUp.delay(600).springify()}
       >
-        <TouchableOpacity 
-          style={[styles.button, !name.trim() && styles.buttonDisabled]} 
+        <TouchableOpacity
+          style={[styles.button, !name.trim() && styles.buttonDisabled]}
           onPress={handleNext}
           disabled={!name.trim()}
         >
-          <Text style={[styles.buttonText, !name.trim() && styles.buttonTextDisabled]}>
+          <Text
+            style={[
+              styles.buttonText,
+              !name.trim() && styles.buttonTextDisabled,
+            ]}
+          >
             Continue
           </Text>
         </TouchableOpacity>
@@ -80,18 +94,10 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+  },
+  logoContainer: {
+    marginBottom: 16,
   },
   title: {
     fontFamily: 'Inter-Bold',
@@ -137,11 +143,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   button: {
-    backgroundColor: '#14b8a6',
+    backgroundColor: '#f97316',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#14b8a6',
+    shadowColor: '#f97316',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

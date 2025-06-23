@@ -29,10 +29,10 @@ export function WellnessCard() {
         <View
           style={[
             styles.iconContainer,
-            { backgroundColor: theme.colors.warning + '20' },
+            { backgroundColor: theme.colors.accent + '20' },
           ]}
         >
-          <Heart size={20} color={theme.colors.warning} />
+          <Heart size={20} color={theme.colors.accent} />
         </View>
         <Text style={[styles.title, { color: theme.colors.text }]}>
           Wellness Moment
@@ -48,7 +48,10 @@ export function WellnessCard() {
           {formatTime(timeLeft)}
         </Text>
         <TouchableOpacity
-          style={[styles.playButton, { backgroundColor: theme.colors.warning }]}
+          style={[
+            styles.playButton,
+            { backgroundColor: theme.colors.ctaPrimary },
+          ]}
           onPress={toggleTimer}
         >
           {isActive ? (

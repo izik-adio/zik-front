@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { FadeInRight, FadeInLeft } from 'react-native-reanimated';
-import { Sparkles, Target, Trophy } from 'lucide-react-native';
+import { Target, Trophy, Sparkles } from 'lucide-react-native';
+import { LogoImage } from '@/components/core/LogoImage';
 
 interface IntroScreenProps {
   onNext: () => void;
@@ -9,23 +10,23 @@ interface IntroScreenProps {
 export function IntroScreen({ onNext }: IntroScreenProps) {
   return (
     <View style={styles.container}>
-      <Animated.View 
+      <Animated.View
         style={styles.header}
         entering={FadeInLeft.delay(200).springify()}
       >
-        <View style={styles.iconContainer}>
-          <Sparkles size={32} color="#14b8a6" />
+        <View style={styles.logoContainer}>
+          <LogoImage size={48} />
         </View>
-        <Text style={styles.greeting}>Hi, I'm Zik!</Text>
         <Text style={styles.subtitle}>Your personal growth companion</Text>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={styles.content}
         entering={FadeInRight.delay(400).springify()}
       >
         <Text style={styles.description}>
-          I'm here to help you turn everyday tasks into meaningful quests, track your progress, and celebrate your wins along the way.
+          I'm here to help you turn everyday tasks into meaningful quests, track
+          your progress, and celebrate your wins along the way.
         </Text>
 
         <View style={styles.features}>
@@ -44,7 +45,7 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
         </View>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={styles.buttonContainer}
         entering={FadeInRight.delay(600).springify()}
       >
@@ -68,24 +69,10 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
   },
-  greeting: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 28,
-    color: '#1e293b',
-    marginBottom: 8,
+  logoContainer: {
+    marginBottom: 16,
   },
   subtitle: {
     fontFamily: 'Inter-Medium',
@@ -129,11 +116,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   button: {
-    backgroundColor: '#14b8a6',
+    backgroundColor: '#f97316',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#14b8a6',
+    shadowColor: '#f97316',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

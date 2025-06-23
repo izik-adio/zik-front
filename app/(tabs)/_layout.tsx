@@ -27,7 +27,7 @@ export default function TabLayout() {
           fontSize: 12,
           marginTop: 4,
         },
-        tabBarActiveTintColor: theme.colors.tabIconSelected,
+        tabBarActiveTintColor: theme.colors.ctaPrimary,
         tabBarInactiveTintColor: theme.colors.tabIconDefault,
       }}
     >

@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { Sparkles } from 'lucide-react-native';
+import { LogoImage } from '@/components/core/LogoImage';
 
 interface WelcomeScreenProps {
   onNext: () => void;
@@ -10,13 +10,12 @@ export function WelcomeScreen({ onNext }: WelcomeScreenProps) {
   return (
     <View style={styles.container}>
       <Animated.View
-        style={styles.logoContainer}
+        style={styles.header}
         entering={FadeInUp.delay(300).springify()}
       >
-        <View style={styles.logo}>
-          <Sparkles size={48} color="#14b8a6" />
+        <View style={styles.logoContainer}>
+          <LogoImage size={64} />
         </View>
-        <Text style={styles.appName}>Zik</Text>
         <Text style={styles.tagline}>Your Path, Illuminated</Text>
       </Animated.View>
 
@@ -53,29 +52,15 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#f8fafc',
   },
-  logoContainer: {
+  header: {
     alignItems: 'center',
     marginBottom: 60,
   },
-  logo: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 8,
-    marginBottom: 24,
+  iconContainer: {
+    marginBottom: 16,
   },
-  appName: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 32,
-    color: '#1e293b',
-    marginBottom: 8,
+  logoContainer: {
+    marginBottom: 16,
   },
   tagline: {
     fontFamily: 'Inter-Medium',
@@ -106,11 +91,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   button: {
-    backgroundColor: '#14b8a6',
+    backgroundColor: '#f97316',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#14b8a6',
+    shadowColor: '#f97316',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

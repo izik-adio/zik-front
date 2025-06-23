@@ -106,11 +106,11 @@ export function QuestCard({
                 <View
                   style={[
                     styles.epicBadge,
-                    { backgroundColor: theme.colors.warning + '20' },
+                    { backgroundColor: theme.colors.accent + '20' },
                   ]}
                 >
                   <Text
-                    style={[styles.epicText, { color: theme.colors.warning }]}
+                    style={[styles.epicText, { color: theme.colors.accent }]}
                   >
                     Epic Quest
                   </Text>

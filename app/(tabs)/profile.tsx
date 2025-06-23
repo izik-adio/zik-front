@@ -132,7 +132,7 @@ export default function ProfileScreen() {
             style={styles.editButton}
             onPress={() => setIsEditing(true)}
           >
-            <Edit3 size={20} color={theme.colors.primary} />
+            <Edit3 size={20} color={theme.colors.ctaPrimary} />
           </TouchableOpacity>
         ) : (
           <View style={styles.editActions}>
@@ -141,13 +141,13 @@ export default function ProfileScreen() {
               onPress={handleCancel}
             >
               <X size={20} color={theme.colors.error} />
-            </TouchableOpacity>
+            </TouchableOpacity>{' '}
             <TouchableOpacity
               style={styles.saveButton}
               onPress={handleSave}
               disabled={updateProfileMutation.isPending}
             >
-              <Save size={20} color={theme.colors.primary} />
+              <Save size={20} color={theme.colors.ctaPrimary} />
             </TouchableOpacity>
           </View>
         )}
@@ -157,13 +157,14 @@ export default function ProfileScreen() {
           style={[styles.profileCard, { backgroundColor: theme.colors.card }]}
         >
           <View style={styles.avatarContainer}>
+            {' '}
             <View
               style={[
                 styles.avatar,
-                { backgroundColor: theme.colors.primary + '20' },
+                { backgroundColor: theme.colors.ctaPrimary + '20' },
               ]}
             >
-              <User size={48} color={theme.colors.primary} />
+              <User size={48} color={theme.colors.ctaPrimary} />
             </View>
           </View>
           <View style={styles.profileInfo}>

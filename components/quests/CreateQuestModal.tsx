@@ -34,7 +34,7 @@ export function CreateQuestModal({
   ]);
 
   const categories = [
-    { id: 'wellness', name: 'Wellness', color: '#14b8a6' },
+    { id: 'wellness', name: 'Wellness', color: theme.colors.ctaPrimary },
     { id: 'fitness', name: 'Fitness', color: '#f97316' },
     { id: 'learning', name: 'Learning', color: '#8b5cf6' },
     { id: 'creativity', name: 'Creativity', color: '#ec4899' },
@@ -204,15 +204,15 @@ export function CreateQuestModal({
             <View style={styles.milestonesHeader}>
               <Text style={[styles.label, { color: theme.colors.text }]}>
                 Milestones
-              </Text>
+              </Text>{' '}
               <TouchableOpacity
                 style={[
                   styles.addButton,
-                  { backgroundColor: theme.colors.primary + '20' },
+                  { backgroundColor: theme.colors.ctaPrimary + '20' },
                 ]}
                 onPress={addMilestone}
               >
-                <Plus size={16} color={theme.colors.primary} />
+                <Plus size={16} color={theme.colors.ctaPrimary} />
               </TouchableOpacity>
             </View>
             {milestones.map((milestone, index) => (
@@ -306,7 +306,6 @@ export function CreateQuestModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   header: {
     flexDirection: 'row',
@@ -314,13 +313,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',
     fontSize: 20,
-    color: '#1e293b',
   },
   closeButton: {
     padding: 8,
@@ -335,19 +331,15 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
-    color: '#1e293b',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#1e293b',
   },
   textArea: {
     minHeight: 80,
@@ -379,7 +371,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f0fdfa',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -405,20 +396,16 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
   },
   cancelButtonText: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
-    color: '#64748b',
   },
   createButton: {
     flex: 1,
@@ -427,7 +414,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   createButtonDisabled: {
-    backgroundColor: '#e2e8f0',
+    opacity: 0.6,
   },
   createButtonText: {
     fontFamily: 'Inter-SemiBold',

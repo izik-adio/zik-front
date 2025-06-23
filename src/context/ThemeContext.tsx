@@ -9,6 +9,7 @@ import { storage } from '../utils/storage';
 
 export interface Colors {
   primary: string;
+  secondary: string; // Orange accent color
   background: string;
   card: string;
   text: string;
@@ -24,6 +25,10 @@ export interface Colors {
   success: string;
   warning: string;
   error: string;
+  accent: string; // Additional orange accent
+  progressActive: string; // For progress indicators
+  ctaPrimary: string; // Call-to-action primary
+  ctaSecondary: string; // Call-to-action secondary
 }
 
 export interface Theme {
@@ -35,6 +40,7 @@ export const lightTheme: Theme = {
   dark: false,
   colors: {
     primary: '#14b8a6',
+    secondary: '#f97316', // Orange accent
     background: '#f8fafc',
     card: '#ffffff',
     text: '#1e293b',
@@ -50,6 +56,10 @@ export const lightTheme: Theme = {
     success: '#10b981',
     warning: '#f59e0b',
     error: '#ef4444',
+    accent: '#f97316', // Orange for highlights and accents
+    progressActive: '#f97316', // Orange for active progress states
+    ctaPrimary: '#f97316', // Orange for primary CTAs
+    ctaSecondary: '#14b8a6', // Teal for secondary CTAs
   },
 };
 
@@ -57,6 +67,7 @@ export const darkTheme: Theme = {
   dark: true,
   colors: {
     primary: '#14b8a6',
+    secondary: '#f97316', // Orange accent
     background: '#0f172a',
     card: '#1e293b',
     text: '#f1f5f9',
@@ -72,6 +83,10 @@ export const darkTheme: Theme = {
     success: '#10b981',
     warning: '#f59e0b',
     error: '#ef4444',
+    accent: '#f97316', // Orange for highlights and accents
+    progressActive: '#f97316', // Orange for active progress states
+    ctaPrimary: '#f97316', // Orange for primary CTAs
+    ctaSecondary: '#14b8a6', // Teal for secondary CTAs
   },
 };
 

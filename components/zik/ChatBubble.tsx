@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { Sparkles } from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
+import { LogoImage } from '@/components/core/LogoImage';
 
 interface ChatBubbleProps {
   message: {
@@ -23,13 +23,8 @@ export function ChatBubble({ message, isTyping = false }: ChatBubbleProps) {
       ]}
     >
       {!message.isUser && (
-        <View
-          style={[
-            styles.avatar,
-            { backgroundColor: theme.colors.primary + '20' },
-          ]}
-        >
-          <Sparkles size={16} color={theme.colors.primary} />
+        <View style={styles.avatar}>
+          <LogoImage size={20} />
         </View>
       )}
 

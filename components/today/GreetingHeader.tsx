@@ -72,7 +72,7 @@ export function GreetingHeader({
               strokeWidth={strokeWidth}
             />
             <Circle
-              stroke={theme.colors.primary}
+              stroke={theme.colors.progressActive}
               fill="transparent"
               cx={radius}
               cy={radius}
@@ -84,7 +84,12 @@ export function GreetingHeader({
               transform={`rotate(-90 ${radius} ${radius})`}
             />
           </Svg>
-          <Text style={[styles.progressText, { color: theme.colors.primary }]}>
+          <Text
+            style={[
+              styles.progressText,
+              { color: theme.colors.progressActive },
+            ]}
+          >
             {Math.round(completionRate)}%
           </Text>
         </View>

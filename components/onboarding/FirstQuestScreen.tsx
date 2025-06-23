@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Target, Lightbulb } from 'lucide-react-native';
+import { LogoImage } from '@/components/core/LogoImage';
 
 interface FirstQuestScreenProps {
   onNext: (data: { firstQuest: string }) => void;
@@ -12,12 +19,12 @@ export function FirstQuestScreen({ onNext, userData }: FirstQuestScreenProps) {
   const [quest, setQuest] = useState(userData.firstQuest || '');
 
   const suggestions = [
-    "Read for 30 minutes daily",
-    "Exercise 3 times a week",
-    "Meditate every morning",
-    "Learn something new",
-    "Practice gratitude",
-    "Drink more water",
+    'Read for 30 minutes daily',
+    'Exercise 3 times a week',
+    'Meditate every morning',
+    'Learn something new',
+    'Practice gratitude',
+    'Drink more water',
   ];
 
   const handleNext = () => {
@@ -32,12 +39,12 @@ export function FirstQuestScreen({ onNext, userData }: FirstQuestScreenProps) {
 
   return (
     <View style={styles.container}>
-      <Animated.View 
+      <Animated.View
         style={styles.header}
         entering={FadeInUp.delay(200).springify()}
       >
-        <View style={styles.iconContainer}>
-          <Target size={32} color="#14b8a6" />
+        <View style={styles.logoContainer}>
+          <LogoImage size={48} />
         </View>
         <Text style={styles.title}>Your First Epic Quest</Text>
         <Text style={styles.subtitle}>
@@ -45,7 +52,7 @@ export function FirstQuestScreen({ onNext, userData }: FirstQuestScreenProps) {
         </Text>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={styles.content}
         entering={FadeInUp.delay(400).springify()}
       >
@@ -80,16 +87,21 @@ export function FirstQuestScreen({ onNext, userData }: FirstQuestScreenProps) {
         </View>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={styles.buttonContainer}
         entering={FadeInUp.delay(600).springify()}
       >
-        <TouchableOpacity 
-          style={[styles.button, !quest.trim() && styles.buttonDisabled]} 
+        <TouchableOpacity
+          style={[styles.button, !quest.trim() && styles.buttonDisabled]}
           onPress={handleNext}
           disabled={!quest.trim()}
         >
-          <Text style={[styles.buttonText, !quest.trim() && styles.buttonTextDisabled]}>
+          <Text
+            style={[
+              styles.buttonText,
+              !quest.trim() && styles.buttonTextDisabled,
+            ]}
+          >
             Create My Quest
           </Text>
         </TouchableOpacity>
@@ -110,18 +122,10 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+  },
+  logoContainer: {
+    marginBottom: 16,
   },
   title: {
     fontFamily: 'Inter-Bold',
@@ -202,11 +206,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   button: {
-    backgroundColor: '#14b8a6',
+    backgroundColor: '#f97316',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#14b8a6',
+    shadowColor: '#f97316',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

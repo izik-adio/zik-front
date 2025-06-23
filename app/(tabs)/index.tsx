@@ -18,6 +18,7 @@ import { GreetingHeader } from '@/components/today/GreetingHeader';
 import { QuestCard } from '@/components/today/QuestCard';
 import { WellnessCard } from '@/components/today/WellnessCard';
 import { AddTaskModal } from '@/components/today/AddTaskModal';
+import { EmptyStateCard } from '@/components/today/EmptyStateCard';
 
 export default function TodayScreen() {
   const { user } = useAuth();
@@ -61,33 +62,8 @@ export default function TodayScreen() {
 
       if (savedQuests && Array.isArray(savedQuests)) {
         setLocalQuests(savedQuests);
-      } else {
-        // Default quests
-        const defaultQuests = [
-          {
-            id: '1',
-            title: 'Morning meditation',
-            time: '10 min',
-            icon: 'brain',
-            isEpic: false,
-          },
-          {
-            id: '2',
-            title: 'Drink 8 glasses of water',
-            time: 'All day',
-            icon: 'droplets',
-            isEpic: false,
-          },
-          {
-            id: '3',
-            title: 'Practice gratitude',
-            time: '5 min',
-            icon: 'heart',
-            isEpic: true,
-          },
-        ];
-        setLocalQuests(defaultQuests);
       }
+      // Don't set default quests for new users - they should see empty state instead
 
       if (savedCompleted && Array.isArray(savedCompleted)) {
         setCompletedQuests(savedCompleted);
@@ -181,7 +157,7 @@ export default function TodayScreen() {
   const completedGoals = goals.filter((g) => g.status === 'completed');
 
   const completionRate =
-    allQuests.length > 0
+    allQuests.length + completedQuests.length + completedGoals.length > 0
       ? ((completedQuests.length + completedGoals.length) /
           (allQuests.length + completedQuests.length + completedGoals.length)) *
         100
@@ -204,36 +180,46 @@ export default function TodayScreen() {
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Today's Quests
             </Text>
-            {localQuests.map((quest) => (
-              <Animated.View
-                key={quest.id}
-                entering={FadeInUp.delay(100)}
-                exiting={FadeOutUp}
-              >
-                <QuestCard
-                  quest={quest}
-                  onToggle={() => toggleQuest(quest.id)}
-                />
-              </Animated.View>
-            ))}
-            {activeGoals.map((goal) => (
-              <Animated.View
-                key={goal.goalId}
-                entering={FadeInUp.delay(100)}
-                exiting={FadeOutUp}
-              >
-                <QuestCard
-                  quest={{
-                    id: goal.goalId,
-                    title: goal.title,
-                    time: 'Ongoing',
-                    icon: 'target',
-                    isEpic: true,
-                  }}
-                  onToggle={() => toggleGoal(goal.goalId)}
-                />
-              </Animated.View>
-            ))}
+
+            {localQuests.length === 0 && activeGoals.length === 0 ? (
+              <EmptyStateCard
+                type="quests"
+                onAddPress={() => setShowAddModal(true)}
+              />
+            ) : (
+              <>
+                {localQuests.map((quest) => (
+                  <Animated.View
+                    key={quest.id}
+                    entering={FadeInUp.delay(100)}
+                    exiting={FadeOutUp}
+                  >
+                    <QuestCard
+                      quest={quest}
+                      onToggle={() => toggleQuest(quest.id)}
+                    />
+                  </Animated.View>
+                ))}
+                {activeGoals.map((goal) => (
+                  <Animated.View
+                    key={goal.goalId}
+                    entering={FadeInUp.delay(100)}
+                    exiting={FadeOutUp}
+                  >
+                    <QuestCard
+                      quest={{
+                        id: goal.goalId,
+                        title: goal.title,
+                        time: 'Ongoing',
+                        icon: 'target',
+                        isEpic: true,
+                      }}
+                      onToggle={() => toggleGoal(goal.goalId)}
+                    />
+                  </Animated.View>
+                ))}
+              </>
+            )}
           </View>
 
           {(completedQuests.length > 0 || completedGoals.length > 0) && (
@@ -269,7 +255,7 @@ export default function TodayScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        style={[styles.fab, { backgroundColor: theme.colors.ctaPrimary }]}
         onPress={() => setShowAddModal(true)}
         activeOpacity={0.8}
       >

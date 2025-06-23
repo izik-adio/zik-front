@@ -13,6 +13,7 @@ import {
 import { Send, Mic } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTheme } from '@/src/context/ThemeContext';
+import { LogoImage } from '@/components/core/LogoImage';
 import { ChatBubble } from '@/components/zik/ChatBubble';
 import { SuggestionChip } from '@/components/zik/SuggestionChip';
 
@@ -109,12 +110,14 @@ export default function ZikScreen() {
           },
         ]}
       >
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-          Chat with Zik
-        </Text>
-        <Text style={[styles.headerSubtitle, { color: theme.colors.subtitle }]}>
-          Your AI growth companion
-        </Text>
+        <View style={styles.headerContent}>
+          <LogoImage size={32} />
+          <Text
+            style={[styles.headerSubtitle, { color: theme.colors.subtitle }]}
+          >
+            Your AI growth companion
+          </Text>
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -196,7 +199,7 @@ export default function ZikScreen() {
                 styles.sendButton,
                 {
                   backgroundColor: inputText.trim()
-                    ? theme.colors.primary
+                    ? theme.colors.ctaPrimary
                     : theme.colors.border,
                 },
               ]}
@@ -231,6 +234,11 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',
