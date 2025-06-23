@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Target, Lightbulb } from 'lucide-react-native';
+import { Lightbulb } from 'lucide-react-native';
 import { LogoImage } from '@/components/core/LogoImage';
 
 interface FirstQuestScreenProps {
@@ -17,6 +17,7 @@ interface FirstQuestScreenProps {
 
 export function FirstQuestScreen({ onNext, userData }: FirstQuestScreenProps) {
   const [quest, setQuest] = useState(userData.firstQuest || '');
+  const [isFocused, setIsFocused] = useState(false);
 
   const suggestions = [
     'Read for 30 minutes daily',
@@ -48,7 +49,7 @@ export function FirstQuestScreen({ onNext, userData }: FirstQuestScreenProps) {
         </View>
         <Text style={styles.title}>Your First Epic Quest</Text>
         <Text style={styles.subtitle}>
-          What's one meaningful goal you'd like to work towards?
+          What&apos;s one meaningful goal you&apos;d like to work towards?
         </Text>
       </Animated.View>
 
@@ -57,10 +58,15 @@ export function FirstQuestScreen({ onNext, userData }: FirstQuestScreenProps) {
         entering={FadeInUp.delay(400).springify()}
       >
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            isFocused && { borderColor: '#f97316' }, // Orange focus border
+          ]}
           placeholder="I want to..."
           value={quest}
           onChangeText={setQuest}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           multiline
           numberOfLines={3}
           textAlignVertical="top"

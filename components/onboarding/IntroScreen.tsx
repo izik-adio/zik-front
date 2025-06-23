@@ -25,8 +25,8 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
         entering={FadeInRight.delay(400).springify()}
       >
         <Text style={styles.description}>
-          I'm here to help you turn everyday tasks into meaningful quests, track
-          your progress, and celebrate your wins along the way.
+          I&apos;m here to help you turn everyday tasks into meaningful quests,
+          track your progress, and celebrate your wins along the way.
         </Text>
 
         <View style={styles.features}>
@@ -50,7 +50,7 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
         entering={FadeInRight.delay(600).springify()}
       >
         <TouchableOpacity style={styles.button} onPress={onNext}>
-          <Text style={styles.buttonText}>Let's Get Started</Text>
+          <Text style={styles.buttonText}>Let&apos;s Get Started</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>

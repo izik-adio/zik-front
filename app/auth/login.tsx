@@ -23,6 +23,7 @@ export default function LoginScreen() {
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [resetStep, setResetStep] = useState<'email' | 'code'>('email');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const { login, forgotPassword, confirmForgotPassword } = useAuth();
   const { theme } = useTheme();
@@ -108,8 +109,11 @@ export default function LoginScreen() {
                 style={[
                   styles.inputContainer,
                   {
-                    backgroundColor: theme.colors.card,
-                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.inputBackground,
+                    borderColor:
+                      focusedField === 'resetEmail'
+                        ? theme.colors.ctaPrimary
+                        : theme.colors.inputBorder,
                   },
                 ]}
               >
@@ -124,6 +128,8 @@ export default function LoginScreen() {
                   placeholderTextColor={theme.colors.subtitle}
                   value={email}
                   onChangeText={setEmail}
+                  onFocus={() => setFocusedField('resetEmail')}
+                  onBlur={() => setFocusedField(null)}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -153,8 +159,11 @@ export default function LoginScreen() {
                 style={[
                   styles.inputContainer,
                   {
-                    backgroundColor: theme.colors.card,
-                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.inputBackground,
+                    borderColor:
+                      focusedField === 'resetCode'
+                        ? theme.colors.ctaPrimary
+                        : theme.colors.inputBorder,
                   },
                 ]}
               >
@@ -164,6 +173,8 @@ export default function LoginScreen() {
                   placeholderTextColor={theme.colors.subtitle}
                   value={resetCode}
                   onChangeText={setResetCode}
+                  onFocus={() => setFocusedField('resetCode')}
+                  onBlur={() => setFocusedField(null)}
                   keyboardType="number-pad"
                 />
               </View>
@@ -172,8 +183,11 @@ export default function LoginScreen() {
                 style={[
                   styles.inputContainer,
                   {
-                    backgroundColor: theme.colors.card,
-                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.inputBackground,
+                    borderColor:
+                      focusedField === 'resetPassword'
+                        ? theme.colors.ctaPrimary
+                        : theme.colors.inputBorder,
                   },
                 ]}
               >
@@ -188,6 +202,8 @@ export default function LoginScreen() {
                   placeholderTextColor={theme.colors.subtitle}
                   value={newPassword}
                   onChangeText={setNewPassword}
+                  onFocus={() => setFocusedField('resetPassword')}
+                  onBlur={() => setFocusedField(null)}
                   secureTextEntry={!showPassword}
                 />
                 <TouchableOpacity
@@ -259,8 +275,11 @@ export default function LoginScreen() {
             style={[
               styles.inputContainer,
               {
-                backgroundColor: theme.colors.card,
-                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.inputBackground,
+                borderColor:
+                  focusedField === 'email'
+                    ? theme.colors.ctaPrimary
+                    : theme.colors.inputBorder,
               },
             ]}
           >
@@ -275,6 +294,8 @@ export default function LoginScreen() {
               placeholderTextColor={theme.colors.subtitle}
               value={email}
               onChangeText={setEmail}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -285,8 +306,11 @@ export default function LoginScreen() {
             style={[
               styles.inputContainer,
               {
-                backgroundColor: theme.colors.card,
-                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.inputBackground,
+                borderColor:
+                  focusedField === 'password'
+                    ? theme.colors.ctaPrimary
+                    : theme.colors.inputBorder,
               },
             ]}
           >
@@ -301,6 +325,8 @@ export default function LoginScreen() {
               placeholderTextColor={theme.colors.subtitle}
               value={password}
               onChangeText={setPassword}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => setFocusedField(null)}
               secureTextEntry={!showPassword}
             />
             <TouchableOpacity
@@ -348,7 +374,7 @@ export default function LoginScreen() {
 
           <View style={styles.signupContainer}>
             <Text style={[styles.signupText, { color: theme.colors.subtitle }]}>
-              Don't have an account?{' '}
+              Don&apos;t have an account?
             </Text>
             <TouchableOpacity onPress={() => router.push('/auth/signup')}>
               <Text

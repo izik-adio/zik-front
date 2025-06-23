@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '@/src/context/AuthContext';
@@ -11,13 +11,7 @@ export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
   const { theme } = useTheme();
 
-  useEffect(() => {
-    if (!isLoading) {
-      checkOnboardingStatus();
-    }
-  }, [isLoading, isAuthenticated]);
-
-  const checkOnboardingStatus = async () => {
+  const checkOnboardingStatus = useCallback(async () => {
     try {
       await SplashScreen.hideAsync();
 
@@ -36,11 +30,17 @@ export default function App() {
       } else {
         router.replace('/auth/login');
       }
-    } catch (error) {
+    } catch {
       router.replace('/auth/login');
       await SplashScreen.hideAsync();
     }
-  };
+  }, [router, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      checkOnboardingStatus();
+    }
+  }, [isLoading, isAuthenticated, checkOnboardingStatus]);
 
   if (isLoading) {
     return (

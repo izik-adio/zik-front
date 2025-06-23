@@ -1,6 +1,5 @@
 import AWS from 'aws-sdk';
 import { jwtDecode } from 'jwt-decode';
-import { Platform } from 'react-native';
 
 interface CognitoConfig {
   region: string;
@@ -73,9 +72,9 @@ class CognitoService {
         { Name: 'name', Value: name },
       ],
     };
-
     try {
-      await this.cognitoIdentityServiceProvider.signUp(params).promise();
+      this.ensureServiceInitialized();
+      await this.cognitoIdentityServiceProvider!.signUp(params).promise();
       return { requiresConfirmation: true };
     } catch (error: any) {
       throw new Error(error.message || 'Sign up failed');
@@ -93,9 +92,11 @@ class CognitoService {
       Username: email,
       ConfirmationCode: confirmationCode,
     };
-
     try {
-      await this.cognitoIdentityServiceProvider.confirmSignUp(params).promise();
+      this.ensureServiceInitialized();
+      await this.cognitoIdentityServiceProvider!.confirmSignUp(
+        params
+      ).promise();
     } catch (error: any) {
       throw new Error(error.message || 'Confirmation failed');
     }
@@ -162,11 +163,11 @@ class CognitoService {
       ClientId: this.config.clientId,
       Username: email,
     };
-
     try {
-      await this.cognitoIdentityServiceProvider
-        .forgotPassword(params)
-        .promise();
+      this.ensureServiceInitialized();
+      await this.cognitoIdentityServiceProvider!.forgotPassword(
+        params
+      ).promise();
     } catch (error: any) {
       throw new Error(error.message || 'Forgot password request failed');
     }
@@ -188,11 +189,11 @@ class CognitoService {
       ConfirmationCode: confirmationCode,
       Password: newPassword,
     };
-
     try {
-      await this.cognitoIdentityServiceProvider
-        .confirmForgotPassword(params)
-        .promise();
+      this.ensureServiceInitialized();
+      await this.cognitoIdentityServiceProvider!.confirmForgotPassword(
+        params
+      ).promise();
     } catch (error: any) {
       throw new Error(error.message || 'Password reset failed');
     }
@@ -227,11 +228,11 @@ class CognitoService {
         REFRESH_TOKEN: refreshToken,
       },
     };
-
     try {
-      const result = await this.cognitoIdentityServiceProvider
-        .initiateAuth(params)
-        .promise();
+      this.ensureServiceInitialized();
+      const result = await this.cognitoIdentityServiceProvider!.initiateAuth(
+        params
+      ).promise();
 
       if (!result.AuthenticationResult) {
         throw new Error('Token refresh failed');
@@ -263,11 +264,11 @@ class CognitoService {
     const params = {
       AccessToken: accessToken,
     };
-
     try {
-      const result = await this.cognitoIdentityServiceProvider
-        .getUser(params)
-        .promise();
+      this.ensureServiceInitialized();
+      const result = await this.cognitoIdentityServiceProvider!.getUser(
+        params
+      ).promise();
 
       const email =
         result.UserAttributes?.find((attr) => attr.Name === 'email')?.Value ||
@@ -303,7 +304,7 @@ class CognitoService {
         userName: decoded.name || '',
         email: decoded.email || '',
       };
-    } catch (error) {
+    } catch {
       throw new Error('Failed to decode ID token');
     }
   }

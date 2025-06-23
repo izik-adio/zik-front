@@ -1,4 +1,4 @@
-import { Image, ImageProps, StyleSheet } from 'react-native';
+import { Image, ImageProps } from 'react-native';
 
 interface LogoImageProps extends Omit<ImageProps, 'source'> {
   size?: number;

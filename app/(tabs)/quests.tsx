@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
-import { questsApi, Quest } from '@/src/api/quests';
+import { questsApi, Task } from '@/src/api/quests';
 import { storage } from '@/src/utils/storage';
 import { QuestPath } from '@/components/quests/QuestPath';
 import { QuestCard } from '@/components/quests/QuestCard';
@@ -26,29 +26,33 @@ export default function QuestsScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [localQuests, setLocalQuests] = useState<any[]>([]);
 
-  // Fetch quests from API
-  const { data: apiQuests = [], isLoading } = useQuery({
+  // Fetch quests from API (Note: the new API doesn't have a generic getQuests method)
+  const { data: apiQuests = [] } = useQuery({
     queryKey: ['quests'],
-    queryFn: questsApi.getQuests,
+    queryFn: async () => {
+      // TODO: Update this to fetch tasks/goals from today or a specific date range
+      // For now, return empty array as the new API is date-specific
+      return [] as Task[];
+    },
     enabled: !!user,
   });
 
   // Create quest mutation
   const createQuestMutation = useMutation({
-    mutationFn: questsApi.createQuest,
+    mutationFn: (questData: any) => {
+      // Convert local quest format to API format
+      return questsApi.createTask({
+        title: questData.title,
+        description: questData.description,
+        dueDate: new Date().toISOString().split('T')[0], // Today
+        priority: 'medium',
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quests'] });
     },
   });
 
-  // Update quest mutation
-  const updateQuestMutation = useMutation({
-    mutationFn: ({ questId, data }: { questId: string; data: any }) =>
-      questsApi.updateQuest(questId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quests'] });
-    },
-  });
   useEffect(() => {
     loadLocalQuests();
   }, []);
@@ -131,9 +135,9 @@ export default function QuestsScreen() {
   };
 
   // Convert API quests to local format for display
-  const convertedApiQuests = apiQuests.map((quest) => ({
-    id: quest.questId,
-    title: quest.title,
+  const convertedApiQuests = apiQuests.map((quest: Task) => ({
+    id: quest.taskId,
+    title: quest.taskName,
     description: quest.description,
     category: 'general',
     progress: quest.status === 'completed' ? 100 : 0,

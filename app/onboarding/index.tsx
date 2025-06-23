@@ -1,20 +1,13 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, SafeAreaView } from 'react-native';
+import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { storage } from '@/src/utils/storage';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  SlideInRight,
-  SlideOutLeft,
-} from 'react-native-reanimated';
+import Animated, { SlideInRight, SlideOutLeft } from 'react-native-reanimated';
 import { WelcomeScreen } from '@/components/onboarding/WelcomeScreen';
 import { IntroScreen } from '@/components/onboarding/IntroScreen';
 import { ProfileSetupScreen } from '@/components/onboarding/ProfileSetupScreen';
 import { FirstQuestScreen } from '@/components/onboarding/FirstQuestScreen';
 import { PermissionsScreen } from '@/components/onboarding/PermissionsScreen';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);

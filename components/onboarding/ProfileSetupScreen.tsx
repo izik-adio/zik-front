@@ -19,6 +19,7 @@ export function ProfileSetupScreen({
   userData,
 }: ProfileSetupScreenProps) {
   const [name, setName] = useState(userData.name || '');
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleNext = () => {
     if (name.trim()) {
@@ -35,7 +36,7 @@ export function ProfileSetupScreen({
         <View style={styles.logoContainer}>
           <LogoImage size={48} />
         </View>
-        <Text style={styles.title}>Let's get to know you</Text>
+        <Text style={styles.title}>Let&apos;s get to know you</Text>
         <Text style={styles.subtitle}>What should I call you?</Text>
       </Animated.View>
 
@@ -44,10 +45,15 @@ export function ProfileSetupScreen({
         entering={FadeInUp.delay(400).springify()}
       >
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            isFocused && { borderColor: '#f97316' }, // Orange focus border
+          ]}
           placeholder="Your name"
           value={name}
           onChangeText={setName}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           autoFocus
           autoCapitalize="words"
           autoCorrect={false}
@@ -55,7 +61,7 @@ export function ProfileSetupScreen({
           onSubmitEditing={handleNext}
         />
         <Text style={styles.hint}>
-          I'll use this to personalize your experience and cheer you on!
+          I&apos;ll use this to personalize your experience and cheer you on!
         </Text>
       </Animated.View>
 

@@ -24,6 +24,7 @@ export default function SignupScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState('');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const { signup, confirmSignup } = useAuth();
   const router = useRouter();
@@ -107,8 +108,8 @@ export default function SignupScreen() {
             Confirm Your Email
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.subtitle }]}>
-            We've sent a 6-digit code to {email}. Enter it below to confirm your
-            account.
+            We&apos;ve sent a 6-digit code to {email}. Enter it below to confirm
+            your account.
           </Text>
 
           <View style={styles.form}>
@@ -117,7 +118,10 @@ export default function SignupScreen() {
                 styles.inputContainer,
                 {
                   backgroundColor: theme.colors.inputBackground,
-                  borderColor: theme.colors.inputBorder,
+                  borderColor:
+                    focusedField === 'confirmationCode'
+                      ? theme.colors.ctaPrimary
+                      : theme.colors.inputBorder,
                 },
               ]}
             >
@@ -127,6 +131,8 @@ export default function SignupScreen() {
                 placeholderTextColor={theme.colors.subtitle}
                 value={confirmationCode}
                 onChangeText={setConfirmationCode}
+                onFocus={() => setFocusedField('confirmationCode')}
+                onBlur={() => setFocusedField(null)}
                 keyboardType="number-pad"
                 maxLength={6}
                 textAlign="center"
@@ -187,7 +193,10 @@ export default function SignupScreen() {
               styles.inputContainer,
               {
                 backgroundColor: theme.colors.inputBackground,
-                borderColor: theme.colors.inputBorder,
+                borderColor:
+                  focusedField === 'name'
+                    ? theme.colors.ctaPrimary
+                    : theme.colors.inputBorder,
               },
             ]}
           >
@@ -202,6 +211,8 @@ export default function SignupScreen() {
               placeholderTextColor={theme.colors.subtitle}
               value={name}
               onChangeText={setName}
+              onFocus={() => setFocusedField('name')}
+              onBlur={() => setFocusedField(null)}
               autoCapitalize="words"
               autoCorrect={false}
             />
@@ -212,7 +223,10 @@ export default function SignupScreen() {
               styles.inputContainer,
               {
                 backgroundColor: theme.colors.inputBackground,
-                borderColor: theme.colors.inputBorder,
+                borderColor:
+                  focusedField === 'email'
+                    ? theme.colors.ctaPrimary
+                    : theme.colors.inputBorder,
               },
             ]}
           >
@@ -227,6 +241,8 @@ export default function SignupScreen() {
               placeholderTextColor={theme.colors.subtitle}
               value={email}
               onChangeText={setEmail}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -238,7 +254,10 @@ export default function SignupScreen() {
               styles.inputContainer,
               {
                 backgroundColor: theme.colors.inputBackground,
-                borderColor: theme.colors.inputBorder,
+                borderColor:
+                  focusedField === 'password'
+                    ? theme.colors.ctaPrimary
+                    : theme.colors.inputBorder,
               },
             ]}
           >
@@ -253,6 +272,8 @@ export default function SignupScreen() {
               placeholderTextColor={theme.colors.subtitle}
               value={password}
               onChangeText={setPassword}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => setFocusedField(null)}
               secureTextEntry={!showPassword}
             />
             <TouchableOpacity
@@ -286,7 +307,7 @@ export default function SignupScreen() {
 
           <View style={styles.loginContainer}>
             <Text style={[styles.loginText, { color: theme.colors.subtitle }]}>
-              Already have an account?{' '}
+              Already have an account?
             </Text>
             <TouchableOpacity onPress={() => router.push('/auth/login')}>
               <Text

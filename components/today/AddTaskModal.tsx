@@ -23,6 +23,7 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('');
   const [isEpic, setIsEpic] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleAdd = () => {
     if (title.trim()) {
@@ -30,6 +31,7 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
       setTitle('');
       setTime('');
       setIsEpic(false);
+      setFocusedField(null);
       onClose();
     }
   };
@@ -38,6 +40,7 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
     setTitle('');
     setTime('');
     setIsEpic(false);
+    setFocusedField(null);
     onClose();
   };
 
@@ -78,7 +81,10 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
                 styles.input,
                 {
                   backgroundColor: theme.colors.inputBackground,
-                  borderColor: theme.colors.inputBorder,
+                  borderColor:
+                    focusedField === 'title'
+                      ? theme.colors.ctaPrimary
+                      : theme.colors.inputBorder,
                   color: theme.colors.text,
                 },
               ]}
@@ -86,6 +92,8 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
               placeholderTextColor={theme.colors.subtitle}
               value={title}
               onChangeText={setTitle}
+              onFocus={() => setFocusedField('title')}
+              onBlur={() => setFocusedField(null)}
               autoFocus
               returnKeyType="next"
             />
@@ -100,7 +108,10 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
                 styles.input,
                 {
                   backgroundColor: theme.colors.inputBackground,
-                  borderColor: theme.colors.inputBorder,
+                  borderColor:
+                    focusedField === 'time'
+                      ? theme.colors.ctaPrimary
+                      : theme.colors.inputBorder,
                   color: theme.colors.text,
                 },
               ]}
@@ -108,6 +119,8 @@ export function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
               placeholderTextColor={theme.colors.subtitle}
               value={time}
               onChangeText={setTime}
+              onFocus={() => setFocusedField('time')}
+              onBlur={() => setFocusedField(null)}
               returnKeyType="done"
               onSubmitEditing={handleAdd}
             />

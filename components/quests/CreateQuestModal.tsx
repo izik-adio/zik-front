@@ -27,6 +27,7 @@ export function CreateQuestModal({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('wellness');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [milestones, setMilestones] = useState([
     { id: '1', title: '', completed: false },
     { id: '2', title: '', completed: false },
@@ -132,13 +133,16 @@ export function CreateQuestModal({
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.text }]}>
               Quest Title
-            </Text>
+            </Text>{' '}
             <TextInput
               style={[
                 styles.input,
                 {
                   backgroundColor: theme.colors.inputBackground,
-                  borderColor: theme.colors.inputBorder,
+                  borderColor:
+                    focusedField === 'title'
+                      ? theme.colors.ctaPrimary
+                      : theme.colors.inputBorder,
                   color: theme.colors.text,
                 },
               ]}
@@ -146,6 +150,8 @@ export function CreateQuestModal({
               placeholderTextColor={theme.colors.subtitle}
               value={title}
               onChangeText={setTitle}
+              onFocus={() => setFocusedField('title')}
+              onBlur={() => setFocusedField(null)}
               autoFocus
             />
           </View>
@@ -153,14 +159,17 @@ export function CreateQuestModal({
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.text }]}>
               Description
-            </Text>
+            </Text>{' '}
             <TextInput
               style={[
                 styles.input,
                 styles.textArea,
                 {
                   backgroundColor: theme.colors.inputBackground,
-                  borderColor: theme.colors.inputBorder,
+                  borderColor:
+                    focusedField === 'description'
+                      ? theme.colors.ctaPrimary
+                      : theme.colors.inputBorder,
                   color: theme.colors.text,
                 },
               ]}
@@ -168,6 +177,8 @@ export function CreateQuestModal({
               placeholderTextColor={theme.colors.subtitle}
               value={description}
               onChangeText={setDescription}
+              onFocus={() => setFocusedField('description')}
+              onBlur={() => setFocusedField(null)}
               multiline
               numberOfLines={3}
               textAlignVertical="top"
@@ -217,13 +228,17 @@ export function CreateQuestModal({
             </View>
             {milestones.map((milestone, index) => (
               <View key={milestone.id} style={styles.milestoneItem}>
+                {' '}
                 <TextInput
                   style={[
                     styles.input,
                     styles.milestoneInput,
                     {
                       backgroundColor: theme.colors.inputBackground,
-                      borderColor: theme.colors.inputBorder,
+                      borderColor:
+                        focusedField === `milestone-${milestone.id}`
+                          ? theme.colors.ctaPrimary
+                          : theme.colors.inputBorder,
                       color: theme.colors.text,
                     },
                   ]}
@@ -231,6 +246,8 @@ export function CreateQuestModal({
                   placeholderTextColor={theme.colors.subtitle}
                   value={milestone.title}
                   onChangeText={(text) => updateMilestone(milestone.id, text)}
+                  onFocus={() => setFocusedField(`milestone-${milestone.id}`)}
+                  onBlur={() => setFocusedField(null)}
                 />
                 {milestones.length > 1 && (
                   <TouchableOpacity

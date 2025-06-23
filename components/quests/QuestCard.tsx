@@ -7,11 +7,11 @@ interface QuestCardProps {
     id: string;
     title: string;
     description: string;
-    milestones: Array<{
+    milestones: {
       id: string;
       title: string;
       completed: boolean;
-    }>;
+    }[];
     progress: number;
     category: string;
   };

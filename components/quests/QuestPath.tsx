@@ -3,21 +3,15 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '@/src/context/ThemeContext';
 
 interface QuestPathProps {
-  quests: Array<{
+  quests: {
     id: string;
     title: string;
     progress: number;
-  }>;
+  }[];
 }
 
 export function QuestPath({ quests }: QuestPathProps) {
   const { theme } = useTheme();
-
-  const getPathColor = (progress: number) => {
-    if (progress === 100) return theme.colors.success;
-    if (progress > 0) return theme.colors.ctaPrimary;
-    return theme.colors.border;
-  };
 
   const getCircleColor = (progress: number) => {
     if (progress === 100) return theme.colors.success;

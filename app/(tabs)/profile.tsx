@@ -141,7 +141,7 @@ export default function ProfileScreen() {
               onPress={handleCancel}
             >
               <X size={20} color={theme.colors.error} />
-            </TouchableOpacity>{' '}
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.saveButton}
               onPress={handleSave}
@@ -157,7 +157,6 @@ export default function ProfileScreen() {
           style={[styles.profileCard, { backgroundColor: theme.colors.card }]}
         >
           <View style={styles.avatarContainer}>
-            {' '}
             <View
               style={[
                 styles.avatar,

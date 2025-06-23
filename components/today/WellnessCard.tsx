@@ -7,7 +7,7 @@ import { useTheme } from '@/src/context/ThemeContext';
 export function WellnessCard() {
   const { theme } = useTheme();
   const [isActive, setIsActive] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [timeLeft] = useState(300); // 5 minutes in seconds
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
-import { goalsApi, Goal } from '@/src/api/goals';
+import { questsApi, Goal } from '@/src/api/quests';
 import { storage } from '@/src/utils/storage';
 import { GreetingHeader } from '@/components/today/GreetingHeader';
 import { QuestCard } from '@/components/today/QuestCard';
@@ -28,16 +28,32 @@ export default function TodayScreen() {
   const [localQuests, setLocalQuests] = useState<any[]>([]);
   const [completedQuests, setCompletedQuests] = useState<any[]>([]);
 
-  // Fetch goals from API
-  const { data: goals = [], isLoading } = useQuery({
+  // Fetch goals from API (Note: will need to be updated when backend supports goal queries)
+  const { data: goals = [] } = useQuery({
     queryKey: ['goals'],
-    queryFn: goalsApi.getGoals,
+    queryFn: async () => {
+      // TODO: Update this once backend supports fetching goals by user
+      // For now, return empty array as the new API doesn't have a generic "get all goals" endpoint
+      return [] as Goal[];
+    },
     enabled: !!user,
   });
 
   // Create goal mutation
   const createGoalMutation = useMutation({
-    mutationFn: goalsApi.createGoal,
+    mutationFn: (goalData: {
+      title: string;
+      description: string;
+      category: string;
+    }) =>
+      questsApi.createGoal({
+        title: goalData.title,
+        description: goalData.description,
+        category: goalData.category,
+        dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0], // 1 year from now
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
     },
@@ -46,7 +62,7 @@ export default function TodayScreen() {
   // Update goal mutation
   const updateGoalMutation = useMutation({
     mutationFn: ({ goalId, data }: { goalId: string; data: any }) =>
-      goalsApi.updateGoal(goalId, data),
+      questsApi.updateGoal(goalId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
     },
@@ -146,7 +162,7 @@ export default function TodayScreen() {
   // Convert goals to quest format for display
   const goalQuests = goals.map((goal) => ({
     id: goal.goalId,
-    title: goal.title,
+    title: goal.goalName,
     time: 'Ongoing',
     icon: 'target',
     isEpic: true,
@@ -178,7 +194,7 @@ export default function TodayScreen() {
 
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Today's Quests
+              Today&apos;s Quests
             </Text>
 
             {localQuests.length === 0 && activeGoals.length === 0 ? (
@@ -209,7 +225,7 @@ export default function TodayScreen() {
                     <QuestCard
                       quest={{
                         id: goal.goalId,
-                        title: goal.title,
+                        title: goal.goalName,
                         time: 'Ongoing',
                         icon: 'target',
                         isEpic: true,
@@ -240,7 +256,7 @@ export default function TodayScreen() {
                   key={goal.goalId}
                   quest={{
                     id: goal.goalId,
-                    title: goal.title,
+                    title: goal.goalName,
                     time: 'Completed',
                     icon: 'target',
                     isEpic: true,
