@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Heart, Play, Pause, RotateCcw, Plus, Minus } from 'lucide-react-native';
+import {
+  Heart,
+  Play,
+  Pause,
+  RotateCcw,
+  Plus,
+  Minus,
+} from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 import * as Notifications from 'expo-notifications';
 
@@ -170,7 +177,7 @@ export function WellnessCard() {
               styles.adjustButton,
               {
                 borderColor: theme.colors.subtitle,
-                opacity: Math.floor(initialTime / 60) <= 1 ? 0.5 : 1
+                opacity: Math.floor(initialTime / 60) <= 1 ? 0.5 : 1,
               },
             ]}
             onPress={removeMinute}
@@ -188,7 +195,7 @@ export function WellnessCard() {
               styles.adjustButton,
               {
                 borderColor: theme.colors.subtitle,
-                opacity: Math.floor(initialTime / 60) >= 60 ? 0.5 : 1
+                opacity: Math.floor(initialTime / 60) >= 60 ? 0.5 : 1,
               },
             ]}
             onPress={addMinute}
