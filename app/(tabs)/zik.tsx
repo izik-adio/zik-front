@@ -302,23 +302,10 @@ export default function ZikScreen() {
                   timestamp: message.timestamp,
                   isStreaming: message.isStreaming,
                 }}
+                isTyping={message.isStreaming && !message.content}
               />
             </Animated.View>
           ))}
-
-          {isLoading && (
-            <Animated.View entering={FadeInUp}>
-              <ChatBubble
-                message={{
-                  id: 'thinking',
-                  text: 'Zik is thinking...',
-                  isUser: false,
-                  timestamp: new Date().toISOString(),
-                }}
-                isTyping={true}
-              />
-            </Animated.View>
-          )}
         </ScrollView>
 
         {/* Enhanced Input Container */}
