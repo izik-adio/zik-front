@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { Keyboard, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import {
   SquareCheck as CheckSquare,
@@ -9,6 +11,27 @@ import { useTheme } from '@/src/context/ThemeContext';
 
 export default function TabLayout() {
   const { theme } = useTheme();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   return (
     <Tabs
@@ -18,9 +41,10 @@ export default function TabLayout() {
           backgroundColor: theme.colors.card,
           borderTopWidth: 1,
           borderTopColor: theme.colors.border,
-          paddingBottom: 8,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 8,
           paddingTop: 8,
-          height: 80,
+          height: Platform.OS === 'ios' ? 90 : 80,
+          display: keyboardVisible ? 'none' : 'flex',
         },
         tabBarLabelStyle: {
           fontFamily: 'Inter-Medium',

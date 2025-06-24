@@ -1,6 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native';
+import Animated, {
+  FadeIn,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useTheme } from '@/src/context/ThemeContext';
-import { LogoImage } from '@/components/core/LogoImage';
+import { LogoImage } from '@/components/onboarding/LogoImage';
 
 interface ChatBubbleProps {
   message: {
@@ -16,15 +21,24 @@ export function ChatBubble({ message, isTyping = false }: ChatBubbleProps) {
   const { theme } = useTheme();
 
   return (
-    <View
+    <Animated.View
+      entering={FadeIn}
       style={[
         styles.container,
         message.isUser ? styles.userContainer : styles.zikContainer,
       ]}
     >
       {!message.isUser && (
-        <View style={styles.avatar}>
-          <LogoImage size={20} />
+        <View
+          style={[
+            styles.avatar,
+            {
+              backgroundColor: theme.colors.card,
+              borderColor: theme.colors.ctaPrimary + '20',
+            },
+          ]}
+        >
+          <LogoImage size={36} />
         </View>
       )}
 
@@ -33,7 +47,13 @@ export function ChatBubble({ message, isTyping = false }: ChatBubbleProps) {
           styles.bubble,
           message.isUser
             ? [styles.userBubble, { backgroundColor: theme.colors.primary }]
-            : [styles.zikBubble, { backgroundColor: theme.colors.card }],
+            : [
+                styles.zikBubble,
+                {
+                  backgroundColor: theme.colors.card,
+                  borderColor: theme.colors.border,
+                },
+              ],
         ]}
       >
         <Text
@@ -53,15 +73,15 @@ export function ChatBubble({ message, isTyping = false }: ChatBubbleProps) {
           )}
         </Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    marginBottom: 16,
-    paddingHorizontal: 16,
+    marginBottom: 20,
+    paddingHorizontal: 4,
   },
   userContainer: {
     justifyContent: 'flex-end',
@@ -70,40 +90,50 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 12,
     marginTop: 4,
+    borderWidth: 2,
   },
   bubble: {
     maxWidth: '80%',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: 24,
   },
   userBubble: {
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   zikBubble: {
-    borderBottomLeftRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderBottomLeftRadius: 8,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   text: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   userText: {
     color: 'white',
+    fontFamily: 'Inter-Medium',
   },
-  zikText: {},
+  zikText: {
+    fontFamily: 'Inter-Regular',
+  },
   typingText: {
     fontFamily: 'Inter-Bold',
+    fontSize: 18,
   },
 });

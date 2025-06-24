@@ -1,14 +1,20 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { LogoImage } from '@/components/core/LogoImage';
+import { useTheme } from '@/src/context/ThemeContext';
+import { LogoImage } from '@/components/onboarding/LogoImage';
 
 interface WelcomeScreenProps {
   onNext: () => void;
+  onSkip?: () => void;
 }
 
-export function WelcomeScreen({ onNext }: WelcomeScreenProps) {
+export function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
+  const { theme } = useTheme();
+
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       <Animated.View
         style={styles.header}
         entering={FadeInUp.delay(300).springify()}
@@ -16,17 +22,19 @@ export function WelcomeScreen({ onNext }: WelcomeScreenProps) {
         <View style={styles.logoContainer}>
           <LogoImage size={64} />
         </View>
-        <Text style={styles.tagline}>Your Path, Illuminated</Text>
+        <Text style={[styles.tagline, { color: theme.colors.subtitle }]}>
+          Your Path, Illuminated
+        </Text>
       </Animated.View>
 
       <Animated.View
         style={styles.content}
         entering={FadeInDown.delay(600).springify()}
       >
-        <Text style={styles.welcome}>
+        <Text style={[styles.welcome, { color: theme.colors.text }]}>
           Welcome to your journey of growth and mindfulness
         </Text>
-        <Text style={styles.description}>
+        <Text style={[styles.description, { color: theme.colors.subtitle }]}>
           Transform your daily habits into epic quests and discover the power of
           consistent progress.
         </Text>
@@ -36,9 +44,26 @@ export function WelcomeScreen({ onNext }: WelcomeScreenProps) {
         style={styles.buttonContainer}
         entering={FadeInUp.delay(900).springify()}
       >
-        <TouchableOpacity style={styles.button} onPress={onNext}>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.colors.ctaPrimary }]}
+          onPress={onNext}
+        >
           <Text style={styles.buttonText}>Get Started</Text>
         </TouchableOpacity>
+
+        {onSkip && (
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={onSkip}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[styles.skipButtonText, { color: theme.colors.subtitle }]}
+            >
+              Skip Setup
+            </Text>
+          </TouchableOpacity>
+        )}
       </Animated.View>
     </View>
   );
@@ -50,7 +75,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f8fafc',
   },
   header: {
     alignItems: 'center',
@@ -65,7 +89,6 @@ const styles = StyleSheet.create({
   tagline: {
     fontFamily: 'Inter-Medium',
     fontSize: 16,
-    color: '#64748b',
   },
   content: {
     alignItems: 'center',
@@ -74,7 +97,6 @@ const styles = StyleSheet.create({
   welcome: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 24,
-    color: '#1e293b',
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 32,
@@ -82,7 +104,6 @@ const styles = StyleSheet.create({
   description: {
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    color: '#64748b',
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 20,
@@ -91,11 +112,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   button: {
-    backgroundColor: '#f97316',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#f97316',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -105,5 +124,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     fontSize: 18,
     color: '#ffffff',
+  },
+  skipButton: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 12,
+  },
+  skipButtonText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
   },
 });

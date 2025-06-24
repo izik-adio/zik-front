@@ -133,7 +133,7 @@ export function CreateQuestModal({
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.text }]}>
               Quest Title
-            </Text>{' '}
+            </Text>
             <TextInput
               style={[
                 styles.input,
@@ -159,7 +159,7 @@ export function CreateQuestModal({
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.text }]}>
               Description
-            </Text>{' '}
+            </Text>
             <TextInput
               style={[
                 styles.input,
@@ -215,7 +215,7 @@ export function CreateQuestModal({
             <View style={styles.milestonesHeader}>
               <Text style={[styles.label, { color: theme.colors.text }]}>
                 Milestones
-              </Text>{' '}
+              </Text>
               <TouchableOpacity
                 style={[
                   styles.addButton,
@@ -228,7 +228,6 @@ export function CreateQuestModal({
             </View>
             {milestones.map((milestone, index) => (
               <View key={milestone.id} style={styles.milestoneItem}>
-                {' '}
                 <TextInput
                   style={[
                     styles.input,

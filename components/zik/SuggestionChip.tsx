@@ -1,5 +1,13 @@
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { useTheme } from '@/src/context/ThemeContext';
+
+const AnimatedTouchableOpacity =
+  Animated.createAnimatedComponent(TouchableOpacity);
 
 interface SuggestionChipProps {
   text: string;
@@ -8,37 +16,57 @@ interface SuggestionChipProps {
 
 export function SuggestionChip({ text, onPress }: SuggestionChipProps) {
   const { theme } = useTheme();
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.95);
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1);
+  };
 
   return (
-    <TouchableOpacity
+    <AnimatedTouchableOpacity
       style={[
         styles.chip,
         {
           backgroundColor: theme.colors.card,
           borderColor: theme.colors.border,
         },
+        animatedStyle,
       ]}
       onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={0.8}
     >
       <Text style={[styles.text, { color: theme.colors.text }]}>{text}</Text>
-    </TouchableOpacity>
+    </AnimatedTouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   chip: {
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderWidth: 1.5,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    marginRight: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   text: {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
+    lineHeight: 20,
   },
 });

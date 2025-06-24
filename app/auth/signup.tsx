@@ -13,7 +13,7 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react-native';
 import { storage } from '@/src/utils/storage';
-import { LogoImage } from '@/components/core/LogoImage';
+import { LogoImage } from '@/components/onboarding/LogoImage';
 
 export default function SignupScreen() {
   const { theme } = useTheme();

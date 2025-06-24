@@ -14,6 +14,7 @@ import { QueryProvider } from '@/src/context/QueryProvider';
 import { ThemeProvider } from '@/src/context/ThemeContext';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
+// Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -27,8 +28,11 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    // Don't hide splash screen here - let the App component handle it
+    // This ensures our custom splash screen shows properly
     if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
+      // Fonts are ready, but keep splash screen visible
+      // The App component will handle hiding it after showing custom splash
     }
   }, [fontsLoaded, fontError]);
 

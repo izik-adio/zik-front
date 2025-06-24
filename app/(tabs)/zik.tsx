@@ -9,11 +9,20 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
+  Dimensions,
 } from 'react-native';
-import { Send, Mic } from 'lucide-react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { Send, Mic, Sparkles } from 'lucide-react-native';
+import Animated, {
+  FadeInUp,
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  interpolateColor,
+} from 'react-native-reanimated';
 import { useTheme } from '@/src/context/ThemeContext';
-import { LogoImage } from '@/components/core/LogoImage';
+import { LogoImage } from '@/components/onboarding/LogoImage';
 import { ChatBubble } from '@/components/zik/ChatBubble';
 import { SuggestionChip } from '@/components/zik/SuggestionChip';
 
@@ -22,13 +31,23 @@ export default function ZikScreen() {
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
+
+  // Animation values
+  const sendButtonScale = useSharedValue(1);
+  const inputFocused = useSharedValue(0);
+  const onlineIndicatorScale = useSharedValue(1);
+  const logoRotation = useSharedValue(0);
 
   const suggestions = [
     'How was my day?',
     'Set a new goal',
     'I need motivation',
     'Plan tomorrow',
+    'What should I focus on?',
+    'Help me reflect',
   ];
 
   useEffect(() => {
@@ -40,10 +59,56 @@ export default function ZikScreen() {
       timestamp: new Date().toISOString(),
     };
     setMessages([initialMessage]);
+
+    // Online indicator pulse animation
+    const pulseAnimation = () => {
+      onlineIndicatorScale.value = withSpring(1.3, { duration: 1000 }, () => {
+        onlineIndicatorScale.value = withSpring(1, { duration: 1000 });
+      });
+    };
+    pulseAnimation();
+    const pulseInterval = setInterval(pulseAnimation, 2000);
+
+    // Logo gentle rotation animation
+    const logoAnimation = () => {
+      logoRotation.value = withSpring(5, { duration: 2000 }, () => {
+        logoRotation.value = withSpring(-5, { duration: 2000 }, () => {
+          logoRotation.value = withSpring(0, { duration: 2000 });
+        });
+      });
+    };
+    logoAnimation();
+    const logoInterval = setInterval(logoAnimation, 6000);
+
+    // Keyboard event listeners
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      clearInterval(pulseInterval);
+      clearInterval(logoInterval);
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
   }, []);
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
+
+    // Animate send button
+    sendButtonScale.value = withSpring(0.8, {}, () => {
+      sendButtonScale.value = withSpring(1);
+    });
 
     const userMessage = {
       id: Date.now().toString(),
@@ -56,6 +121,11 @@ export default function ZikScreen() {
     setInputText('');
     setIsTyping(true);
 
+    // Auto scroll to bottom
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
     // Simulate Zik's response
     setTimeout(() => {
       const zikResponse = generateZikResponse(text);
@@ -67,6 +137,11 @@ export default function ZikScreen() {
       };
       setMessages((prev) => [...prev, zikMessage]);
       setIsTyping(false);
+
+      // Auto scroll after response
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }, 1500);
   };
 
@@ -80,6 +155,10 @@ export default function ZikScreen() {
         "You've got this! Remember, every small step forward is progress. What's one tiny action you could take right now to move closer to your dreams?",
       'plan tomorrow':
         "Great thinking ahead! Let's make tomorrow amazing. What are 3 things you want to accomplish that will make you feel proud?",
+      'what should i focus on':
+        "Let's prioritize what matters most to you right now. What area of your life feels like it needs the most attention or growth?",
+      'help me reflect':
+        "Reflection is so powerful! Take a moment to think: What's one thing you learned about yourself recently? I'm here to explore it with you.",
       default:
         "That's really interesting! Tell me more about what's on your mind. I'm here to support your growth journey.",
     };
@@ -94,14 +173,62 @@ export default function ZikScreen() {
   };
 
   const handleSuggestionPress = (suggestion: string) => {
-    sendMessage(suggestion);
+    setInputText(suggestion);
+    inputRef.current?.focus();
   };
+
+  const handleInputFocus = () => {
+    inputFocused.value = withSpring(1);
+  };
+
+  const handleInputBlur = () => {
+    inputFocused.value = withSpring(0);
+  };
+
+  // Animated styles
+  const sendButtonAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: sendButtonScale.value }],
+      backgroundColor: inputText.trim()
+        ? theme.colors.ctaPrimary
+        : theme.colors.border,
+    };
+  });
+
+  const inputAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      borderColor: interpolateColor(
+        inputFocused.value,
+        [0, 1],
+        [theme.colors.border, theme.colors.ctaPrimary]
+      ),
+      transform: [
+        {
+          scale: withSpring(inputFocused.value === 1 ? 1.02 : 1),
+        },
+      ],
+    };
+  });
+
+  const onlineIndicatorAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: onlineIndicatorScale.value }],
+    };
+  });
+
+  const logoAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${logoRotation.value}deg` }],
+    };
+  });
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      <View
+      {/* Enhanced Header */}
+      <Animated.View
+        entering={FadeInDown}
         style={[
           styles.header,
           {
@@ -111,24 +238,46 @@ export default function ZikScreen() {
         ]}
       >
         <View style={styles.headerContent}>
-          <LogoImage size={32} />
-          <Text
-            style={[styles.headerSubtitle, { color: theme.colors.subtitle }]}
-          >
-            Your AI growth companion
-          </Text>
+          <View style={styles.logoContainer}>
+            <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
+              <LogoImage size={44} />
+            </Animated.View>
+          </View>
+          <View style={styles.headerTextContainer}>
+            <View style={styles.statusIndicator}>
+              <Animated.View
+                style={[
+                  styles.onlineIndicator,
+                  { backgroundColor: '#10B981' },
+                  onlineIndicatorAnimatedStyle,
+                ]}
+              />
+              <Text
+                style={[
+                  styles.headerSubtitle,
+                  { color: theme.colors.subtitle },
+                ]}
+              >
+                Online • Ready to help
+              </Text>
+            </View>
+          </View>
         </View>
-      </View>
+      </Animated.View>
 
       <KeyboardAvoidingView
         style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <ScrollView
           ref={scrollViewRef}
           style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
           showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd()}
+          onContentSizeChange={() =>
+            scrollViewRef.current?.scrollToEnd({ animated: true })
+          }
         >
           {messages.map((message, index) => (
             <Animated.View
@@ -154,73 +303,91 @@ export default function ZikScreen() {
           )}
         </ScrollView>
 
-        <View
+        {/* Enhanced Input Container */}
+        <Animated.View
+          entering={FadeInUp.delay(200)}
           style={[
             styles.inputContainer,
             {
               backgroundColor: theme.colors.card,
               borderTopColor: theme.colors.border,
+              paddingBottom: Platform.OS === 'ios' ? 20 : 16,
             },
           ]}
         >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.suggestionsContainer}
-          >
-            {suggestions.map((suggestion, index) => (
-              <SuggestionChip
-                key={index}
-                text={suggestion}
-                onPress={() => handleSuggestionPress(suggestion)}
-              />
-            ))}
-          </ScrollView>
+          {/* Suggestions */}
+          {messages.length <= 1 && (
+            <Animated.View entering={FadeInUp.delay(300)}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.suggestionsContainer}
+                contentContainerStyle={styles.suggestionsContent}
+              >
+                {suggestions.map((suggestion, index) => (
+                  <Animated.View
+                    key={index}
+                    entering={FadeInUp.delay(400 + index * 50)}
+                  >
+                    <SuggestionChip
+                      text={suggestion}
+                      onPress={() => handleSuggestionPress(suggestion)}
+                    />
+                  </Animated.View>
+                ))}
+              </ScrollView>
+            </Animated.View>
+          )}
 
+          {/* Input Row */}
           <View style={styles.inputRow}>
-            <TextInput
-              style={[
-                styles.textInput,
-                {
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.colors.inputBackground,
-                  color: theme.colors.text,
-                },
-              ]}
-              placeholder="Type your message..."
-              placeholderTextColor={theme.colors.subtitle}
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              maxLength={500}
-            />
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                {
-                  backgroundColor: inputText.trim()
-                    ? theme.colors.ctaPrimary
-                    : theme.colors.border,
-                },
-              ]}
-              onPress={() => sendMessage(inputText)}
-              disabled={!inputText.trim()}
-            >
-              <Send
-                size={20}
-                color={inputText.trim() ? '#ffffff' : theme.colors.subtitle}
+            <Animated.View style={[styles.inputWrapper, inputAnimatedStyle]}>
+              <TextInput
+                ref={inputRef}
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: theme.colors.inputBackground,
+                    color: theme.colors.text,
+                  },
+                ]}
+                placeholder="Type your message..."
+                placeholderTextColor={theme.colors.subtitle}
+                value={inputText}
+                onChangeText={setInputText}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
+                multiline
+                maxLength={500}
+                scrollEnabled={false}
               />
-            </TouchableOpacity>
+            </Animated.View>
+
+            <Animated.View style={[styles.sendButton, sendButtonAnimatedStyle]}>
+              <TouchableOpacity
+                style={styles.sendButtonInner}
+                onPress={() => sendMessage(inputText)}
+                disabled={!inputText.trim()}
+                activeOpacity={0.8}
+              >
+                <Send
+                  size={20}
+                  color={inputText.trim() ? '#ffffff' : theme.colors.subtitle}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+
             <TouchableOpacity
               style={[
                 styles.micButton,
                 { backgroundColor: theme.colors.inputBackground },
               ]}
+              activeOpacity={0.8}
             >
               <Mic size={20} color={theme.colors.subtitle} />
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -232,66 +399,137 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingBottom: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
+  },
+  logoContainer: {
+    position: 'relative',
+  },
+  logoWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sparkleContainer: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    padding: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',
-    fontSize: 24,
+    fontSize: 26,
+    marginBottom: 4,
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  onlineIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   headerSubtitle: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter-Medium',
     fontSize: 14,
-    marginTop: 4,
   },
   content: {
     flex: 1,
   },
   messagesContainer: {
     flex: 1,
-    padding: 16,
+  },
+  messagesContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    paddingBottom: 40,
   },
   inputContainer: {
     borderTopWidth: 1,
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 16,
+    paddingTop: 16,
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 8,
   },
   suggestionsContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
+    maxHeight: 44,
+  },
+  suggestionsContent: {
+    paddingRight: 16,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
+    gap: 12,
+  },
+  inputWrapper: {
+    flex: 1,
+    borderWidth: 2,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     fontFamily: 'Inter-Regular',
     fontSize: 16,
-    maxHeight: 100,
+    maxHeight: 120,
+    lineHeight: 22,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  sendButtonInner: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 24,
   },
   micButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });

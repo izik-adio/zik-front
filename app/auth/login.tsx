@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react-native';
-import { LogoImage } from '@/components/core/LogoImage';
+import { LogoImage } from '@/components/onboarding/LogoImage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');

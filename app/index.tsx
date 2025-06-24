@@ -1,48 +1,82 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { storage } from '@/src/utils/storage';
-import * as SplashScreen from 'expo-splash-screen';
+import { SplashScreen } from '@/components/onboarding/SplashScreen';
+import { AuthWelcomeScreen } from '@/components/onboarding/AuthWelcomeScreen';
+import * as ExpoSplashScreen from 'expo-splash-screen';
+
+// Keep splash screen visible initially
+ExpoSplashScreen.preventAutoHideAsync();
 
 export default function App() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const { theme } = useTheme();
+  const [showSplash, setShowSplash] = useState(true);
+  const [showAuthWelcome, setShowAuthWelcome] = useState(false);
+  const [isAppReady, setIsAppReady] = useState(false);
 
-  const checkOnboardingStatus = useCallback(async () => {
+  const handleSplashComplete = useCallback(() => {
+    setShowSplash(false);
+    setIsAppReady(true);
+  }, []);
+
+  const checkAppFlow = useCallback(async () => {
     try {
-      await SplashScreen.hideAsync();
+      // Hide expo splash screen
+      await ExpoSplashScreen.hideAsync();
 
-      // Check if user has completed onboarding first
+      // Check if user has completed initial setup
       const hasOnboarded = await storage.getItem('hasOnboarded');
+      const hasSeenAuthWelcome = await storage.getItem('hasSeenAuthWelcome');
 
+      // First time user - show auth welcome first
+      if (hasSeenAuthWelcome !== 'true') {
+        setShowAuthWelcome(true);
+        return;
+      }
+
+      // User has seen auth welcome, check if they completed onboarding
       if (hasOnboarded !== 'true') {
-        // First time user - show onboarding regardless of auth status
         router.replace('/onboarding');
         return;
       }
 
-      // User has completed onboarding, check auth status
+      // User completed everything, check auth status
       if (isAuthenticated) {
         router.replace('/(tabs)');
       } else {
-        router.replace('/auth/login');
+        // Return to auth welcome for login/signup
+        setShowAuthWelcome(true);
       }
-    } catch {
-      router.replace('/auth/login');
-      await SplashScreen.hideAsync();
+    } catch (error) {
+      console.error('Error in app flow:', error);
+      setShowAuthWelcome(true);
+      await ExpoSplashScreen.hideAsync();
     }
   }, [router, isAuthenticated]);
 
   useEffect(() => {
-    if (!isLoading) {
-      checkOnboardingStatus();
+    if (!isLoading && isAppReady) {
+      checkAppFlow();
     }
-  }, [isLoading, isAuthenticated, checkOnboardingStatus]);
+  }, [isLoading, isAppReady, checkAppFlow]);
 
-  if (isLoading) {
+  // Show splash screen initially
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+
+  // Show auth welcome screen
+  if (showAuthWelcome) {
+    return <AuthWelcomeScreen />;
+  }
+
+  // Show loading state while checking auth
+  if (isLoading || !isAppReady) {
     return (
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
