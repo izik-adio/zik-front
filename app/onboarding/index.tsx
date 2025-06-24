@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { storage } from '@/src/utils/storage';
 import Animated, { SlideInRight, SlideOutLeft } from 'react-native-reanimated';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useAuth } from '@/src/context/AuthContext';
 import { X } from 'lucide-react-native';
 import { WelcomeScreen } from '@/components/onboarding/WelcomeScreen';
 import { GoalsSelectionScreen } from '@/components/onboarding/GoalsSelectionScreen';
@@ -22,6 +23,7 @@ export default function OnboardingScreen() {
   });
   const router = useRouter();
   const { theme } = useTheme();
+  const { isAuthenticated } = useAuth();
   const steps = [
     { component: WelcomeScreen, key: 'welcome' },
     { component: GoalsSelectionScreen, key: 'goals' },
@@ -69,20 +71,27 @@ export default function OnboardingScreen() {
         await storage.setItem('selectedGoals', userData.selectedGoals);
       }
 
-      // Check if user is authenticated
-      const hasSeenAuthWelcome = await storage.getItem('hasSeenAuthWelcome');
-
-      if (hasSeenAuthWelcome === 'true') {
-        // User came from auth welcome, check if they're authenticated
-        // If not authenticated, go to login; if authenticated, go to main app
+      // Check if user is authenticated and redirect appropriately
+      if (isAuthenticated) {
+        // User is authenticated, go directly to main app
         setTimeout(() => {
-          router.replace('/auth/login');
+          router.replace('/(tabs)');
         }, 100);
       } else {
-        // First time flow - go to auth welcome
-        setTimeout(() => {
-          router.replace('/');
-        }, 100);
+        // User is not authenticated, check if they came from auth welcome
+        const hasSeenAuthWelcome = await storage.getItem('hasSeenAuthWelcome');
+
+        if (hasSeenAuthWelcome === 'true') {
+          // User came from auth welcome, go to login
+          setTimeout(() => {
+            router.replace('/auth/login');
+          }, 100);
+        } else {
+          // First time flow - go to auth welcome
+          setTimeout(() => {
+            router.replace('/');
+          }, 100);
+        }
       }
     } catch (error) {
       console.error('Error completing onboarding:', error);
@@ -110,10 +119,18 @@ export default function OnboardingScreen() {
       // Set default values for skipped steps
       await storage.setItem('onboardingSkipped', 'true');
 
-      // Force redirect with small delay to ensure storage completes
-      setTimeout(() => {
-        router.replace('/auth/login');
-      }, 100);
+      // Check if user is authenticated and redirect appropriately
+      if (isAuthenticated) {
+        // User is already authenticated, go directly to main app
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 100);
+      } else {
+        // User is not authenticated, go to login
+        setTimeout(() => {
+          router.replace('/auth/login');
+        }, 100);
+      }
     } catch (error) {
       console.error('Error skipping onboarding:', error);
       // Fallback redirect even if storage fails

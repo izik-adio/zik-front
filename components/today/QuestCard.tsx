@@ -1,4 +1,4 @@
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet, Alert } from 'react-native';
 import Animated, {
   useSharedValue,
   withSpring,
@@ -12,6 +12,7 @@ import {
   Heart,
   Target,
   Clock,
+  Trash2,
 } from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 
@@ -25,12 +26,14 @@ interface QuestCardProps {
   };
   completed?: boolean;
   onToggle: () => void;
+  onDelete?: () => void;
 }
 
 export function QuestCard({
   quest,
   completed = false,
   onToggle,
+  onDelete,
 }: QuestCardProps) {
   const { theme } = useTheme();
   const scale = useSharedValue(1);
@@ -44,6 +47,24 @@ export function QuestCard({
       scale.value = withSpring(1);
     });
     onToggle();
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Quest',
+      `Are you sure you want to delete "${quest.title}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => onDelete?.(),
+        },
+      ]
+    );
   };
 
   const getIcon = () => {
@@ -126,6 +147,15 @@ export function QuestCard({
               <Circle size={24} color={theme.colors.border} />
             )}
           </TouchableOpacity>
+
+          {onDelete && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+            >
+              <Trash2 size={20} color={theme.colors.error || '#ef4444'} />
+            </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -204,5 +234,9 @@ const styles = StyleSheet.create({
   },
   checkbox: {
     padding: 8,
+  },
+  deleteButton: {
+    padding: 8,
+    marginLeft: 4,
   },
 });

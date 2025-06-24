@@ -6,14 +6,13 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { Plus } from 'lucide-react-native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
-import { questsApi, Goal } from '@/src/api/quests';
-import { storage } from '@/src/utils/storage';
+import { useQuestStore, getQuestStoreActions } from '@/src/store/questStore';
 import { GreetingHeader } from '@/components/today/GreetingHeader';
 import { QuestCard } from '@/components/today/QuestCard';
 import { WellnessCard } from '@/components/today/WellnessCard';
@@ -23,161 +22,105 @@ import { EmptyStateCard } from '@/components/today/EmptyStateCard';
 export default function TodayScreen() {
   const { user } = useAuth();
   const { theme } = useTheme();
-  const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
-  const [localQuests, setLocalQuests] = useState<any[]>([]);
-  const [completedQuests, setCompletedQuests] = useState<any[]>([]);
 
-  // Fetch goals from API (Note: will need to be updated when backend supports goal queries)
-  const { data: goals = [] } = useQuery({
-    queryKey: ['goals'],
-    queryFn: async () => {
-      // TODO: Update this once backend supports fetching goals by user
-      // For now, return empty array as the new API doesn't have a generic "get all goals" endpoint
-      return [] as Goal[];
-    },
-    enabled: !!user,
-  });
+  const { dailyQuests, epicQuests, isLoading, error, lastFetch } =
+    useQuestStore();
 
-  // Create goal mutation
-  const createGoalMutation = useMutation({
-    mutationFn: (goalData: {
-      title: string;
-      description: string;
-      category: string;
-    }) =>
-      questsApi.createGoal({
-        title: goalData.title,
-        description: goalData.description,
-        category: goalData.category,
-        dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0], // 1 year from now
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['goals'] });
-    },
-  });
+  // Get actions from store
+  const actions = getQuestStoreActions();
+  const {
+    fetchTodayQuests,
+    fetchQuestsFromCache,
+    markQuestComplete,
+    createQuest,
+    deleteQuest,
+    clearError,
+  } = actions;
 
-  // Update goal mutation
-  const updateGoalMutation = useMutation({
-    mutationFn: ({ goalId, data }: { goalId: string; data: any }) =>
-      questsApi.updateGoal(goalId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['goals'] });
-    },
-  });
   useEffect(() => {
-    loadLocalQuests();
-  }, []);
+    if (user) {
+      // First, try to load from cache immediately
+      fetchQuestsFromCache();
 
-  const loadLocalQuests = async () => {
+      // Then refresh from API in the background
+      // Only fetch if data is stale (older than 5 minutes) or doesn't exist
+      const shouldRefresh =
+        !lastFetch ||
+        Date.now() - new Date(lastFetch).getTime() > 5 * 60 * 1000;
+
+      if (shouldRefresh) {
+        fetchTodayQuests();
+      }
+    }
+  }, [user, fetchTodayQuests, fetchQuestsFromCache, lastFetch]);
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Error', error);
+      clearError();
+    }
+  }, [error, clearError]);
+
+  const handleToggleQuest = async (questId: string, isEpic: boolean) => {
     try {
-      const savedQuests = await storage.getItem('dailyQuests');
-      const savedCompleted = await storage.getItem('completedQuests');
-
-      if (savedQuests && Array.isArray(savedQuests)) {
-        setLocalQuests(savedQuests);
-      }
-      // Don't set default quests for new users - they should see empty state instead
-
-      if (savedCompleted && Array.isArray(savedCompleted)) {
-        setCompletedQuests(savedCompleted);
-      }
+      await markQuestComplete(questId, isEpic ? 'goal' : 'task');
     } catch (error) {
-      console.error('Error loading quests:', error);
+      console.error('Error completing quest:', error);
     }
   };
 
-  const toggleQuest = async (questId: string) => {
-    const quest = localQuests.find((q) => q.id === questId);
-    if (!quest) return;
-
-    const newQuests = localQuests.filter((q) => q.id !== questId);
-    const newCompleted = [
-      ...completedQuests,
-      { ...quest, completedAt: new Date().toISOString() },
-    ];
-
-    setLocalQuests(newQuests);
-    setCompletedQuests(newCompleted);
-
+  const handleDeleteQuest = async (questId: string, isEpic: boolean) => {
     try {
-      await storage.setItem('dailyQuests', newQuests);
-      await storage.setItem('completedQuests', newCompleted);
+      await deleteQuest(questId, isEpic ? 'goal' : 'task');
     } catch (error) {
-      console.error('Error saving quest completion:', error);
+      console.error('Error deleting quest:', error);
+      Alert.alert('Error', 'Failed to delete quest. Please try again.');
     }
   };
 
-  const addQuest = async (title: string, time: string, isEpic: boolean) => {
-    if (isEpic && user) {
-      // Create as a goal via API
-      try {
-        await createGoalMutation.mutateAsync({
-          title,
-          description: `Epic quest: ${title}`,
-          category: 'personal',
-        });
-      } catch (error) {
-        console.error('Error creating goal:', error);
-      }
-    } else {
-      // Create as local quest
-      const newQuest = {
-        id: Date.now().toString(),
+  const handleAddQuest = async (
+    title: string,
+    time: string,
+    isEpic: boolean
+  ) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      await createQuest({
         title,
-        time,
-        icon: 'target',
-        isEpic,
-      };
-
-      const updatedQuests = [...localQuests, newQuest];
-      setLocalQuests(updatedQuests);
-
-      try {
-        await storage.setItem('dailyQuests', updatedQuests);
-      } catch (error) {
-        console.error('Error saving new quest:', error);
-      }
-    }
-  };
-
-  const toggleGoal = async (goalId: string) => {
-    const goal = goals.find((g) => g.goalId === goalId);
-    if (!goal) return;
-
-    const newStatus = goal.status === 'completed' ? 'active' : 'completed';
-
-    try {
-      await updateGoalMutation.mutateAsync({
-        goalId,
-        data: { status: newStatus },
+        type: isEpic ? 'goal' : 'task',
+        description: isEpic ? `Epic quest: ${title}` : undefined,
+        dueDate: isEpic ? undefined : today,
+        priority: 'medium',
+        category: 'personal',
       });
+
+      setShowAddModal(false);
     } catch (error) {
-      console.error('Error updating goal:', error);
+      console.error('Error creating quest:', error);
     }
   };
 
-  // Convert goals to quest format for display
-  const goalQuests = goals.map((goal) => ({
-    id: goal.goalId,
-    title: goal.goalName,
-    time: 'Ongoing',
-    icon: 'target',
-    isEpic: true,
-  }));
+  // Filter active quests - ensure arrays are defined
+  const activeDailyQuests = (dailyQuests || []).filter(
+    (quest) => quest.status !== 'completed'
+  );
+  const activeEpicQuests = (epicQuests || []).filter(
+    (quest) => quest.status !== 'completed'
+  );
+  const completedDailyQuests = (dailyQuests || []).filter(
+    (quest) => quest.status === 'completed'
+  );
+  const completedEpicQuests = (epicQuests || []).filter(
+    (quest) => quest.status === 'completed'
+  );
 
-  const allQuests = [...localQuests, ...goalQuests];
-  const activeGoals = goals.filter((g) => g.status !== 'completed');
-  const completedGoals = goals.filter((g) => g.status === 'completed');
-
+  const totalQuests = (dailyQuests?.length || 0) + (epicQuests?.length || 0);
+  const completedCount =
+    completedDailyQuests.length + completedEpicQuests.length;
   const completionRate =
-    allQuests.length + completedQuests.length + completedGoals.length > 0
-      ? ((completedQuests.length + completedGoals.length) /
-          (allQuests.length + completedQuests.length + completedGoals.length)) *
-        100
-      : 0;
+    totalQuests > 0 ? (completedCount / totalQuests) * 100 : 0;
 
   return (
     <SafeAreaView
@@ -197,40 +140,48 @@ export default function TodayScreen() {
               Today&apos;s Quests
             </Text>
 
-            {localQuests.length === 0 && activeGoals.length === 0 ? (
+            {activeDailyQuests.length === 0 && activeEpicQuests.length === 0 ? (
               <EmptyStateCard
                 type="quests"
                 onAddPress={() => setShowAddModal(true)}
               />
             ) : (
               <>
-                {localQuests.map((quest) => (
+                {activeDailyQuests.map((quest) => (
                   <Animated.View
-                    key={quest.id}
-                    entering={FadeInUp.delay(100)}
-                    exiting={FadeOutUp}
-                  >
-                    <QuestCard
-                      quest={quest}
-                      onToggle={() => toggleQuest(quest.id)}
-                    />
-                  </Animated.View>
-                ))}
-                {activeGoals.map((goal) => (
-                  <Animated.View
-                    key={goal.goalId}
+                    key={quest.questId}
                     entering={FadeInUp.delay(100)}
                     exiting={FadeOutUp}
                   >
                     <QuestCard
                       quest={{
-                        id: goal.goalId,
-                        title: goal.goalName,
+                        id: quest.questId,
+                        title: quest.title,
+                        time: quest.dueDate,
+                        icon: 'target',
+                        isEpic: false,
+                      }}
+                      onToggle={() => handleToggleQuest(quest.questId, false)}
+                      onDelete={() => handleDeleteQuest(quest.questId, false)}
+                    />
+                  </Animated.View>
+                ))}
+                {activeEpicQuests.map((quest) => (
+                  <Animated.View
+                    key={quest.questId}
+                    entering={FadeInUp.delay(100)}
+                    exiting={FadeOutUp}
+                  >
+                    <QuestCard
+                      quest={{
+                        id: quest.questId,
+                        title: quest.title,
                         time: 'Ongoing',
                         icon: 'target',
                         isEpic: true,
                       }}
-                      onToggle={() => toggleGoal(goal.goalId)}
+                      onToggle={() => handleToggleQuest(quest.questId, true)}
+                      onDelete={() => handleDeleteQuest(quest.questId, true)}
                     />
                   </Animated.View>
                 ))}
@@ -238,25 +189,32 @@ export default function TodayScreen() {
             )}
           </View>
 
-          {(completedQuests.length > 0 || completedGoals.length > 0) && (
+          {(completedDailyQuests.length > 0 ||
+            completedEpicQuests.length > 0) && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
                 Completed
               </Text>
-              {completedQuests.map((quest) => (
+              {completedDailyQuests.map((quest) => (
                 <QuestCard
-                  key={quest.id}
-                  quest={quest}
+                  key={`completed-daily-${quest.questId}`}
+                  quest={{
+                    id: quest.questId,
+                    title: quest.title,
+                    time: quest.dueDate,
+                    icon: 'target',
+                    isEpic: false,
+                  }}
                   completed={true}
                   onToggle={() => {}}
                 />
               ))}
-              {completedGoals.map((goal) => (
+              {completedEpicQuests.map((quest) => (
                 <QuestCard
-                  key={goal.goalId}
+                  key={`completed-epic-${quest.questId}`}
                   quest={{
-                    id: goal.goalId,
-                    title: goal.goalName,
+                    id: quest.questId,
+                    title: quest.title,
                     time: 'Completed',
                     icon: 'target',
                     isEpic: true,
@@ -281,7 +239,7 @@ export default function TodayScreen() {
       <AddTaskModal
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onAdd={addQuest}
+        onAdd={handleAddQuest}
       />
     </SafeAreaView>
   );

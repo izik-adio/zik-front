@@ -10,9 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
-  Dimensions,
+  Alert,
 } from 'react-native';
-import { Send, Mic, Sparkles } from 'lucide-react-native';
+import { Send, Mic, CheckCircle } from 'lucide-react-native';
 import Animated, {
   FadeInUp,
   FadeInDown,
@@ -22,24 +22,35 @@ import Animated, {
   interpolateColor,
 } from 'react-native-reanimated';
 import { useTheme } from '@/src/context/ThemeContext';
+import { useChatStore } from '@/src/store/chatStore';
 import { LogoImage } from '@/components/onboarding/LogoImage';
 import { ChatBubble } from '@/components/zik/ChatBubble';
 import { SuggestionChip } from '@/components/zik/SuggestionChip';
 
 export default function ZikScreen() {
   const { theme } = useTheme();
-  const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [showQuestCreatedToast, setShowQuestCreatedToast] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
+
+  const {
+    messages,
+    isLoading,
+    isStreaming,
+    isRefreshingQuests,
+    error,
+    sendMessage,
+    clearError,
+  } = useChatStore();
 
   // Animation values
   const sendButtonScale = useSharedValue(1);
   const inputFocused = useSharedValue(0);
   const onlineIndicatorScale = useSharedValue(1);
   const logoRotation = useSharedValue(0);
+  const toastOpacity = useSharedValue(0);
+  const toastTranslateY = useSharedValue(-50);
 
   const suggestions = [
     'How was my day?',
@@ -51,15 +62,41 @@ export default function ZikScreen() {
   ];
 
   useEffect(() => {
-    // Initial greeting
-    const initialMessage = {
-      id: '1',
-      text: "Hi! I'm Zik, your personal growth companion. How are you feeling today?",
-      isUser: false,
-      timestamp: new Date().toISOString(),
-    };
-    setMessages([initialMessage]);
+    // Add initial greeting if no messages exist
+    if (messages.length === 0) {
+      // This will be handled by the chat store initialization
+    }
 
+    // Handle errors
+    if (error) {
+      Alert.alert('Error', error);
+      clearError();
+    }
+  }, [messages, error, clearError]); // Show toast when quest refresh completes
+  useEffect(() => {
+    let previousRefreshing = false;
+
+    const unsubscribe = useChatStore.subscribe((state) => {
+      if (previousRefreshing && !state.isRefreshingQuests) {
+        // Quest refresh just completed, show success toast
+        setShowQuestCreatedToast(true);
+        toastOpacity.value = withSpring(1);
+        toastTranslateY.value = withSpring(0);
+
+        // Hide toast after 3 seconds
+        setTimeout(() => {
+          toastOpacity.value = withSpring(0);
+          toastTranslateY.value = withSpring(-50);
+          setTimeout(() => setShowQuestCreatedToast(false), 300);
+        }, 3000);
+      }
+      previousRefreshing = state.isRefreshingQuests;
+    });
+
+    return unsubscribe;
+  }, [toastOpacity, toastTranslateY]);
+
+  useEffect(() => {
     // Online indicator pulse animation
     const pulseAnimation = () => {
       onlineIndicatorScale.value = withSpring(1.3, { duration: 1000 }, () => {
@@ -83,14 +120,14 @@ export default function ZikScreen() {
     // Keyboard event listeners
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
+      () => {
+        // Keyboard shown - could add additional logic here if needed
       }
     );
     const keyboardDidHideListener = Keyboard.addListener(
       'keyboardDidHide',
       () => {
-        setKeyboardHeight(0);
+        // Keyboard hidden - could add additional logic here if needed
       }
     );
 
@@ -100,76 +137,34 @@ export default function ZikScreen() {
       keyboardDidShowListener.remove();
       keyboardDidHideListener.remove();
     };
-  }, []);
+  }, [onlineIndicatorScale, logoRotation]);
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim()) return;
+  // Auto-scroll when new messages arrive or when streaming
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages.length, isStreaming]);
+
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim() || isLoading || isStreaming) {
+      return;
+    }
 
     // Animate send button
     sendButtonScale.value = withSpring(0.8, {}, () => {
       sendButtonScale.value = withSpring(1);
     });
 
-    const userMessage = {
-      id: Date.now().toString(),
-      text: text.trim(),
-      isUser: true,
-      timestamp: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
     setInputText('');
-    setIsTyping(true);
 
-    // Auto scroll to bottom
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-
-    // Simulate Zik's response
-    setTimeout(() => {
-      const zikResponse = generateZikResponse(text);
-      const zikMessage = {
-        id: (Date.now() + 1).toString(),
-        text: zikResponse,
-        isUser: false,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, zikMessage]);
-      setIsTyping(false);
-
-      // Auto scroll after response
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }, 1500);
-  };
-
-  const generateZikResponse = (userText: string): string => {
-    const responses = {
-      'how was my day':
-        "It sounds like you've had quite a journey today! What was the highlight that made you feel most accomplished?",
-      'set a new goal':
-        'I love your ambition! What area of your life would you like to focus on growing? Personal wellness, career, relationships, or something else?',
-      'i need motivation':
-        "You've got this! Remember, every small step forward is progress. What's one tiny action you could take right now to move closer to your dreams?",
-      'plan tomorrow':
-        "Great thinking ahead! Let's make tomorrow amazing. What are 3 things you want to accomplish that will make you feel proud?",
-      'what should i focus on':
-        "Let's prioritize what matters most to you right now. What area of your life feels like it needs the most attention or growth?",
-      'help me reflect':
-        "Reflection is so powerful! Take a moment to think: What's one thing you learned about yourself recently? I'm here to explore it with you.",
-      default:
-        "That's really interesting! Tell me more about what's on your mind. I'm here to support your growth journey.",
-    };
-
-    const lowerText = userText.toLowerCase();
-    for (const [key, response] of Object.entries(responses)) {
-      if (lowerText.includes(key)) {
-        return response;
-      }
+    try {
+      await sendMessage(text.trim());
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
-    return responses.default;
   };
 
   const handleSuggestionPress = (suggestion: string) => {
@@ -187,11 +182,13 @@ export default function ZikScreen() {
 
   // Animated styles
   const sendButtonAnimatedStyle = useAnimatedStyle(() => {
+    const isDisabled = !inputText.trim() || isLoading || isStreaming;
     return {
       transform: [{ scale: sendButtonScale.value }],
-      backgroundColor: inputText.trim()
-        ? theme.colors.ctaPrimary
-        : theme.colors.border,
+      backgroundColor: isDisabled
+        ? theme.colors.border
+        : theme.colors.ctaPrimary,
+      opacity: isDisabled ? 0.6 : 1,
     };
   });
 
@@ -219,6 +216,13 @@ export default function ZikScreen() {
   const logoAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ rotate: `${logoRotation.value}deg` }],
+    };
+  });
+
+  const toastAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: toastOpacity.value,
+      transform: [{ translateY: toastTranslateY.value }],
     };
   });
 
@@ -258,7 +262,13 @@ export default function ZikScreen() {
                   { color: theme.colors.subtitle },
                 ]}
               >
-                Online • Ready to help
+                {isRefreshingQuests
+                  ? 'Updating quests...'
+                  : isStreaming
+                  ? 'Typing...'
+                  : isLoading
+                  ? 'Thinking...'
+                  : 'Online • Ready to help'}
               </Text>
             </View>
           </View>
@@ -284,15 +294,23 @@ export default function ZikScreen() {
               key={message.id}
               entering={FadeInUp.delay(index * 100)}
             >
-              <ChatBubble message={message} />
+              <ChatBubble
+                message={{
+                  id: message.id,
+                  text: message.content,
+                  isUser: message.sender === 'user',
+                  timestamp: message.timestamp,
+                  isStreaming: message.isStreaming,
+                }}
+              />
             </Animated.View>
           ))}
 
-          {isTyping && (
+          {isLoading && (
             <Animated.View entering={FadeInUp}>
               <ChatBubble
                 message={{
-                  id: 'typing',
+                  id: 'thinking',
                   text: 'Zik is thinking...',
                   isUser: false,
                   timestamp: new Date().toISOString(),
@@ -366,13 +384,17 @@ export default function ZikScreen() {
             <Animated.View style={[styles.sendButton, sendButtonAnimatedStyle]}>
               <TouchableOpacity
                 style={styles.sendButtonInner}
-                onPress={() => sendMessage(inputText)}
-                disabled={!inputText.trim()}
+                onPress={() => handleSendMessage(inputText)}
+                disabled={!inputText.trim() || isLoading || isStreaming}
                 activeOpacity={0.8}
               >
                 <Send
                   size={20}
-                  color={inputText.trim() ? '#ffffff' : theme.colors.subtitle}
+                  color={
+                    inputText.trim() && !isLoading && !isStreaming
+                      ? '#ffffff'
+                      : theme.colors.subtitle
+                  }
                 />
               </TouchableOpacity>
             </Animated.View>
@@ -389,6 +411,25 @@ export default function ZikScreen() {
           </View>
         </Animated.View>
       </KeyboardAvoidingView>
+
+      {/* Success Toast */}
+      {showQuestCreatedToast && (
+        <Animated.View
+          style={[
+            styles.toastContainer,
+            {
+              backgroundColor: theme.colors.card,
+              borderColor: '#10B981',
+            },
+            toastAnimatedStyle,
+          ]}
+        >
+          <CheckCircle size={20} color="#10B981" />
+          <Text style={[styles.toastText, { color: theme.colors.text }]}>
+            Quests updated successfully!
+          </Text>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -531,5 +572,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  toastContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 1000,
+  },
+  toastText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    flex: 1,
   },
 });

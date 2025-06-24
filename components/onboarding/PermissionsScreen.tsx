@@ -161,7 +161,7 @@ export function PermissionsScreen({ onNext }: PermissionsScreenProps) {
             >
               <Sparkles size={20} color="#ffffff" style={styles.buttonIcon} />
               <Text style={styles.continueButtonText}>
-                Let's Begin Your Journey!
+                Let&apos;s Begin Your Journey!
               </Text>
             </TouchableOpacity>
           </Animated.View>

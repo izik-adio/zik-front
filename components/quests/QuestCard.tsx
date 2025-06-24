@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CheckCircle, Circle, Trophy } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { CheckCircle, Circle, Trophy, Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 
 interface QuestCardProps {
@@ -17,14 +17,34 @@ interface QuestCardProps {
   };
   completed?: boolean;
   onMilestoneToggle: (milestoneId: string) => void;
+  onDelete?: () => void;
 }
 
 export function QuestCard({
   quest,
   completed = false,
   onMilestoneToggle,
+  onDelete,
 }: QuestCardProps) {
   const { theme } = useTheme();
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Quest',
+      `Are you sure you want to delete "${quest.title}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => onDelete?.(),
+        },
+      ]
+    );
+  };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -71,20 +91,30 @@ export function QuestCard({
             />
           )}
         </View>
-        <View
-          style={[
-            styles.categoryBadge,
-            { backgroundColor: getCategoryColor(quest.category) + '20' },
-          ]}
-        >
-          <Text
+        <View style={styles.headerActions}>
+          <View
             style={[
-              styles.categoryText,
-              { color: getCategoryColor(quest.category) },
+              styles.categoryBadge,
+              { backgroundColor: getCategoryColor(quest.category) + '20' },
             ]}
           >
-            {quest.category}
-          </Text>
+            <Text
+              style={[
+                styles.categoryText,
+                { color: getCategoryColor(quest.category) },
+              ]}
+            >
+              {quest.category}
+            </Text>
+          </View>
+          {onDelete && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+            >
+              <Trash2 size={18} color={theme.colors.error || '#ef4444'} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -117,7 +147,7 @@ export function QuestCard({
       </View>
 
       <View style={styles.milestones}>
-        {quest.milestones.map((milestone) => (
+        {(quest.milestones || []).map((milestone) => (
           <TouchableOpacity
             key={milestone.id}
             style={styles.milestone}
@@ -181,6 +211,11 @@ const styles = StyleSheet.create({
   trophy: {
     marginLeft: 4,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   categoryBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -190,6 +225,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 12,
     textTransform: 'capitalize',
+  },
+  deleteButton: {
+    padding: 4,
   },
   description: {
     fontFamily: 'Inter-Regular',

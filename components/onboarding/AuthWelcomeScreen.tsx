@@ -118,7 +118,7 @@ export function AuthWelcomeScreen() {
                 Sign in to your account
               </Text>
             </View>
-          </TouchableOpacity>{' '}
+          </TouchableOpacity>
         </Animated.View>
       </Animated.View>
 

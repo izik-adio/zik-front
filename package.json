@@ -36,6 +36,7 @@
     "expo-status-bar": "~2.2.3",
     "expo-symbols": "~0.4.5",
     "expo-system-ui": "~5.0.9",
+    "expo-updates": "~0.28.15",
     "expo-web-browser": "~14.2.0",
     "jwt-decode": "^4.0.0",
     "lucide-react-native": "^0.475.0",
@@ -51,7 +52,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
-    "expo-updates": "~0.28.15"
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
