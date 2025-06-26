@@ -160,22 +160,22 @@ const retryRequest = async <T>(
 };
 
 /**
- * Main API client for Quest operations
+ * Main API client for Task operations
  */
-export const questsApi = {
+export const tasksApi = {
   /**
    * Fetch tasks for a specific date
    * @param date - Date in YYYY-MM-DD format
    * @returns Promise<Task[]>
    */
   async fetchTasksByDate(date: string): Promise<Task[]> {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)) {
       throw new ApiError(400, 'Date must be in YYYY-MM-DD format');
     }
 
     return retryRequest(async () => {
       try {
-        const response = await api.get(`/quests?date=${date}`);
+        const response = await api.get(`/tasks`, { params: { date } });
         return response.data as Task[];
       } catch (error: any) {
         if (error.response?.status === 401) {
@@ -196,19 +196,19 @@ export const questsApi = {
   },
 
   /**
-   * Create a new task or goal
-   * @param questData - Task or Goal creation data
-   * @returns Promise<Task | Goal>
+   * Create a new task
+   * @param taskData - Task creation data
+   * @returns Promise<Task>
    */
-  async createQuest(questData: CreateQuestData): Promise<Quest> {
+  async createTask(taskData: Omit<CreateTaskData, 'type'>): Promise<Task> {
     // Validate required fields
-    if (!questData.title?.trim()) {
+    if (!taskData.title?.trim()) {
       throw new ApiError(400, 'Title is required');
     }
-    if (!questData.dueDate) {
+    if (!taskData.dueDate) {
       throw new ApiError(400, 'Due date is required');
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(questData.dueDate)) {
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(taskData.dueDate)) {
       throw new ApiError(400, 'Due date must be in YYYY-MM-DD format');
     }
 
@@ -216,28 +216,15 @@ export const questsApi = {
       try {
         // Transform the data to match backend expectations
         const payload = {
-          title: questData.title.trim(),
-          dueDate: questData.dueDate,
-          type: questData.type,
-          description: questData.description || '',
-          priority: questData.priority || 'medium',
-          category: questData.category || 'general',
-          ...(questData.type === 'task' &&
-          'goalId' in questData &&
-          questData.goalId
-            ? { goalId: questData.goalId }
-            : {}),
+          taskName: taskData.title.trim(),
+          dueDate: taskData.dueDate,
+          description: taskData.description || '',
+          priority: taskData.priority || 'medium',
+          goalId: taskData.goalId,
         };
 
-        const response = await api.post('/quests', payload);
-
-        // Add client-side timestamps for immediate UI feedback
-        const now = new Date().toISOString();
-        return {
-          ...response.data,
-          createdAt: response.data.createdAt || now,
-          updatedAt: response.data.updatedAt || now,
-        } as Quest;
+        const response = await api.post('/tasks', payload);
+        return response.data as Task;
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
@@ -246,7 +233,7 @@ export const questsApi = {
         const message =
           error.response?.data?.message ||
           error.message ||
-          'Failed to create quest';
+          'Failed to create task';
         throw new ApiError(
           error.response?.status || 500,
           message,
@@ -257,185 +244,225 @@ export const questsApi = {
   },
 
   /**
-   * Update a task or goal
-   * @param questId - The ID of the quest to update
-   * @param type - Whether it's a 'task' or 'goal'
+   * Update a task
+   * @param taskId - The ID of the task to update
    * @param updateData - Partial update data
-   * @returns Promise<Task | Goal>
-   */
-  async updateQuest(
-    questId: string,
-    type: 'task' | 'goal',
-    updateData: UpdateQuestData
-  ): Promise<Quest> {
-    if (!questId?.trim()) {
-      throw new ApiError(400, 'Quest ID is required');
-    }
-    if (!type || !['task', 'goal'].includes(type)) {
-      throw new ApiError(400, 'Type must be either "task" or "goal"');
-    }
-
-    return retryRequest(async () => {
-      try {
-        const response = await api.put(
-          `/quests/${questId}?type=${type}`,
-          updateData
-        );
-
-        // Add client-side updated timestamp for immediate UI feedback
-        return {
-          ...response.data,
-          updatedAt: response.data.updatedAt || new Date().toISOString(),
-        } as Quest;
-      } catch (error: any) {
-        if (error.response?.status === 401) {
-          await handleUnauthorized();
-        }
-        if (error.response?.status === 404) {
-          throw new ApiError(
-            404,
-            `${type.charAt(0).toUpperCase() + type.slice(1)} not found`
-          );
-        }
-
-        const message =
-          error.response?.data?.message ||
-          error.message ||
-          `Failed to update ${type}`;
-        throw new ApiError(
-          error.response?.status || 500,
-          message,
-          error.response?.data
-        );
-      }
-    });
-  },
-
-  /**
-   * Delete a task or goal
-   * @param questId - The ID of the quest to delete
-   * @param type - Whether it's a 'task' or 'goal'
-   * @returns Promise<void>
-   */
-  async deleteQuest(questId: string, type: 'task' | 'goal'): Promise<void> {
-    if (!questId?.trim()) {
-      throw new ApiError(400, 'Quest ID is required');
-    }
-    if (!type || !['task', 'goal'].includes(type)) {
-      throw new ApiError(400, 'Type must be either "task" or "goal"');
-    }
-
-    return retryRequest(async () => {
-      try {
-        await api.delete(`/quests/${questId}?type=${type}`);
-      } catch (error: any) {
-        if (error.response?.status === 401) {
-          await handleUnauthorized();
-        }
-        if (error.response?.status === 404) {
-          throw new ApiError(
-            404,
-            `${type.charAt(0).toUpperCase() + type.slice(1)} not found`
-          );
-        }
-
-        const message =
-          error.response?.data?.message ||
-          error.message ||
-          `Failed to delete ${type}`;
-        throw new ApiError(
-          error.response?.status || 500,
-          message,
-          error.response?.data
-        );
-      }
-    });
-  },
-
-  /**
-   * Convenience method to fetch today's tasks
-   * @returns Promise<Task[]>
-   */
-  async fetchTodayTasks(): Promise<Task[]> {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    return this.fetchTasksByDate(today);
-  },
-
-  /**
-   * Convenience method to create a task
-   * @param taskData - Task creation data
    * @returns Promise<Task>
    */
-  async createTask(taskData: Omit<CreateTaskData, 'type'>): Promise<Task> {
-    return this.createQuest({ ...taskData, type: 'task' }) as Promise<Task>;
+  async updateTask(taskId: string, updateData: UpdateTaskData): Promise<Task> {
+    if (!taskId?.trim()) {
+      throw new ApiError(400, 'Task ID is required');
+    }
+
+    return retryRequest(async () => {
+      try {
+        const response = await api.put(`/tasks/${taskId}`, updateData);
+        return response.data as Task;
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+        if (error.response?.status === 404) {
+          throw new ApiError(404, 'Task not found');
+        }
+
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to update task';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
   },
 
   /**
-   * Convenience method to create a goal
+   * Delete a task
+   * @param taskId - The ID of the task to delete
+   * @returns Promise<void>
+   */
+  async deleteTask(taskId: string): Promise<void> {
+    if (!taskId?.trim()) {
+      throw new ApiError(400, 'Task ID is required');
+    }
+
+    return retryRequest(async () => {
+      try {
+        await api.delete(`/tasks/${taskId}`);
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+        if (error.response?.status === 404) {
+          throw new ApiError(404, 'Task not found');
+        }
+
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to delete task';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
+  },
+};
+
+/**
+ * Main API client for Goal operations
+ */
+export const goalsApi = {
+  /**
+   * Fetch all goals for the authenticated user
+   * @returns Promise<Goal[]>
+   */
+  async fetchGoals(): Promise<Goal[]> {
+    return retryRequest(async () => {
+      try {
+        const response = await api.get('/goals');
+        return response.data.goals as Goal[];
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to fetch goals';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
+  },
+
+  /**
+   * Create a new goal
    * @param goalData - Goal creation data
    * @returns Promise<Goal>
    */
   async createGoal(goalData: Omit<CreateGoalData, 'type'>): Promise<Goal> {
-    return this.createQuest({ ...goalData, type: 'goal' }) as Promise<Goal>;
+    // Validate required fields
+    if (!goalData.title?.trim()) {
+      throw new ApiError(400, 'Title is required');
+    }
+    if (!goalData.dueDate) {
+      throw new ApiError(400, 'Target date is required');
+    }
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(goalData.dueDate)) {
+      throw new ApiError(400, 'Target date must be in YYYY-MM-DD format');
+    }
+
+    return retryRequest(async () => {
+      try {
+        // Transform the data to match backend expectations
+        const payload = {
+          goalName: goalData.title.trim(),
+          targetDate: goalData.dueDate,
+          description: goalData.description || '',
+          category: goalData.category || 'general',
+        };
+
+        const response = await api.post('/goals', payload);
+        return response.data as Goal;
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to create goal';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
   },
 
   /**
-   * Convenience method to update a task
-   * @param taskId - The task ID
-   * @param updateData - Task update data
-   * @returns Promise<Task>
-   */
-  async updateTask(taskId: string, updateData: UpdateTaskData): Promise<Task> {
-    return this.updateQuest(taskId, 'task', updateData) as Promise<Task>;
-  },
-
-  /**
-   * Convenience method to update a goal
-   * @param goalId - The goal ID
-   * @param updateData - Goal update data
+   * Update a goal
+   * @param goalId - The ID of the goal to update
+   * @param updateData - Partial update data
    * @returns Promise<Goal>
    */
   async updateGoal(goalId: string, updateData: UpdateGoalData): Promise<Goal> {
-    return this.updateQuest(goalId, 'goal', updateData) as Promise<Goal>;
+    if (!goalId?.trim()) {
+      throw new ApiError(400, 'Goal ID is required');
+    }
+
+    return retryRequest(async () => {
+      try {
+        const response = await api.put(`/goals/${goalId}`, updateData);
+        return response.data as Goal;
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+        if (error.response?.status === 404) {
+          throw new ApiError(404, 'Goal not found');
+        }
+
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to update goal';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
   },
 
   /**
-   * Convenience method to delete a task
-   * @param taskId - The task ID
-   * @returns Promise<void>
-   */
-  async deleteTask(taskId: string): Promise<void> {
-    return this.deleteQuest(taskId, 'task');
-  },
-
-  /**
-   * Convenience method to delete a goal
-   * @param goalId - The goal ID
+   * Delete a goal
+   * @param goalId - The ID of the goal to delete
    * @returns Promise<void>
    */
   async deleteGoal(goalId: string): Promise<void> {
-    return this.deleteQuest(goalId, 'goal');
-  },
+    if (!goalId?.trim()) {
+      throw new ApiError(400, 'Goal ID is required');
+    }
 
-  /**
-   * Convenience method to complete a task
-   * @param taskId - The task ID
-   * @returns Promise<Task>
-   */
-  async completeTask(taskId: string): Promise<Task> {
-    return this.updateTask(taskId, { status: 'completed' });
-  },
+    return retryRequest(async () => {
+      try {
+        await api.delete(`/goals/${goalId}`);
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+        if (error.response?.status === 404) {
+          throw new ApiError(404, 'Goal not found');
+        }
 
-  /**
-   * Convenience method to complete a goal
-   * @param goalId - The goal ID
-   * @returns Promise<Goal>
-   */
-  async completeGoal(goalId: string): Promise<Goal> {
-    return this.updateGoal(goalId, { status: 'completed' });
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to delete goal';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
   },
 };
 
 // Export the API base URL for external use
 export const API_BASE =
-  'https://dxc20i9fqg.execute-api.us-east-1.amazonaws.com';
+  'https://h5k4oat3hi.execute-api.us-east-1.amazonaws.com';

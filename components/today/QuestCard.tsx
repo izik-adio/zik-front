@@ -15,15 +15,10 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
+import { Task } from '@/src/api/quests';
 
 interface QuestCardProps {
-  quest: {
-    id: string;
-    title: string;
-    time: string;
-    icon: string;
-    isEpic: boolean;
-  };
+  quest: Task;
   completed?: boolean;
   onToggle: () => void;
   onDelete?: () => void;
@@ -51,8 +46,8 @@ export function QuestCard({
 
   const handleDelete = () => {
     Alert.alert(
-      'Delete Quest',
-      `Are you sure you want to delete "${quest.title}"?`,
+      'Delete Task',
+      `Are you sure you want to delete "${quest.taskName}"?`,
       [
         {
           text: 'Cancel',
@@ -72,15 +67,14 @@ export function QuestCard({
       size: 24,
       color: completed ? theme.colors.subtitle : theme.colors.primary,
     };
-    switch (quest.icon) {
-      case 'brain':
-        return <Brain {...iconProps} />;
-      case 'droplets':
-        return <Droplets {...iconProps} />;
-      case 'heart':
-        return <Heart {...iconProps} />;
-      case 'target':
+    // Use priority or category for icon selection
+    switch (quest.priority) {
+      case 'high':
         return <Target {...iconProps} />;
+      case 'medium':
+        return <Brain {...iconProps} />;
+      case 'low':
+        return <Heart {...iconProps} />;
       default:
         return <Target {...iconProps} />;
     }
@@ -114,29 +108,16 @@ export function QuestCard({
                 ],
               ]}
             >
-              {quest.title}
+              {quest.taskName}
             </Text>
             <View style={styles.details}>
               <View style={styles.timeContainer}>
                 <Clock size={14} color={theme.colors.subtitle} />
                 <Text style={[styles.time, { color: theme.colors.subtitle }]}>
-                  {quest.time}
+                  {quest.dueDate}
                 </Text>
               </View>
-              {quest.isEpic && (
-                <View
-                  style={[
-                    styles.epicBadge,
-                    { backgroundColor: theme.colors.accent + '20' },
-                  ]}
-                >
-                  <Text
-                    style={[styles.epicText, { color: theme.colors.accent }]}
-                  >
-                    Epic Quest
-                  </Text>
-                </View>
-              )}
+              {/* Remove isEpic badge, not in new Task type */}
             </View>
           </View>
 

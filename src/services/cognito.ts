@@ -32,8 +32,8 @@ class CognitoService {
 
     this.config = {
       region: process.env.EXPO_PUBLIC_AWS_REGION || 'us-east-1',
-      userPoolId: process.env.EXPO_PUBLIC_USER_POOL_ID || '',
-      clientId: process.env.EXPO_PUBLIC_CLIENT_ID || '',
+      userPoolId: process.env.EXPO_PUBLIC_USER_POOL_ID || 'us-east-1_O2rQF4dnw',
+      clientId: process.env.EXPO_PUBLIC_CLIENT_ID || '5h8ivvlrv2odgou8ultdbims5j',
     };
 
     // Initialize AWS for all platforms except when in dev mode

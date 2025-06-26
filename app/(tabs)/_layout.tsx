@@ -76,7 +76,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="quests"
         options={{
-          title: 'Quests',
+          title: 'Goals', // Changed from 'Quests'
           tabBarIcon: ({ size, color }) => (
             <Mountain size={size} color={color} />
           ),

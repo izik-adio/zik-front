@@ -1,6 +1,8 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { storage } from '../utils/storage';
 import { AuthTokens } from '../services/cognito';
+import { isTokenExpired } from '../utils/jwt';
+import { cognitoService } from './cognito';
 import {
   EpicQuest,
   DailyQuest,
@@ -22,7 +24,7 @@ class ApiService {
     this.baseURL = isDevMode
       ? 'http://localhost:3000'
       : process.env.EXPO_PUBLIC_API_URL ||
-        'https://dxc20i9fqg.execute-api.us-east-1.amazonaws.com/';
+        'https://h5k4oat3hi.execute-api.us-east-1.amazonaws.com/';
 
     this.api = axios.create({
       baseURL: this.baseURL,
@@ -88,101 +90,70 @@ class ApiService {
   }
 
   /**
-   * Fetch all quests for the authenticated user
-   * @param date Optional date filter for Daily Quests (YYYY-MM-DD)
-   */ async getQuests(date?: string): Promise<GetQuestsResponse> {
+   * Fetch all tasks and goals for the authenticated user (for dashboard)
+   * @param date Optional date filter for Daily Tasks (YYYY-MM-DD)
+   */
+  async getDashboard(date?: string): Promise<GetQuestsResponse> {
     try {
-      const params = date ? { date } : {};
-
-      // Check auth token
+      // Proactive token expiry check and refresh
       const tokens = await storage.getItem<AuthTokens>('authTokens');
-
+      if (
+        tokens?.AccessToken &&
+        isTokenExpired(tokens.AccessToken) &&
+        tokens.RefreshToken
+      ) {
+        try {
+          const { tokens: newTokens, user } =
+            await cognitoService.refreshTokens(tokens.RefreshToken);
+          await storage.setItem('authTokens', newTokens);
+          await storage.setItem('userData', user);
+        } catch (refreshError) {
+          await storage.clear();
+          throw new Error('Session expired. Please log in again.');
+        }
+      }
       // Fetch tasks
-      const response: AxiosResponse<any> = await this.api.get('/quests', {
+      const params = date ? { date } : {};
+      const tasksResponse: AxiosResponse<any> = await this.api.get('/tasks', {
         params,
       });
-
-      // Try to fetch goals/epic quests separately
-      let goalsData: GetGoalsResponse['goals'] = [];
+      // Fetch goals
+      let goalsData: EpicQuest[] = [];
       try {
-        const goalsResponse: AxiosResponse<GetGoalsResponse> =
-          await this.api.get('/goals');
-
-        // Handle the new backend response format
-        if (goalsResponse.data && goalsResponse.data.goals) {
-          goalsData = goalsResponse.data.goals;
-        } else {
-          goalsData = [];
+        const goalsResponse: AxiosResponse<any> = await this.api.get('/goals');
+        if (Array.isArray(goalsResponse.data)) {
+          goalsData = goalsResponse.data.map((goal: any) => ({
+            questId: goal.goalId,
+            userId: goal.userId,
+            title: goal.goalName,
+            description: goal.description || '',
+            category: goal.category || 'general',
+            status: goal.status,
+            targetDate: goal.targetDate,
+            createdAt: goal.createdAt,
+            updatedAt: goal.updatedAt,
+          }));
         }
       } catch (goalsError) {
         console.warn('Could not fetch goals:', goalsError);
-        // Continue without goals - they'll be empty
-      } // Transform the response to match our expected format
-      let transformedResponse: GetQuestsResponse;
-      if (response.data.tasks) {
-        // API returns { date, tasks } format - transform to our expected format
-        const tasks = response.data.tasks; // Convert goals data to epic quests using the new backend format
-        const epicQuests: EpicQuest[] = goalsData.map((goal) => ({
-          questId: goal.goalId,
-          userId: goal.userId,
-          title: goal.goalName,
-          description: goal.description || '',
-          category: goal.category || 'general',
-          status:
-            goal.status === 'completed'
-              ? 'completed'
-              : goal.status === 'paused'
-              ? 'paused'
-              : 'active',
-          targetDate: goal.targetDate,
-          createdAt: goal.createdAt,
-          updatedAt: goal.updatedAt,
-        }));
-
-        // Separate tasks into daily quests
-        const dailyQuests: DailyQuest[] = [];
-
-        tasks.forEach((task: any) => {
-          const dailyQuest: DailyQuest = {
-            questId: task.taskId,
-            userId: task.userId,
-            title: task.taskName,
-            status:
-              task.status === 'pending'
-                ? 'pending'
-                : task.status === 'completed'
-                ? 'completed'
-                : 'in-progress',
-            dueDate: task.dueDate,
-            priority: task.priority || 'medium',
-            description: task.description || '',
-            createdAt: task.createdAt,
-            updatedAt: task.updatedAt,
-          };
-
-          // Add epicId if task is linked to a goal
-          if (task.goalId) {
-            dailyQuest.epicId = task.goalId;
-          }
-
-          dailyQuests.push(dailyQuest);
-        });
-        transformedResponse = {
-          epicQuests,
-          dailyQuests,
-        };
-      } else if (response.data.epicQuests && response.data.dailyQuests) {
-        // Already in correct format
-        transformedResponse = response.data;
-      } else {
-        // Fallback - create empty response
-        transformedResponse = {
-          epicQuests: [],
-          dailyQuests: [],
-        };
       }
-
-      return transformedResponse;
+      // Transform tasks
+      let dailyQuests: DailyQuest[] = [];
+      if (Array.isArray(tasksResponse.data)) {
+        dailyQuests = tasksResponse.data.map((task: any) => ({
+          questId: task.taskId,
+          userId: task.userId,
+          epicId: task.goalId,
+          title: task.taskName,
+          status: task.status,
+          dueDate: task.dueDate,
+          priority: task.priority || 'medium',
+          description: task.description || '',
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+        }));
+      }
+      return { epicQuests: goalsData, dailyQuests };
     } catch (error) {
       console.error('Error fetching quests:', error);
 
@@ -202,57 +173,142 @@ class ApiService {
   }
 
   /**
-   * Create a new quest (Epic Quest or Daily Quest)
+   * Create a new daily task
    */
-  async createQuest(
-    questData: CreateQuestRequest
-  ): Promise<EpicQuest | DailyQuest> {
+  async createTask(taskData: any): Promise<DailyQuest> {
     try {
-      const response: AxiosResponse<EpicQuest | DailyQuest> =
-        await this.api.post('/quests', questData);
-      return response.data;
+      const payload = {
+        taskName: taskData.title,
+        dueDate: taskData.dueDate,
+        description: taskData.description || '',
+        priority: taskData.priority || 'medium',
+        goalId: taskData.goalId,
+      };
+      const response: AxiosResponse<any> = await this.api.post(
+        '/tasks',
+        payload
+      );
+      return {
+        questId: response.data.taskId,
+        userId: response.data.userId,
+        epicId: response.data.goalId,
+        title: response.data.taskName,
+        status: response.data.status,
+        dueDate: response.data.dueDate,
+        priority: response.data.priority,
+        description: response.data.description,
+        createdAt: response.data.createdAt,
+        updatedAt: response.data.updatedAt,
+      };
     } catch (error) {
-      console.error('Error creating quest:', error);
       throw this.handleApiError(error);
     }
   }
 
   /**
-   * Update a specific quest
+   * Create a new goal
    */
-  async updateQuest(
-    questId: string,
-    questData: UpdateQuestRequest,
-    type: 'goal' | 'task'
-  ): Promise<EpicQuest | DailyQuest> {
+  async createGoal(goalData: any): Promise<EpicQuest> {
     try {
-      const response: AxiosResponse<EpicQuest | DailyQuest> =
-        await this.api.put(`/quests/${questId}`, questData, {
-          params: { type },
-        });
-      return response.data;
+      const payload = {
+        goalName: goalData.title,
+        targetDate: goalData.dueDate,
+        description: goalData.description || '',
+        category: goalData.category || 'general',
+      };
+      const response: AxiosResponse<any> = await this.api.post(
+        '/goals',
+        payload
+      );
+      return {
+        questId: response.data.goalId,
+        userId: response.data.userId,
+        title: response.data.goalName,
+        description: response.data.description,
+        category: response.data.category,
+        status: response.data.status,
+        targetDate: response.data.targetDate,
+        createdAt: response.data.createdAt,
+        updatedAt: response.data.updatedAt,
+      };
     } catch (error) {
-      console.error('Error updating quest:', error);
       throw this.handleApiError(error);
     }
   }
 
   /**
-   * Delete a specific quest
+   * Update a daily task
    */
-  async deleteQuest(
-    questId: string,
-    type: 'goal' | 'task'
-  ): Promise<DeleteQuestResponse> {
+  async updateTask(taskId: string, data: any): Promise<DailyQuest> {
     try {
-      const response: AxiosResponse<DeleteQuestResponse> =
-        await this.api.delete(`/quests/${questId}`, { params: { type } });
-      return response.data;
+      const response: AxiosResponse<any> = await this.api.put(
+        `/tasks/${taskId}`,
+        data
+      );
+      return {
+        questId: response.data.taskId,
+        userId: response.data.userId,
+        epicId: response.data.goalId,
+        title: response.data.taskName,
+        status: response.data.status,
+        dueDate: response.data.dueDate,
+        priority: response.data.priority,
+        description: response.data.description,
+        createdAt: response.data.createdAt,
+        updatedAt: response.data.updatedAt,
+      };
     } catch (error) {
-      console.error('Error deleting quest:', error);
       throw this.handleApiError(error);
     }
   }
+
+  /**
+   * Update a goal
+   */
+  async updateGoal(goalId: string, data: any): Promise<EpicQuest> {
+    try {
+      const response: AxiosResponse<any> = await this.api.put(
+        `/goals/${goalId}`,
+        data
+      );
+      return {
+        questId: response.data.goalId,
+        userId: response.data.userId,
+        title: response.data.goalName,
+        description: response.data.description,
+        category: response.data.category,
+        status: response.data.status,
+        targetDate: response.data.targetDate,
+        createdAt: response.data.createdAt,
+        updatedAt: response.data.updatedAt,
+      };
+    } catch (error) {
+      throw this.handleApiError(error);
+    }
+  }
+
+  /**
+   * Delete a daily task
+   */
+  async deleteTask(taskId: string): Promise<void> {
+    try {
+      await this.api.delete(`/tasks/${taskId}`);
+    } catch (error) {
+      throw this.handleApiError(error);
+    }
+  }
+
+  /**
+   * Delete a goal
+   */
+  async deleteGoal(goalId: string): Promise<void> {
+    try {
+      await this.api.delete(`/goals/${goalId}`);
+    } catch (error) {
+      throw this.handleApiError(error);
+    }
+  }
+
   /**
    * Send a chat message with streaming response support
    * This function handles real-time streaming of AI responses, calling callbacks
@@ -322,11 +378,11 @@ class ApiService {
   /**
    * Convenience method to mark a quest as complete
    */
-  async markQuestComplete(
-    questId: string,
-    type: 'goal' | 'task'
-  ): Promise<EpicQuest | DailyQuest> {
-    return this.updateQuest(questId, { status: 'completed' }, type);
+  async markTaskComplete(taskId: string): Promise<DailyQuest> {
+    return this.updateTask(taskId, { status: 'completed' });
+  }
+  async markGoalComplete(goalId: string): Promise<EpicQuest> {
+    return this.updateGoal(goalId, { status: 'completed' });
   }
 
   /**
@@ -334,7 +390,7 @@ class ApiService {
    */
   async getTodayQuests(): Promise<GetQuestsResponse> {
     const today = new Date().toISOString().split('T')[0];
-    return this.getQuests(today);
+    return this.getDashboard(today);
   }
 
   /**

@@ -1,37 +1,21 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { CheckCircle, Circle, Trophy, Trash2 } from 'lucide-react-native';
+import { Trophy, Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
+import { Goal } from '@/src/api/quests';
 
-interface QuestCardProps {
-  quest: {
-    id: string;
-    title: string;
-    description: string;
-    milestones: {
-      id: string;
-      title: string;
-      completed: boolean;
-    }[];
-    progress: number;
-    category: string;
-  };
+interface GoalCardProps {
+  goal: Goal;
   completed?: boolean;
-  onMilestoneToggle: (milestoneId: string) => void;
   onDelete?: () => void;
 }
 
-export function QuestCard({
-  quest,
-  completed = false,
-  onMilestoneToggle,
-  onDelete,
-}: QuestCardProps) {
+export function GoalCard({ goal, completed = false, onDelete }: GoalCardProps) {
   const { theme } = useTheme();
 
   const handleDelete = () => {
     Alert.alert(
-      'Delete Quest',
-      `Are you sure you want to delete "${quest.title}"?`,
+      'Delete Goal',
+      `Are you sure you want to delete "${goal.goalName}"?`,
       [
         {
           text: 'Cancel',
@@ -75,199 +59,75 @@ export function QuestCard({
     >
       <View style={styles.header}>
         <View style={styles.titleContainer}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>
+            {goal.goalName}
+          </Text>
           <Text
             style={[
-              styles.title,
-              { color: completed ? theme.colors.subtitle : theme.colors.text },
+              styles.category,
+              { color: getCategoryColor(goal.category || '') },
             ]}
           >
-            {quest.title}
+            {goal.category}
           </Text>
-          {completed && (
-            <Trophy
-              size={20}
-              color={theme.colors.warning}
-              style={styles.trophy}
-            />
-          )}
         </View>
-        <View style={styles.headerActions}>
-          <View
-            style={[
-              styles.categoryBadge,
-              { backgroundColor: getCategoryColor(quest.category) + '20' },
-            ]}
-          >
-            <Text
-              style={[
-                styles.categoryText,
-                { color: getCategoryColor(quest.category) },
-              ]}
-            >
-              {quest.category}
-            </Text>
-          </View>
-          {onDelete && (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={handleDelete}
-            >
-              <Trash2 size={18} color={theme.colors.error || '#ef4444'} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <TouchableOpacity onPress={handleDelete}>
+          <Trash2 size={20} color={theme.colors.error} />
+        </TouchableOpacity>
       </View>
-
-      <Text
-        style={[
-          styles.description,
-          { color: completed ? theme.colors.subtitle : theme.colors.subtitle },
-        ]}
-      >
-        {quest.description}
+      <Text style={[styles.description, { color: theme.colors.subtitle }]}>
+        {goal.description}
       </Text>
-
-      <View style={styles.progressContainer}>
-        <View
-          style={[styles.progressBar, { backgroundColor: theme.colors.border }]}
-        >
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${quest.progress}%`,
-                backgroundColor: getCategoryColor(quest.category),
-              },
-            ]}
-          />
-        </View>
-        <Text style={[styles.progressText, { color: theme.colors.text }]}>
-          {quest.progress}%
+      <Text style={[styles.status, { color: theme.colors.ctaPrimary }]}>
+        Status: {goal.status}
+      </Text>
+      {goal.targetDate && (
+        <Text style={[styles.targetDate, { color: theme.colors.subtitle }]}>
+          Target: {goal.targetDate}
         </Text>
-      </View>
-
-      <View style={styles.milestones}>
-        {(quest.milestones || []).map((milestone) => (
-          <TouchableOpacity
-            key={milestone.id}
-            style={styles.milestone}
-            onPress={() => !completed && onMilestoneToggle(milestone.id)}
-            disabled={completed}
-          >
-            {milestone.completed ? (
-              <CheckCircle size={20} color={theme.colors.primary} />
-            ) : (
-              <Circle size={20} color={theme.colors.border} />
-            )}
-            <Text
-              style={[
-                styles.milestoneText,
-                {
-                  color: milestone.completed
-                    ? theme.colors.subtitle
-                    : theme.colors.text,
-                  textDecorationLine: milestone.completed
-                    ? 'line-through'
-                    : 'none',
-                },
-              ]}
-            >
-              {milestone.title}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
     borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: 8,
   },
   titleContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   title: {
-    fontFamily: 'Inter-Bold',
     fontSize: 18,
+    fontWeight: 'bold',
   },
-  trophy: {
-    marginLeft: 4,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  categoryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  categoryText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    textTransform: 'capitalize',
-  },
-  deleteButton: {
-    padding: 4,
+  category: {
+    fontSize: 14,
+    marginTop: 2,
   },
   description: {
-    fontFamily: 'Inter-Regular',
+    fontSize: 15,
+    marginTop: 8,
+  },
+  status: {
     fontSize: 14,
-    marginBottom: 16,
-    lineHeight: 20,
+    marginTop: 8,
   },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
-  progressBar: {
-    flex: 1,
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  progressText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    minWidth: 40,
-    textAlign: 'right',
-  },
-  milestones: {
-    gap: 12,
-  },
-  milestone: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  milestoneText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    flex: 1,
+  targetDate: {
+    fontSize: 13,
+    marginTop: 4,
   },
 });

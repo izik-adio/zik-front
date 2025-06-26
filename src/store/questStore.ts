@@ -1,249 +1,219 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { EpicQuest, DailyQuest, GetQuestsResponse } from '../types/api';
-import { apiService } from '../services/api';
+import { Task, Goal } from '../api/quests';
+import { tasksApi, goalsApi } from '../api/quests';
 
-interface QuestState {
-  // Data
-  epicQuests: EpicQuest[];
-  dailyQuests: DailyQuest[];
+interface TaskGoalState {
+  goals: Goal[];
+  tasks: Task[];
   isLoading: boolean;
   error: string | null;
   lastFetch: string | null;
-
-  // Actions  fetchQuests: (date?: string) => Promise<void>;
-  fetchTodayQuests: () => Promise<void>;
-  fetchQuestsFromCache: () => void;
-  markQuestComplete: (questId: string, type: 'goal' | 'task') => Promise<void>;
-  createQuest: (questData: {
-    title: string;
-    type: 'goal' | 'task';
-    dueDate?: string;
-    description?: string;
-    priority?: 'low' | 'medium' | 'high';
-    category?: string;
-    epicId?: string;
-  }) => Promise<void>;
-  updateQuest: (
-    questId: string,
-    questData: {
-      status?:
-        | 'active'
-        | 'completed'
-        | 'paused'
-        | 'pending'
-        | 'in-progress'
-        | 'skipped';
-      title?: string;
-      description?: string;
-      priority?: 'low' | 'medium' | 'high';
-      category?: string;
-      targetDate?: string;
-      dueDate?: string;
-    },
-    type: 'goal' | 'task'
-  ) => Promise<void>;
-  deleteQuest: (questId: string, type: 'goal' | 'task') => Promise<void>;
+  fetchTodayTasks: () => Promise<void>;
+  fetchGoals: () => Promise<void>;
+  fetchTasksFromCache: () => void;
+  markTaskComplete: (taskId: string) => Promise<void>;
+  markGoalComplete: (goalId: string) => Promise<void>;
+  createTask: (taskData: any) => Promise<void>;
+  createGoal: (goalData: any) => Promise<void>;
+  updateTask: (taskId: string, data: any) => Promise<void>;
+  updateGoal: (goalId: string, data: any) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  deleteGoal: (goalId: string) => Promise<void>;
   clearError: () => void;
   resetState: () => void;
 }
 
-export const useQuestStore = create<QuestState>()(
+export const useTaskGoalStore = create<TaskGoalState>()(
   persist(
     (set, get) => ({
-      // Initial state
-      epicQuests: [],
-      dailyQuests: [],
+      goals: [],
+      tasks: [],
       isLoading: false,
       error: null,
       lastFetch: null,
-
-      // Actions
-      fetchQuests: async (date?: string) => {
-        // Always use today's date if no date is provided
-        const targetDate = date || new Date().toISOString().split('T')[0];
-
+      fetchTodayTasks: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response: GetQuestsResponse = await apiService.getQuests(
-            targetDate
-          );
-
-          set({
-            epicQuests: response.epicQuests,
-            dailyQuests: response.dailyQuests,
-            isLoading: false,
-            lastFetch: new Date().toISOString(),
-          });
+          const today = new Date().toISOString().split('T')[0];
+          const response: any = await tasksApi.fetchTasksByDate(today);
+          const tasks = Array.isArray(response) ? response : (response && Array.isArray(response.tasks) ? response.tasks : []);
+          console.log('[DEBUG] fetched tasks:', tasks);
+          set({ tasks, isLoading: false, lastFetch: new Date().toISOString() });
         } catch (error) {
-          console.error('Error in fetchQuests:', error);
-          const errorMessage =
-            error instanceof Error ? error.message : 'Failed to fetch quests';
-
           set({
             isLoading: false,
-            error: errorMessage,
+            error:
+              error instanceof Error ? error.message : 'Failed to fetch tasks',
           });
         }
       },
-      fetchTodayQuests: async () => {
-        const today = new Date().toISOString().split('T')[0];
+      fetchGoals: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response: GetQuestsResponse = await apiService.getQuests(today);
-          set({
-            epicQuests: response.epicQuests,
-            dailyQuests: response.dailyQuests,
-            isLoading: false,
-            lastFetch: new Date().toISOString(),
-          });
+          const response: any = await goalsApi.fetchGoals();
+          const goals = Array.isArray(response) ? response : (response && Array.isArray(response.goals) ? response.goals : []);
+          console.log('[DEBUG] fetched goals:', goals);
+          set({ goals, isLoading: false, lastFetch: new Date().toISOString() });
         } catch (error) {
           set({
             isLoading: false,
             error:
-              error instanceof Error ? error.message : 'Failed to fetch quests',
+              error instanceof Error ? error.message : 'Failed to fetch goals',
           });
         }
       },
-      fetchQuestsFromCache: () => {
-        // This method allows components to trigger a re-render with cached data
-        // Only update if we actually have cached data
-        const state = get();
-        // Data is already available from persistence, no action needed
+      fetchTasksFromCache: () => {
+        // No-op: zustand persist handles cache
       },
-      markQuestComplete: async (questId: string, type: 'goal' | 'task') => {
+      markTaskComplete: async (taskId) => {
         try {
-          const updatedQuest = await apiService.markQuestComplete(
-            questId,
-            type
-          );
-
-          if (type === 'goal') {
-            set((state) => ({
-              epicQuests: state.epicQuests.map((quest) =>
-                quest.questId === questId
-                  ? { ...quest, ...updatedQuest, status: 'completed' }
-                  : quest
-              ),
-            }));
-          } else {
-            set((state) => ({
-              dailyQuests: state.dailyQuests.map((quest) =>
-                quest.questId === questId
-                  ? { ...quest, ...updatedQuest, status: 'completed' }
-                  : quest
-              ),
-            }));
-          }
+          const updated = await tasksApi.updateTask(taskId, {
+            status: 'completed',
+          });
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.taskId === taskId
+                ? { ...t, ...updated, status: 'completed' }
+                : t
+            ),
+          }));
         } catch (error) {
           set({
             error:
-              error instanceof Error ? error.message : 'Failed to update quest',
+              error instanceof Error
+                ? error.message
+                : 'Failed to complete task',
           });
-          throw error; // Re-throw so UI can handle if needed
         }
       },
-
-      createQuest: async (questData) => {
+      markGoalComplete: async (goalId) => {
+        try {
+          const updated = await goalsApi.updateGoal(goalId, {
+            status: 'completed',
+          });
+          set((state) => ({
+            goals: state.goals.map((g) =>
+              g.goalId === goalId
+                ? { ...g, ...updated, status: 'completed' }
+                : g
+            ),
+          }));
+        } catch (error) {
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Failed to complete goal',
+          });
+        }
+      },
+      createTask: async (taskData) => {
         set({ isLoading: true, error: null });
         try {
-          const newQuest = await apiService.createQuest(questData);
-
-          if (questData.type === 'goal') {
-            set((state) => ({
-              epicQuests: [...state.epicQuests, newQuest as EpicQuest],
-              isLoading: false,
-            }));
-          } else {
-            set((state) => ({
-              dailyQuests: [...state.dailyQuests, newQuest as DailyQuest],
-              isLoading: false,
-            }));
-          }
+          const newTask = await tasksApi.createTask(taskData);
+          set((state) => ({
+            tasks: [...state.tasks, newTask],
+            isLoading: false,
+          }));
         } catch (error) {
           set({
             isLoading: false,
             error:
-              error instanceof Error ? error.message : 'Failed to create quest',
+              error instanceof Error ? error.message : 'Failed to create task',
           });
-          throw error;
         }
       },
-
-      updateQuest: async (questId, questData, type) => {
+      createGoal: async (goalData) => {
+        set({ isLoading: true, error: null });
         try {
-          const updatedQuest = await apiService.updateQuest(
-            questId,
-            questData,
-            type
-          );
-
-          if (type === 'goal') {
-            set((state) => ({
-              epicQuests: state.epicQuests.map((quest) =>
-                quest.questId === questId ? (updatedQuest as EpicQuest) : quest
-              ),
-            }));
-          } else {
-            set((state) => ({
-              dailyQuests: state.dailyQuests.map((quest) =>
-                quest.questId === questId ? (updatedQuest as DailyQuest) : quest
-              ),
-            }));
-          }
+          const newGoal = await goalsApi.createGoal(goalData);
+          set((state) => ({
+            goals: [...state.goals, newGoal],
+            isLoading: false,
+          }));
+        } catch (error) {
+          set({
+            isLoading: false,
+            error:
+              error instanceof Error ? error.message : 'Failed to create goal',
+          });
+        }
+      },
+      updateTask: async (taskId, data) => {
+        try {
+          const updated = await tasksApi.updateTask(taskId, data);
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.taskId === taskId ? { ...t, ...updated } : t
+            ),
+          }));
         } catch (error) {
           set({
             error:
-              error instanceof Error ? error.message : 'Failed to update quest',
+              error instanceof Error ? error.message : 'Failed to update task',
           });
-          throw error;
         }
       },
-
-      deleteQuest: async (questId, type) => {
+      updateGoal: async (goalId, data) => {
         try {
-          await apiService.deleteQuest(questId, type);
-
-          if (type === 'goal') {
-            set((state) => ({
-              epicQuests: state.epicQuests.filter(
-                (quest) => quest.questId !== questId
-              ),
-            }));
-          } else {
-            set((state) => ({
-              dailyQuests: state.dailyQuests.filter(
-                (quest) => quest.questId !== questId
-              ),
-            }));
-          }
+          const updated = await goalsApi.updateGoal(goalId, data);
+          set((state) => ({
+            goals: state.goals.map((g) =>
+              g.goalId === goalId ? { ...g, ...updated } : g
+            ),
+          }));
         } catch (error) {
           set({
             error:
-              error instanceof Error ? error.message : 'Failed to delete quest',
+              error instanceof Error ? error.message : 'Failed to update goal',
           });
-          throw error;
         }
       },
-
+      deleteTask: async (taskId) => {
+        try {
+          await tasksApi.deleteTask(taskId);
+          set((state) => ({
+            tasks: state.tasks.filter((t) => t.taskId !== taskId),
+          }));
+        } catch (error) {
+          set({
+            error:
+              error instanceof Error ? error.message : 'Failed to delete task',
+          });
+        }
+      },
+      deleteGoal: async (goalId) => {
+        try {
+          await goalsApi.deleteGoal(goalId);
+          set((state) => ({
+            goals: state.goals.filter((g) => g.goalId !== goalId),
+          }));
+        } catch (error) {
+          set({
+            error:
+              error instanceof Error ? error.message : 'Failed to delete goal',
+          });
+        }
+      },
       clearError: () => set({ error: null }),
       resetState: () =>
         set({
-          epicQuests: [],
-          dailyQuests: [],
+          goals: [],
+          tasks: [],
           isLoading: false,
           error: null,
           lastFetch: null,
         }),
     }),
     {
-      name: 'quest-store',
+      name: 'task-goal-store',
       storage: createJSONStorage(() => AsyncStorage),
       // Persist quest data but not loading states or errors
       partialize: (state) => ({
-        epicQuests: state.epicQuests,
-        dailyQuests: state.dailyQuests,
+        goals: state.goals,
+        tasks: state.tasks,
         lastFetch: state.lastFetch,
       }),
     }
@@ -251,22 +221,30 @@ export const useQuestStore = create<QuestState>()(
 );
 
 // Selectors for better performance
-export const useEpicQuests = () => useQuestStore((state) => state.epicQuests);
-export const useDailyQuests = () => useQuestStore((state) => state.dailyQuests);
-export const useQuestLoading = () => useQuestStore((state) => state.isLoading);
-export const useQuestError = () => useQuestStore((state) => state.error);
+export const useGoals = () => {
+  const goals = useTaskGoalStore((state) => state.goals);
+  return Array.isArray(goals) ? goals : [];
+};
+export const useTasks = () => useTaskGoalStore((state) => state.tasks);
+export const useTaskGoalLoading = () =>
+  useTaskGoalStore((state) => state.isLoading);
+export const useTaskGoalError = () => useTaskGoalStore((state) => state.error);
 
 // Direct store access for actions (workaround for persist typing issues)
-export const getQuestStoreActions = () => {
-  const state = useQuestStore.getState() as any;
+export const getTaskGoalStoreActions = () => {
+  const state = useTaskGoalStore.getState() as any;
   return {
-    fetchQuests: state.fetchQuests,
-    fetchTodayQuests: state.fetchTodayQuests,
-    fetchQuestsFromCache: state.fetchQuestsFromCache,
-    markQuestComplete: state.markQuestComplete,
-    createQuest: state.createQuest,
-    updateQuest: state.updateQuest,
-    deleteQuest: state.deleteQuest,
+    fetchTodayTasks: state.fetchTodayTasks,
+    fetchGoals: state.fetchGoals,
+    fetchTasksFromCache: state.fetchTasksFromCache,
+    markTaskComplete: state.markTaskComplete,
+    markGoalComplete: state.markGoalComplete,
+    createTask: state.createTask,
+    createGoal: state.createGoal,
+    updateTask: state.updateTask,
+    updateGoal: state.updateGoal,
+    deleteTask: state.deleteTask,
+    deleteGoal: state.deleteGoal,
     clearError: state.clearError,
     resetState: state.resetState,
   };

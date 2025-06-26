@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
-import { useQuestStore } from './questStore';
+import { useTaskGoalStore } from './questStore';
 
 export interface ChatMessage {
   id: string;
@@ -133,12 +133,12 @@ export const useChatStore = create<ChatState>()(
               // Refresh quests after chat completion
               set({ isRefreshingQuests: true });
               try {
-                const questStoreState = useQuestStore.getState();
+                const questStoreState = useTaskGoalStore.getState();
                 if (
-                  'fetchQuests' in questStoreState &&
-                  typeof questStoreState.fetchQuests === 'function'
+                  'fetchTodayTasks' in questStoreState &&
+                  typeof questStoreState.fetchTodayTasks === 'function'
                 ) {
-                  (questStoreState.fetchQuests as any)();
+                  (questStoreState.fetchTodayTasks as any)();
                 }
               } catch (error) {
                 console.warn('Failed to refresh quests after chat:', error);

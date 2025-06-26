@@ -12,7 +12,8 @@ import { Plus } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
-import { useQuestStore, getQuestStoreActions } from '@/src/store/questStore';
+import { useTasks, getTaskGoalStoreActions } from '@/src/store/questStore';
+import { Task } from '@/src/api/quests';
 import { GreetingHeader } from '@/components/today/GreetingHeader';
 import { QuestCard } from '@/components/today/QuestCard';
 import { WellnessCard } from '@/components/today/WellnessCard';
@@ -24,256 +25,118 @@ export default function TodayScreen() {
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const { dailyQuests, epicQuests, isLoading, error, lastFetch } =
-    useQuestStore();
+  const tasks = useTasks();
 
   // Get actions from store
-  const actions = getQuestStoreActions();
+  const actions = getTaskGoalStoreActions();
   const {
-    fetchTodayQuests,
-    fetchQuestsFromCache,
-    markQuestComplete,
-    createQuest,
-    deleteQuest,
+    fetchTodayTasks,
+    fetchTasksFromCache,
+    markTaskComplete,
+    createTask,
+    deleteTask,
     clearError,
   } = actions;
 
   useEffect(() => {
     if (user) {
-      // First, try to load from cache immediately
-      fetchQuestsFromCache();
-
-      // Then refresh from API in the background
-      // Only fetch if data is stale (older than 5 minutes) or doesn't exist
-      const shouldRefresh =
-        !lastFetch ||
-        Date.now() - new Date(lastFetch).getTime() > 5 * 60 * 1000;
-
-      if (shouldRefresh) {
-        fetchTodayQuests();
-      }
+      fetchTodayTasks();
     }
-  }, [user, fetchTodayQuests, fetchQuestsFromCache, lastFetch]);
+  }, [user]);
 
-  useEffect(() => {
-    if (error) {
-      Alert.alert('Error', error);
-      clearError();
-    }
-  }, [error, clearError]);
-
-  const handleToggleQuest = async (questId: string, isEpic: boolean) => {
+  const handleToggleTask = async (taskId: string) => {
     try {
-      await markQuestComplete(questId, isEpic ? 'goal' : 'task');
+      await markTaskComplete(taskId);
     } catch (error) {
-      console.error('Error completing quest:', error);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to complete task'
+      );
     }
   };
 
-  const handleDeleteQuest = async (questId: string, isEpic: boolean) => {
+  const handleDeleteTask = async (taskId: string) => {
     try {
-      await deleteQuest(questId, isEpic ? 'goal' : 'task');
+      await deleteTask(taskId);
     } catch (error) {
-      console.error('Error deleting quest:', error);
-      Alert.alert('Error', 'Failed to delete quest. Please try again.');
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to delete task'
+      );
     }
   };
 
-  const handleAddQuest = async (
+  const handleAddTask = async (
     title: string,
     time: string,
     isEpic: boolean
   ) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-
-      await createQuest({
+      await createTask({
         title,
-        type: isEpic ? 'goal' : 'task',
-        description: isEpic ? `Epic quest: ${title}` : undefined,
-        dueDate: isEpic ? undefined : today,
+        dueDate: time,
+        description: '',
         priority: 'medium',
-        category: 'personal',
       });
-
       setShowAddModal(false);
     } catch (error) {
-      console.error('Error creating quest:', error);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to add task'
+      );
     }
   };
 
-  // Filter active quests - ensure arrays are defined
-  const activeDailyQuests = (dailyQuests || []).filter(
-    (quest) => quest.status !== 'completed'
-  );
-  const activeEpicQuests = (epicQuests || []).filter(
-    (quest) => quest.status !== 'completed'
-  );
-  const completedDailyQuests = (dailyQuests || []).filter(
-    (quest) => quest.status === 'completed'
-  );
-  const completedEpicQuests = (epicQuests || []).filter(
-    (quest) => quest.status === 'completed'
-  );
-
-  const totalQuests = (dailyQuests?.length || 0) + (epicQuests?.length || 0);
-  const completedCount =
-    completedDailyQuests.length + completedEpicQuests.length;
-  const completionRate =
-    totalQuests > 0 ? (completedCount / totalQuests) * 100 : 0;
-
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <GreetingHeader
-          userName={user?.userName || 'Friend'}
-          completionRate={completionRate}
-        />
-
-        <View style={styles.content}>
-          <WellnessCard />
-
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Today&apos;s Quests
-            </Text>
-
-            {activeDailyQuests.length === 0 && activeEpicQuests.length === 0 ? (
-              <EmptyStateCard
-                type="quests"
-                onAddPress={() => setShowAddModal(true)}
-              />
-            ) : (
-              <>
-                {activeDailyQuests.map((quest) => (
-                  <Animated.View
-                    key={quest.questId}
-                    entering={FadeInUp.delay(100)}
-                    exiting={FadeOutUp}
-                  >
-                    <QuestCard
-                      quest={{
-                        id: quest.questId,
-                        title: quest.title,
-                        time: quest.dueDate,
-                        icon: 'target',
-                        isEpic: false,
-                      }}
-                      onToggle={() => handleToggleQuest(quest.questId, false)}
-                      onDelete={() => handleDeleteQuest(quest.questId, false)}
-                    />
-                  </Animated.View>
-                ))}
-                {activeEpicQuests.map((quest) => (
-                  <Animated.View
-                    key={quest.questId}
-                    entering={FadeInUp.delay(100)}
-                    exiting={FadeOutUp}
-                  >
-                    <QuestCard
-                      quest={{
-                        id: quest.questId,
-                        title: quest.title,
-                        time: 'Ongoing',
-                        icon: 'target',
-                        isEpic: true,
-                      }}
-                      onToggle={() => handleToggleQuest(quest.questId, true)}
-                      onDelete={() => handleDeleteQuest(quest.questId, true)}
-                    />
-                  </Animated.View>
-                ))}
-              </>
-            )}
-          </View>
-
-          {(completedDailyQuests.length > 0 ||
-            completedEpicQuests.length > 0) && (
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-                Completed
-              </Text>
-              {completedDailyQuests.map((quest) => (
-                <QuestCard
-                  key={`completed-daily-${quest.questId}`}
-                  quest={{
-                    id: quest.questId,
-                    title: quest.title,
-                    time: quest.dueDate,
-                    icon: 'target',
-                    isEpic: false,
-                  }}
-                  completed={true}
-                  onToggle={() => {}}
-                />
-              ))}
-              {completedEpicQuests.map((quest) => (
-                <QuestCard
-                  key={`completed-epic-${quest.questId}`}
-                  quest={{
-                    id: quest.questId,
-                    title: quest.title,
-                    time: 'Completed',
-                    icon: 'target',
-                    isEpic: true,
-                  }}
-                  completed={true}
-                  onToggle={() => {}}
-                />
-              ))}
-            </View>
-          )}
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <GreetingHeader userName={user?.userName || 'User'} completionRate={0} />
+      <WellnessCard />
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: theme.colors.text }]}>
+          Today's Tasks
+        </Text>
+        <TouchableOpacity onPress={() => setShowAddModal(true)}>
+          <Plus size={24} color={theme.colors.ctaPrimary} />
+        </TouchableOpacity>
+      </View>
+      <ScrollView contentContainerStyle={styles.content}>
+        {Array.isArray(tasks) && tasks.length === 0 ? (
+          <EmptyStateCard
+            type="quests"
+            onAddPress={() => setShowAddModal(true)}
+          />
+        ) : (
+          (Array.isArray(tasks) ? tasks : []).map((task: Task) => (
+            <QuestCard
+              key={task.taskId}
+              quest={task}
+              onToggle={() => handleToggleTask(task.taskId)}
+              onDelete={() => handleDeleteTask(task.taskId)}
+            />
+          ))
+        )}
       </ScrollView>
-
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.colors.ctaPrimary }]}
-        onPress={() => setShowAddModal(true)}
-        activeOpacity={0.8}
-      >
-        <Plus size={24} color="#ffffff" />
-      </TouchableOpacity>
-
       <AddTaskModal
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onAdd={handleAddQuest}
+        onAdd={handleAddTask}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   content: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    marginBottom: 12,
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 90,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    padding: 16,
   },
 });

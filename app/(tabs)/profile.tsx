@@ -310,7 +310,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </View>{' '}
+      </View>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Profile Information Card */}
         <View
@@ -421,7 +421,7 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
-        </View>{' '}
+        </View>
         {/* Notification Settings Card */}
         <View
           style={[styles.settingsCard, { backgroundColor: theme.colors.card }]}
@@ -507,7 +507,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             </View>
-            <ChevronRight size={20} color={theme.colors.subtitle} />{' '}
+            <ChevronRight size={20} color={theme.colors.subtitle} />
           </TouchableOpacity>
         </View>
         {/* Privacy & Security Card */}

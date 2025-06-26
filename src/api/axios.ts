@@ -5,7 +5,7 @@ import { cognitoService, AuthTokens } from '../services/cognito';
 const isDevMode = process.env.EXPO_PUBLIC_DEV_MODE === 'true';
 
 // AWS HTTP API v2 endpoint
-const API_BASE = 'https://dxc20i9fqg.execute-api.us-east-1.amazonaws.com';
+const API_BASE = 'https://h5k4oat3hi.execute-api.us-east-1.amazonaws.com';
 
 const api = axios.create({
   baseURL: isDevMode ? 'http://localhost:3000' : API_BASE,
