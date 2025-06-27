@@ -16,12 +16,14 @@ interface CreateQuestModalProps {
   visible: boolean;
   onClose: () => void;
   onCreate: (questData: any) => void;
+  isEpicQuest?: boolean;
 }
 
 export function CreateQuestModal({
   visible,
   onClose,
   onCreate,
+  isEpicQuest = false,
 }: CreateQuestModalProps) {
   const { theme } = useTheme();
   const [title, setTitle] = useState('');
@@ -122,7 +124,7 @@ export function CreateQuestModal({
           ]}
         >
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-            Create Epic Quest
+            {isEpicQuest ? 'Create Epic Quest' : 'Create Quest'}
           </Text>
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
             <X size={24} color={theme.colors.subtitle} />
@@ -146,7 +148,7 @@ export function CreateQuestModal({
                   color: theme.colors.text,
                 },
               ]}
-              placeholder="What's your epic quest?"
+              placeholder={isEpicQuest ? "What's your epic quest?" : "What's your quest?"}
               placeholderTextColor={theme.colors.subtitle}
               value={title}
               onChangeText={setTitle}
@@ -173,7 +175,7 @@ export function CreateQuestModal({
                   color: theme.colors.text,
                 },
               ]}
-              placeholder="Describe your journey..."
+              placeholder={isEpicQuest ? "Describe your journey..." : "Describe your quest..."}
               placeholderTextColor={theme.colors.subtitle}
               value={description}
               onChangeText={setDescription}

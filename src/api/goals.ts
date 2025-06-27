@@ -1,7 +1,7 @@
 // Backward compatibility wrapper for goals API
 // This file provides the old goals API interface while using the new unified quests API
 
-import { questsApi } from './quests';
+import { goalsApi as newGoalsApi, Goal as NewGoal } from './quests';
 
 /**
  * @deprecated Use questsApi from './quests' instead
@@ -72,11 +72,11 @@ export const goalsApi = {
         .split('T')[0], // Default to 1 year from now
     };
 
-    const createdGoal = await questsApi.createGoal(newGoalData); // Transform new interface back to old interface for compatibility
+    const createdGoal = await newGoalsApi.createGoal(newGoalData); // Transform new interface back to old interface for compatibility
     return {
       goalId: createdGoal.goalId,
       userId: createdGoal.userId,
-      title: createdGoal.goalName,
+      title: (createdGoal as any).goalName,
       description: createdGoal.description,
       category: createdGoal.category,
       status: createdGoal.status,
@@ -109,11 +109,11 @@ export const goalsApi = {
       newUpdateData.status = statusMap[updatedData.status] || 'active';
     }
 
-    const updatedGoal = await questsApi.updateGoal(goalId, newUpdateData); // Transform new interface back to old interface for compatibility
+    const updatedGoal = await newGoalsApi.updateGoal(goalId, newUpdateData); // Transform new interface back to old interface for compatibility
     return {
       goalId: updatedGoal.goalId,
       userId: updatedGoal.userId,
-      title: updatedGoal.goalName,
+      title: (updatedGoal as any).goalName,
       description: updatedGoal.description,
       category: updatedGoal.category,
       status: updatedGoal.status,
@@ -128,6 +128,6 @@ export const goalsApi = {
     console.warn(
       'goalsApi.deleteGoal is deprecated. Please migrate to questsApi.deleteGoal.'
     );
-    return questsApi.deleteGoal(goalId);
+    return newGoalsApi.deleteGoal(goalId);
   },
 };

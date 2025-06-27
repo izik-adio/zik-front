@@ -42,8 +42,8 @@ export function QuestPath({ quests }: QuestPathProps) {
               cy={y}
               r="12"
               fill={getCircleColor(quest.progress)}
-              stroke={theme.colors.card}
-              strokeWidth="3"
+              stroke="#FFFFFF"
+              strokeWidth="2"
             />
           );
         })}

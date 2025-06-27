@@ -12,7 +12,7 @@ import {
   Keyboard,
   Alert,
 } from 'react-native';
-import { Send, Mic, CheckCircle } from 'lucide-react-native';
+import { Send, Mic, CheckCircle, MoreVertical, Trash2 } from 'lucide-react-native';
 import Animated, {
   FadeInUp,
   FadeInDown,
@@ -42,6 +42,7 @@ export default function ZikScreen() {
     error,
     sendMessage,
     clearError,
+    clearMessages,
   } = useChatStore();
 
   // Animation values
@@ -172,6 +173,31 @@ export default function ZikScreen() {
     inputRef.current?.focus();
   };
 
+  const handleClearChat = () => {
+    // Simple confirmation - KISS principle
+    Alert.alert(
+      'Clear Chat',
+      'Start fresh? This will clear all messages and begin a new conversation.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            clearMessages();
+            // Simple feedback - scroll to top smoothly
+            setTimeout(() => {
+              scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+            }, 200);
+          },
+        },
+      ]
+    );
+  };
+
   const handleInputFocus = () => {
     inputFocused.value = withSpring(1);
   };
@@ -265,13 +291,24 @@ export default function ZikScreen() {
                 {isRefreshingQuests
                   ? 'Updating quests...'
                   : isStreaming
-                  ? 'Typing...'
-                  : isLoading
-                  ? 'Thinking...'
-                  : 'Online • Ready to help'}
+                    ? 'Typing...'
+                    : isLoading
+                      ? 'Thinking...'
+                      : 'Online • Ready to help'}
               </Text>
             </View>
           </View>
+          {/* Simple clear chat button - KISS principle */}
+          <TouchableOpacity
+            style={[
+              styles.clearButton,
+              { backgroundColor: theme.colors.inputBackground }
+            ]}
+            onPress={handleClearChat}
+            activeOpacity={0.7}
+          >
+            <Trash2 size={18} color={theme.colors.subtitle} />
+          </TouchableOpacity>
         </View>
       </Animated.View>
 
@@ -478,6 +515,17 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  clearButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   headerSubtitle: {
     fontFamily: 'Inter-Medium',

@@ -23,6 +23,7 @@ export interface Task {
   priority: 'low' | 'medium' | 'high';
   status: 'pending' | 'in-progress' | 'completed';
   goalId?: string; // Optional link to a goal
+  milestoneId?: string; // NEW: Optional link to a milestone
   createdAt: string; // ISO-8601
   updatedAt: string; // ISO-8601
 }
@@ -38,6 +39,22 @@ export interface Goal {
   targetDate: string; // YYYY-MM-DD format
   category: string;
   status: 'active' | 'completed' | 'paused';
+  roadmapStatus: 'none' | 'generating' | 'ready'; // NEW: Roadmap generation status
+  createdAt: string; // ISO-8601
+  updatedAt: string; // ISO-8601
+}
+
+/**
+ * Milestone interface for Epic Quest roadmaps
+ */
+export interface Milestone {
+  milestoneId: string;
+  epicId: string;
+  sequence: number; // Order of the milestone (1, 2, 3...)
+  title: string;
+  description: string;
+  status: 'locked' | 'active' | 'completed';
+  durationInDays: number;
   createdAt: string; // ISO-8601
   updatedAt: string; // ISO-8601
 }
@@ -453,6 +470,147 @@ export const goalsApi = {
           error.response?.data?.message ||
           error.message ||
           'Failed to delete goal';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
+  },
+};
+
+/**
+ * Main API client for Roadmap and Milestone operations
+ */
+export const roadmapApi = {
+  /**
+   * Fetch roadmap for a specific epic quest
+   * @param goalId - Goal ID (Epic Quest ID)
+   * @returns Promise<Milestone[]>
+   */
+  async fetchRoadmap(goalId: string): Promise<Milestone[]> {
+    return retryRequest(async () => {
+      try {
+        const response = await api.get(`/goals/${goalId}/milestones`);
+
+        // Handle the new API response structure
+        let milestones: Milestone[];
+        if (response.data && Array.isArray(response.data.milestones)) {
+          milestones = response.data.milestones;
+        } else if (Array.isArray(response.data)) {
+          milestones = response.data;
+        } else {
+          milestones = [];
+        }
+
+        return milestones;
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+        if (error.response?.status === 404) {
+          throw new ApiError(404, 'Goal milestones not found');
+        }
+
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to fetch roadmap';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
+  },
+
+  /**
+   * Generate roadmap for a specific epic quest
+   * @param epicId - Epic Quest ID
+   * @returns Promise<void>
+   */
+  async generateRoadmap(epicId: string): Promise<void> {
+    return retryRequest(async () => {
+      try {
+        await api.post(`/goals/${epicId}/generate-roadmap`);
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+        if (error.response?.status === 404) {
+          throw new ApiError(404, 'Epic quest not found');
+        }
+
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to generate roadmap';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
+  },
+
+  /**
+   * Fetch daily quests for a specific milestone
+   * @param milestoneId - Milestone ID
+   * @returns Promise<Task[]>
+   */
+  async fetchMilestoneQuests(milestoneId: string): Promise<Task[]> {
+    return retryRequest(async () => {
+      try {
+        const response = await api.get(`/milestones/${milestoneId}/daily-quests`);
+        return response.data as Task[];
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+        if (error.response?.status === 404) {
+          throw new ApiError(404, 'Milestone not found');
+        }
+
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to fetch milestone quests';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
+  },
+
+  /**
+   * Complete a milestone
+   * @param milestoneId - Milestone ID
+   * @returns Promise<Milestone>
+   */
+  async completeMilestone(milestoneId: string): Promise<Milestone> {
+    return retryRequest(async () => {
+      try {
+        const response = await api.patch(`/milestones/${milestoneId}`, {
+          status: 'completed'
+        });
+        return response.data as Milestone;
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+        if (error.response?.status === 404) {
+          throw new ApiError(404, 'Milestone not found');
+        }
+
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to complete milestone';
         throw new ApiError(
           error.response?.status || 500,
           message,

@@ -85,10 +85,10 @@ export const useChatStore = create<ChatState>()(
                     messages: state.messages.map((msg) =>
                       msg.id === aiMessageId
                         ? {
-                            ...msg,
-                            content: parsed.response,
-                            isStreaming: true,
-                          }
+                          ...msg,
+                          content: parsed.response,
+                          isStreaming: true,
+                        }
                         : msg
                     ),
                   }));
@@ -208,12 +208,21 @@ export const useChatStore = create<ChatState>()(
       },
       clearError: () => set({ error: null }),
       clearMessages: () => {
+        // Create a fresh, personalized welcome message
+        const welcomeMessages = [
+          "Fresh start! I'm Zik, your growth companion. What would you like to achieve today?",
+          "Hello again! I'm here to help you on your journey. What's on your mind?",
+          "Ready for a new conversation! I'm Zik, and I'm excited to support your goals. How can I assist you?",
+          "Hi there! I'm Zik, your personal companion for growth and wellness. What shall we work on together?",
+        ];
+
+        const randomMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+
         set({
           messages: [
             {
-              id: 'initial',
-              content:
-                "Hi! I'm Zik, your personal growth companion. How are you feeling today?",
+              id: `welcome_${Date.now()}`,
+              content: randomMessage,
               sender: 'zik',
               timestamp: new Date().toISOString(),
             },
