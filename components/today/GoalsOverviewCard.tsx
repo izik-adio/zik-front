@@ -2,10 +2,10 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { Target, ArrowRight, Map, Clock } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../../src/context/ThemeContext';
-import { Goal } from '../../src/api/quests';
+import { EpicQuest } from '../../src/api/quests';
 
 interface GoalsOverviewCardProps {
-    goals: Goal[];
+    goals: EpicQuest[];
     activeGoalId?: string | null;
 }
 
@@ -54,25 +54,25 @@ export function GoalsOverviewCard({ goals, activeGoalId }: GoalsOverviewCardProp
             >
                 {goals.map((goal) => (
                     <TouchableOpacity
-                        key={goal.goalId}
+                        key={goal.questId}
                         style={[
                             styles.goalItem,
                             { backgroundColor: theme.colors.background },
-                            activeGoalId === goal.goalId && [
+                            activeGoalId === goal.questId && [
                                 styles.activeGoalItem,
                                 { borderColor: theme.colors.ctaPrimary }
                             ]
                         ]}
-                        onPress={() => router.push(`/epic/${goal.goalId}` as any)}
+                        onPress={() => router.push(`/epic/${goal.questId}` as any)}
                     >
                         <View style={styles.goalContent}>
                             <View style={styles.goalHeader}>
                                 <Map size={16} color={
-                                    activeGoalId === goal.goalId
+                                    activeGoalId === goal.questId
                                         ? theme.colors.ctaPrimary
                                         : theme.colors.subtitle
                                 } />
-                                {activeGoalId === goal.goalId && (
+                                {activeGoalId === goal.questId && (
                                     <View style={[styles.activeBadge, { backgroundColor: theme.colors.ctaPrimary }]}>
                                         <Text style={styles.activeBadgeText}>Active</Text>
                                     </View>
@@ -83,7 +83,7 @@ export function GoalsOverviewCard({ goals, activeGoalId }: GoalsOverviewCardProp
                                 styles.goalTitle,
                                 { color: theme.colors.text }
                             ]} numberOfLines={2}>
-                                {goal.goalName}
+                                {goal.title}
                             </Text>
 
                             <View style={styles.goalMeta}>
@@ -215,9 +215,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        backgroundColor: 'rgba(0,0,0,0.05)',
     },
     statusText: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '500',
     },
 });

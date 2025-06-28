@@ -11,6 +11,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider } from '@/src/context/AuthContext';
+import { ProfileProvider } from '@/src/context/ProfileContext';
 import { QueryProvider } from '@/src/context/QueryProvider';
 import { ThemeProvider } from '@/src/context/ThemeContext';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
@@ -45,16 +46,18 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <QueryProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="auth" />
-              <Stack.Screen name="onboarding/index" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="auto" />
-          </QueryProvider>
+          <ProfileProvider>
+            <QueryProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="auth" />
+                <Stack.Screen name="onboarding/index" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <StatusBar style="auto" />
+            </QueryProvider>
+          </ProfileProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

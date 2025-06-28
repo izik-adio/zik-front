@@ -1,34 +1,61 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Task, Goal, Milestone } from '../api/quests';
-import { tasksApi, goalsApi, roadmapApi } from '../api/quests';
+import {
+  DailyQuest,
+  EpicQuest,
+  Milestone,
+  CreateDailyQuestData,
+  CreateEpicQuestData,
+  UpdateDailyQuestData,
+  UpdateEpicQuestData,
+  dailyQuestsApi,
+  epicQuestsApi,
+  roadmapApi
+} from '../api/quests';
 
-interface TaskGoalState {
-  // Epic Quests (Goals)
-  epics: Goal[];
+/**
+ * Roadmap cache entry structure
+ */
+interface RoadmapCacheEntry {
+  milestones: Milestone[];
+  lastFetched: number;
+  epicQuest: EpicQuest | null;
+}
 
-  // Cached roadmaps for epics
-  roadmapCache: Record<string, {
-    milestones: Milestone[];
-    lastFetched: number;
-    epic: Goal | null;
-  }>;
+/**
+ * Active roadmap state structure
+ */
+interface ActiveRoadmapState {
+  epicQuestId: string | null;
+  epicQuest: EpicQuest | null;
+  milestones: Milestone[];
+}
 
-  // Active Roadmap Data
-  activeRoadmap: {
-    epicId: string | null;
-    epic: Goal | null;
-    milestones: Milestone[];
-    activeMilestone: Milestone | null;
-  };
+/**
+ * Progressive task access structure
+ */
+interface TaskAccessState {
+  todayTasks: DailyQuest[];
+  futureTasks: DailyQuest[];
+  canAccessFuture: boolean;
+  maxDaysAhead: number;
+}
 
-  // Daily Tasks for Active Milestone
-  activeMilestoneTasks: Task[];
+/**
+ * Quest Store State Interface
+ */
+interface QuestStoreState {
+  // Core Data
+  epicQuests: EpicQuest[];
+  dailyQuests: DailyQuest[];
 
-  // Legacy support for existing components
-  goals: Goal[];
-  tasks: Task[];
+  // Roadmap Management
+  roadmapCache: Record<string, RoadmapCacheEntry>;
+  activeRoadmap: ActiveRoadmapState;
+
+  // Progressive Task Access
+  taskAccess: TaskAccessState;
 
   // Loading and Error States
   isLoading: boolean;
@@ -36,486 +63,557 @@ interface TaskGoalState {
   error: string | null;
   lastFetch: string | null;
 
-  // Cache control
-  cacheExpiryTime: number; // Cache expiry in milliseconds (default: 5 minutes)
+  // Cache Control
+  cacheExpiryTime: number; // 5 minutes in milliseconds
 
   // Epic Quest Actions
-  fetchEpics: (forceRefresh?: boolean) => Promise<void>;
-  createEpic: (epicData: any) => Promise<void>;
-  deleteEpic: (epicId: string) => Promise<void>;
+  fetchEpicQuests: (forceRefresh?: boolean) => Promise<void>;
+  createEpicQuest: (questData: Omit<CreateEpicQuestData, 'type'>) => Promise<EpicQuest>;
+  updateEpicQuest: (questId: string, updateData: UpdateEpicQuestData) => Promise<EpicQuest>;
+  deleteEpicQuest: (questId: string) => Promise<void>;
+  getEpicQuestById: (questId: string) => Promise<EpicQuest>;
+
+  // Daily Quest Actions
+  fetchDailyQuests: (date: string, forceRefresh?: boolean) => Promise<void>;
+  createDailyQuest: (questData: Omit<CreateDailyQuestData, 'type'>) => Promise<DailyQuest>;
+  updateDailyQuest: (questId: string, updateData: UpdateDailyQuestData) => Promise<DailyQuest>;
+  deleteDailyQuest: (questId: string) => Promise<void>;
 
   // Roadmap Actions
-  fetchRoadmap: (epicId: string, forceRefresh?: boolean) => Promise<Milestone[]>;
-  generateRoadmap: (epicId: string) => Promise<void>;
-  clearRoadmapCache: (epicId?: string) => void;
+  fetchRoadmap: (epicQuestId: string, forceRefresh?: boolean) => Promise<Milestone[]>;
+  generateRoadmap: (epicQuestId: string) => Promise<void>;
+  clearRoadmapCache: (epicQuestId?: string) => void;
+  pollRoadmapGeneration: (epicQuestId: string, maxAttempts?: number) => Promise<void>;
 
-  // Milestone Actions
-  completeMilestone: (milestoneId: string) => Promise<void>;
-  activateNextMilestone: (epicId: string) => Promise<void>;
+  // Active Roadmap Management
+  setActiveRoadmap: (epicQuestId: string) => Promise<void>;
 
-  // Active Milestone Data Actions
-  fetchActiveMilestoneData: () => Promise<void>;
+  // Progressive Task Access
+  fetchFutureTasks: () => Promise<void>;
+  checkTaskAccessRules: () => void;
+  getAvailableTasks: () => { today: DailyQuest[]; future: DailyQuest[]; showFuture: boolean };
 
-  // Refresh Actions
+  // Utility Actions
   refreshTodayData: () => Promise<void>;
   refreshQuestsData: () => Promise<void>;
-
-  // Legacy Actions (for compatibility)
-  fetchTodayTasks: (forceRefresh?: boolean) => Promise<void>;
-  fetchGoals: (forceRefresh?: boolean) => Promise<void>;
-  fetchTasksFromCache: () => void;
-  markTaskComplete: (taskId: string) => Promise<void>;
-  markGoalComplete: (goalId: string) => Promise<void>;
-  createTask: (taskData: any) => Promise<void>;
-  createGoal: (goalData: any) => Promise<void>;
-  updateTask: (taskId: string, data: any) => Promise<void>;
-  updateGoal: (goalId: string, data: any) => Promise<void>;
-  deleteTask: (taskId: string) => Promise<void>;
-  deleteGoal: (goalId: string) => Promise<void>;
   clearError: () => void;
   resetState: () => void;
 }
 
-export const useTaskGoalStore = create<TaskGoalState>()(
+/**
+ * Initial state values
+ */
+const initialState = {
+  epicQuests: [],
+  dailyQuests: [],
+  roadmapCache: {},
+  activeRoadmap: {
+    epicQuestId: null,
+    epicQuest: null,
+    milestones: [],
+  },
+  taskAccess: {
+    todayTasks: [],
+    futureTasks: [],
+    canAccessFuture: false,
+    maxDaysAhead: 2,
+  },
+  isLoading: false,
+  isRefreshing: false,
+  error: null,
+  lastFetch: null,
+  cacheExpiryTime: 5 * 60 * 1000, // 5 minutes
+};
+
+/**
+ * Main Quest Store using Zustand
+ */
+export const useQuestStore = create<QuestStoreState>()(
   persist(
     (set, get) => ({
-      // Epic Quests (Goals)
-      epics: [],
-
-      // Cached roadmaps for epics
-      roadmapCache: {},
-
-      // Active Roadmap Data
-      activeRoadmap: {
-        epicId: null,
-        epic: null,
-        milestones: [],
-        activeMilestone: null,
-      },
-
-      // Daily Tasks for Active Milestone
-      activeMilestoneTasks: [],
-
-      // Legacy support
-      goals: [],
-      tasks: [],
-
-      // Loading and Error States
-      isLoading: false,
-      isRefreshing: false,
-      error: null,
-      lastFetch: null,
-
-      // Cache control (5 minutes default)
-      cacheExpiryTime: 5 * 60 * 1000,
+      ...initialState,
 
       // Epic Quest Actions
-      fetchEpics: async (forceRefresh = false) => {
+      fetchEpicQuests: async (forceRefresh = false) => {
+        const state = get();
         const now = Date.now();
-        const lastFetchTime = get().lastFetch ? new Date(get().lastFetch!).getTime() : 0;
-        const cacheExpiry = get().cacheExpiryTime;
+        const lastFetchTime = state.lastFetch ? new Date(state.lastFetch).getTime() : 0;
 
         // Skip fetch if data is fresh and not forcing refresh
-        if (!forceRefresh && get().epics.length > 0 && (now - lastFetchTime) < cacheExpiry) {
+        if (!forceRefresh && state.epicQuests.length > 0 && (now - lastFetchTime) < state.cacheExpiryTime) {
           return;
         }
 
         set({ isLoading: true, error: null });
         try {
-          const response: any = await goalsApi.fetchGoals();
-          const epics = Array.isArray(response) ? response : (response && Array.isArray(response.goals) ? response.goals : []);
-          set({ epics, goals: epics, isLoading: false, lastFetch: new Date().toISOString() });
+          const epicQuests = await epicQuestsApi.fetchEpicQuests();
+          set({
+            epicQuests,
+            isLoading: false,
+            lastFetch: new Date().toISOString()
+          });
 
-          // Auto-select an active goal if none is currently set and we have goals
+          // Auto-select an active epic quest if none is currently set
           const currentState = get();
-          if (!currentState.activeRoadmap.epicId && epics.length > 0) {
-            // Find the first goal with a roadmap, or just the first goal
-            const goalWithRoadmap = epics.find((epic: Goal) => epic.roadmapStatus === 'ready');
-            const selectedGoal = goalWithRoadmap || epics[0];
-
-            if (selectedGoal) {
-              // Fetch the roadmap for this goal to set it as active
-              await get().fetchRoadmap(selectedGoal.goalId);
+          if (!currentState.activeRoadmap.epicQuestId && epicQuests.length > 0) {
+            // Only set active roadmap if there's an epic quest with a ready roadmap
+            const questWithRoadmap = epicQuests.find(quest => quest.roadmapStatus === 'ready');
+            if (questWithRoadmap) {
+              try {
+                await currentState.setActiveRoadmap(questWithRoadmap.questId);
+              } catch (error) {
+                console.warn('Failed to set active roadmap for quest:', questWithRoadmap.questId, error);
+              }
+            } else {
+              console.log('No epic quests with ready roadmaps found, skipping auto-selection');
             }
           }
-        } catch (error) {
+        } catch (error: any) {
+          console.error('Failed to fetch epic quests:', error);
           set({
-            isLoading: false,
-            error: error instanceof Error ? error.message : 'Failed to fetch epic quests',
+            error: error.message || 'Failed to fetch epic quests',
+            isLoading: false
           });
         }
       },
 
-      createEpic: async (epicData) => {
+      createEpicQuest: async (questData) => {
         set({ isLoading: true, error: null });
         try {
-          const newEpic = await goalsApi.createGoal(epicData);
-          set((state) => ({
-            epics: [...state.epics, newEpic],
-            goals: [...state.goals, newEpic],
-            isLoading: false,
+          const newQuest = await epicQuestsApi.createEpicQuest(questData);
+          set(state => ({
+            epicQuests: [...state.epicQuests, newQuest],
+            isLoading: false
           }));
-        } catch (error) {
+          return newQuest;
+        } catch (error: any) {
+          console.error('Failed to create epic quest:', error);
           set({
-            isLoading: false,
-            error: error instanceof Error ? error.message : 'Failed to create epic quest',
+            error: error.message || 'Failed to create epic quest',
+            isLoading: false
+          });
+          throw error;
+        }
+      },
+
+      updateEpicQuest: async (questId, updateData) => {
+        set({ isLoading: true, error: null });
+        try {
+          const updatedQuest = await epicQuestsApi.updateEpicQuest(questId, updateData);
+          set(state => ({
+            epicQuests: state.epicQuests.map(quest =>
+              quest.questId === questId ? updatedQuest : quest
+            ),
+            activeRoadmap: state.activeRoadmap.epicQuestId === questId
+              ? { ...state.activeRoadmap, epicQuest: updatedQuest }
+              : state.activeRoadmap,
+            isLoading: false
+          }));
+          return updatedQuest;
+        } catch (error: any) {
+          console.error('Failed to update epic quest:', error);
+          set({
+            error: error.message || 'Failed to update epic quest',
+            isLoading: false
+          });
+          throw error;
+        }
+      },
+
+      deleteEpicQuest: async (questId) => {
+        set({ isLoading: true, error: null });
+        try {
+          await epicQuestsApi.deleteEpicQuest(questId);
+          set(state => ({
+            epicQuests: state.epicQuests.filter(quest => quest.questId !== questId),
+            activeRoadmap: state.activeRoadmap.epicQuestId === questId
+              ? initialState.activeRoadmap
+              : state.activeRoadmap,
+            roadmapCache: Object.fromEntries(
+              Object.entries(state.roadmapCache).filter(([key]) => key !== questId)
+            ),
+            isLoading: false
+          }));
+        } catch (error: any) {
+          console.error('Failed to delete epic quest:', error);
+          set({
+            error: error.message || 'Failed to delete epic quest',
+            isLoading: false
+          });
+          throw error;
+        }
+      },
+
+      getEpicQuestById: async (questId) => {
+        try {
+          return await epicQuestsApi.getEpicQuestById(questId);
+        } catch (error: any) {
+          console.error('Failed to fetch epic quest by ID:', error);
+          throw error;
+        }
+      },
+
+      // Daily Quest Actions
+      fetchDailyQuests: async (date, forceRefresh = false) => {
+        const state = get();
+        const now = Date.now();
+        const lastFetchTime = state.lastFetch ? new Date(state.lastFetch).getTime() : 0;
+
+        // Skip fetch if data is fresh and not forcing refresh
+        if (!forceRefresh && state.dailyQuests.length > 0 && (now - lastFetchTime) < state.cacheExpiryTime) {
+          return;
+        }
+
+        set({ isLoading: true, error: null });
+        try {
+          const dailyQuests = await dailyQuestsApi.fetchDailyQuestsByDate(date);
+
+          // Only update if data has actually changed to prevent unnecessary re-renders
+          const currentTaskIds = state.taskAccess.todayTasks.map(t => t.questId).sort();
+          const newTaskIds = dailyQuests.map(t => t.questId).sort();
+          const hasChanged = JSON.stringify(currentTaskIds) !== JSON.stringify(newTaskIds) ||
+            forceRefresh ||
+            dailyQuests.some(task => {
+              const existing = state.taskAccess.todayTasks.find(t => t.questId === task.questId);
+              return !existing || existing.status !== task.status || existing.title !== task.title;
+            });
+
+          if (hasChanged) {
+            set(state => ({
+              dailyQuests,
+              taskAccess: {
+                ...state.taskAccess,
+                todayTasks: dailyQuests,
+              },
+              isLoading: false,
+              lastFetch: new Date().toISOString()
+            }));
+          } else {
+            set({ isLoading: false });
+          }
+        } catch (error: any) {
+          console.error('Failed to fetch daily quests:', error);
+          set({
+            error: error.message || 'Failed to fetch daily quests',
+            isLoading: false
           });
         }
       },
 
-      deleteEpic: async (epicId) => {
+      createDailyQuest: async (questData) => {
+        set({ isLoading: true, error: null });
         try {
-          await goalsApi.deleteGoal(epicId);
-          set((state) => ({
-            epics: state.epics.filter((e) => e.goalId !== epicId),
-            goals: state.goals.filter((g) => g.goalId !== epicId),
+          const newQuest = await dailyQuestsApi.createDailyQuest(questData);
+          set(state => ({
+            dailyQuests: [...state.dailyQuests, newQuest],
+            taskAccess: {
+              ...state.taskAccess,
+              todayTasks: [...state.taskAccess.todayTasks, newQuest],
+            },
+            isLoading: false
           }));
-        } catch (error) {
+          return newQuest;
+        } catch (error: any) {
+          console.error('Failed to create daily quest:', error);
           set({
-            error: error instanceof Error ? error.message : 'Failed to delete epic quest',
+            error: error.message || 'Failed to create daily quest',
+            isLoading: false
           });
+          throw error;
+        }
+      },
+
+      updateDailyQuest: async (questId, updateData) => {
+        set({ isLoading: true, error: null });
+        try {
+          const updatedQuest = await dailyQuestsApi.updateDailyQuest(questId, updateData);
+          set(state => ({
+            dailyQuests: state.dailyQuests.map(quest =>
+              quest.questId === questId ? updatedQuest : quest
+            ),
+            taskAccess: {
+              ...state.taskAccess,
+              todayTasks: state.taskAccess.todayTasks.map(quest =>
+                quest.questId === questId ? updatedQuest : quest
+              ),
+              futureTasks: state.taskAccess.futureTasks.map(quest =>
+                quest.questId === questId ? updatedQuest : quest
+              ),
+            },
+            isLoading: false
+          }));
+          return updatedQuest;
+        } catch (error: any) {
+          console.error('Failed to update daily quest:', error);
+          set({
+            error: error.message || 'Failed to update daily quest',
+            isLoading: false
+          });
+          throw error;
+        }
+      },
+
+      deleteDailyQuest: async (questId) => {
+        set({ isLoading: true, error: null });
+        try {
+          await dailyQuestsApi.deleteDailyQuest(questId);
+          set(state => ({
+            dailyQuests: state.dailyQuests.filter(quest => quest.questId !== questId),
+            taskAccess: {
+              ...state.taskAccess,
+              todayTasks: state.taskAccess.todayTasks.filter(quest => quest.questId !== questId),
+              futureTasks: state.taskAccess.futureTasks.filter(quest => quest.questId !== questId),
+            },
+            isLoading: false
+          }));
+        } catch (error: any) {
+          console.error('Failed to delete daily quest:', error);
+          set({
+            error: error.message || 'Failed to delete daily quest',
+            isLoading: false
+          });
+          throw error;
         }
       },
 
       // Roadmap Actions
-      fetchRoadmap: async (epicId, forceRefresh = false) => {
+      fetchRoadmap: async (epicQuestId, forceRefresh = false) => {
+        const state = get();
+        const cached = state.roadmapCache[epicQuestId];
         const now = Date.now();
-        const cached = get().roadmapCache[epicId];
-        const cacheExpiry = get().cacheExpiryTime;
 
-        // Use cached data if available and fresh
-        if (!forceRefresh && cached && (now - cached.lastFetched) < cacheExpiry) {
-          set({
-            activeRoadmap: {
-              epicId,
-              epic: cached.epic,
-              milestones: cached.milestones,
-              activeMilestone: cached.milestones.find(m => m.status === 'active') || null,
-            },
-          });
+        // Return cached data if fresh and not forcing refresh
+        if (!forceRefresh && cached && (now - cached.lastFetched) < state.cacheExpiryTime) {
           return cached.milestones;
         }
 
         set({ isLoading: true, error: null });
         try {
-          const milestones = await roadmapApi.fetchRoadmap(epicId);
-          const epic = get().epics.find(e => e.goalId === epicId) || null;
-          const activeMilestone = milestones.find(m => m.status === 'active') || null;
+          const milestones = await roadmapApi.fetchRoadmap(epicQuestId);
+          const epicQuest = state.epicQuests.find(quest => quest.questId === epicQuestId) || null;
 
-          // Cache the results
-          set({
+          set(state => ({
             roadmapCache: {
-              ...get().roadmapCache,
-              [epicId]: {
+              ...state.roadmapCache,
+              [epicQuestId]: {
                 milestones,
                 lastFetched: now,
-                epic,
-              },
+                epicQuest,
+              }
             },
-            activeRoadmap: {
-              epicId,
-              epic,
-              milestones,
-              activeMilestone,
-            },
-            isLoading: false,
-          });
-
-          // If there's an active milestone, fetch its tasks
-          if (activeMilestone) {
-            await get().fetchActiveMilestoneData();
-          }
+            isLoading: false
+          }));
 
           return milestones;
-        } catch (error) {
+        } catch (error: any) {
+          console.error('Failed to fetch roadmap:', error);
           set({
-            isLoading: false,
-            error: error instanceof Error ? error.message : 'Failed to fetch roadmap',
-          });
-          return [];
-        }
-      },
-
-      generateRoadmap: async (epicId) => {
-        try {
-          await roadmapApi.generateRoadmap(epicId);
-          // Update epic status to generating
-          set((state) => ({
-            epics: state.epics.map((e) =>
-              e.goalId === epicId ? { ...e, roadmapStatus: 'generating' } : e
-            ),
-            goals: state.goals.map((g) =>
-              g.goalId === epicId ? { ...g, roadmapStatus: 'generating' } : g
-            ),
-          }));
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : 'Failed to generate roadmap',
-          });
-        }
-      },
-
-      // Milestone Actions
-      completeMilestone: async (milestoneId) => {
-        try {
-          const updatedMilestone = await roadmapApi.completeMilestone(milestoneId);
-          set((state) => ({
-            activeRoadmap: {
-              ...state.activeRoadmap,
-              milestones: state.activeRoadmap.milestones.map((m) =>
-                m.milestoneId === milestoneId ? updatedMilestone : m
-              ),
-            },
-          }));
-
-          // Activate next milestone if available
-          const state = get();
-          if (state.activeRoadmap.epicId) {
-            await state.activateNextMilestone(state.activeRoadmap.epicId);
-          }
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : 'Failed to complete milestone',
-          });
-        }
-      },
-
-      activateNextMilestone: async (epicId) => {
-        try {
-          const state = get();
-          const milestones = state.activeRoadmap.milestones;
-          const nextMilestone = milestones.find(m => m.status === 'locked');
-
-          if (nextMilestone) {
-            // Update milestone status to active (this would be an API call in real implementation)
-            const updatedMilestone: Milestone = { ...nextMilestone, status: 'active' };
-
-            set((prevState) => ({
-              activeRoadmap: {
-                ...prevState.activeRoadmap,
-                milestones: prevState.activeRoadmap.milestones.map((m) =>
-                  m.milestoneId === nextMilestone.milestoneId ? updatedMilestone : m
-                ),
-                activeMilestone: updatedMilestone,
-              },
-            }));
-
-            // Fetch new milestone's tasks
-            await get().fetchActiveMilestoneData();
-          }
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : 'Failed to activate next milestone',
-          });
-        }
-      },
-
-      // Active Milestone Data Actions
-      fetchActiveMilestoneData: async () => {
-        const state = get();
-        if (!state.activeRoadmap.activeMilestone) {
-          set({ activeMilestoneTasks: [] });
-          return;
-        }
-
-        set({ isLoading: true, error: null });
-        try {
-          const tasks = await roadmapApi.fetchMilestoneQuests(state.activeRoadmap.activeMilestone.milestoneId);
-          set({
-            activeMilestoneTasks: tasks,
-            tasks: tasks, // Update legacy tasks for compatibility
+            error: error.message || 'Failed to fetch roadmap',
             isLoading: false
           });
-        } catch (error) {
-          set({
-            isLoading: false,
-            error: error instanceof Error ? error.message : 'Failed to fetch milestone tasks',
-          });
+          throw error;
         }
       },
 
-      // Legacy Actions (for compatibility)
-      fetchTodayTasks: async (forceRefresh = false) => {
+      generateRoadmap: async (epicQuestId) => {
         set({ isLoading: true, error: null });
         try {
-          const today = new Date().toISOString().split('T')[0];
-          const response: any = await tasksApi.fetchTasksByDate(today);
-          const tasks = Array.isArray(response) ? response : (response && Array.isArray(response.tasks) ? response.tasks : []);
-          set({ tasks, isLoading: false, lastFetch: new Date().toISOString() });
-        } catch (error) {
-          set({
-            isLoading: false,
-            error:
-              error instanceof Error ? error.message : 'Failed to fetch tasks',
-          });
-        }
-      },
+          await roadmapApi.generateRoadmap(epicQuestId);
 
-      fetchGoals: async (forceRefresh = false) => {
-        // Delegate to fetchEpics for consistency
-        await get().fetchEpics(forceRefresh);
-      },
-
-      fetchTasksFromCache: () => {
-        // No-op: zustand persist handles cache
-      },
-
-      markTaskComplete: async (taskId) => {
-        try {
-          const updated = await tasksApi.updateTask(taskId, {
-            status: 'completed',
-          });
-          set((state) => ({
-            activeMilestoneTasks: state.activeMilestoneTasks.map((t) =>
-              t.taskId === taskId
-                ? { ...t, ...updated, status: 'completed' }
-                : t
+          // Update epic quest status to 'generating'
+          set(state => ({
+            epicQuests: state.epicQuests.map(quest =>
+              quest.questId === epicQuestId
+                ? { ...quest, roadmapStatus: 'generating' }
+                : quest
             ),
-            tasks: state.tasks.map((t) =>
-              t.taskId === taskId
-                ? { ...t, ...updated, status: 'completed' }
-                : t
-            ),
+            isLoading: false
           }));
-        } catch (error) {
+
+          // Start polling for completion
+          await get().pollRoadmapGeneration(epicQuestId);
+        } catch (error: any) {
+          console.error('Failed to generate roadmap:', error);
           set({
-            error:
-              error instanceof Error
-                ? error.message
-                : 'Failed to complete task',
+            error: error.message || 'Failed to generate roadmap',
+            isLoading: false
           });
+          throw error;
         }
       },
 
-      markGoalComplete: async (goalId) => {
-        try {
-          const updated = await goalsApi.updateGoal(goalId, {
-            status: 'completed',
-          });
-          set((state) => ({
-            epics: state.epics.map((g) =>
-              g.goalId === goalId
-                ? { ...g, ...updated, status: 'completed' }
-                : g
-            ),
-            goals: state.goals.map((g) =>
-              g.goalId === goalId
-                ? { ...g, ...updated, status: 'completed' }
-                : g
-            ),
+      clearRoadmapCache: (epicQuestId) => {
+        if (epicQuestId) {
+          set(state => ({
+            roadmapCache: Object.fromEntries(
+              Object.entries(state.roadmapCache).filter(([key]) => key !== epicQuestId)
+            )
           }));
-        } catch (error) {
-          set({
-            error:
-              error instanceof Error
-                ? error.message
-                : 'Failed to complete goal',
-          });
-        }
-      },
-
-      createTask: async (taskData) => {
-        set({ isLoading: true, error: null });
-        try {
-          const newTask = await tasksApi.createTask(taskData);
-          set((state) => ({
-            activeMilestoneTasks: [...state.activeMilestoneTasks, newTask],
-            tasks: [...state.tasks, newTask],
-            isLoading: false,
-          }));
-        } catch (error) {
-          set({
-            isLoading: false,
-            error:
-              error instanceof Error ? error.message : 'Failed to create task',
-          });
-        }
-      },
-
-      createGoal: async (goalData) => {
-        // Delegate to createEpic for consistency
-        await get().createEpic(goalData);
-      },
-
-      updateTask: async (taskId, data) => {
-        try {
-          const updated = await tasksApi.updateTask(taskId, data);
-          set((state) => ({
-            activeMilestoneTasks: state.activeMilestoneTasks.map((t) =>
-              t.taskId === taskId ? { ...t, ...updated } : t
-            ),
-            tasks: state.tasks.map((t) =>
-              t.taskId === taskId ? { ...t, ...updated } : t
-            ),
-          }));
-        } catch (error) {
-          set({
-            error:
-              error instanceof Error ? error.message : 'Failed to update task',
-          });
-        }
-      },
-
-      updateGoal: async (goalId, data) => {
-        try {
-          const updated = await goalsApi.updateGoal(goalId, data);
-          set((state) => ({
-            epics: state.epics.map((g) =>
-              g.goalId === goalId ? { ...g, ...updated } : g
-            ),
-            goals: state.goals.map((g) =>
-              g.goalId === goalId ? { ...g, ...updated } : g
-            ),
-          }));
-        } catch (error) {
-          set({
-            error:
-              error instanceof Error ? error.message : 'Failed to update goal',
-          });
-        }
-      },
-
-      deleteTask: async (taskId) => {
-        try {
-          await tasksApi.deleteTask(taskId);
-          set((state) => ({
-            activeMilestoneTasks: state.activeMilestoneTasks.filter((t) => t.taskId !== taskId),
-            tasks: state.tasks.filter((t) => t.taskId !== taskId),
-          }));
-        } catch (error) {
-          set({
-            error:
-              error instanceof Error ? error.message : 'Failed to delete task',
-          });
-        }
-      },
-
-      deleteGoal: async (goalId) => {
-        // Delegate to deleteEpic for consistency
-        await get().deleteEpic(goalId);
-      },
-
-      clearError: () => set({ error: null }),
-
-      // Cache management
-      clearRoadmapCache: (epicId?: string) => {
-        if (epicId) {
-          set((state) => {
-            const newCache = { ...state.roadmapCache };
-            delete newCache[epicId];
-            return { roadmapCache: newCache };
-          });
         } else {
           set({ roadmapCache: {} });
         }
       },
 
-      // Refresh actions
+      pollRoadmapGeneration: async (epicQuestId, maxAttempts = 30) => {
+        let attempts = 0;
+        const pollInterval = 2000; // 2 seconds
+
+        const poll = async (): Promise<void> => {
+          if (attempts >= maxAttempts) {
+            set(state => ({
+              epicQuests: state.epicQuests.map(quest =>
+                quest.questId === epicQuestId
+                  ? { ...quest, roadmapStatus: 'error' }
+                  : quest
+              ),
+              error: 'Roadmap generation timed out'
+            }));
+            return;
+          }
+
+          try {
+            const epicQuest = await epicQuestsApi.getEpicQuestById(epicQuestId);
+
+            if (epicQuest.roadmapStatus === 'ready') {
+              set(state => ({
+                epicQuests: state.epicQuests.map(quest =>
+                  quest.questId === epicQuestId ? epicQuest : quest
+                )
+              }));
+
+              // Fetch the roadmap data
+              await get().fetchRoadmap(epicQuestId, true);
+              return;
+            } else if (epicQuest.roadmapStatus === 'error') {
+              set(state => ({
+                epicQuests: state.epicQuests.map(quest =>
+                  quest.questId === epicQuestId ? epicQuest : quest
+                ),
+                error: 'Roadmap generation failed'
+              }));
+              return;
+            }
+
+            // Continue polling
+            attempts++;
+            setTimeout(poll, pollInterval);
+          } catch (error: any) {
+            console.error('Error polling roadmap generation:', error);
+            set({ error: error.message || 'Error checking roadmap status' });
+          }
+        };
+
+        await poll();
+      },
+
+      // Active Roadmap Management
+      setActiveRoadmap: async (epicQuestId) => {
+        const state = get();
+        const epicQuest = state.epicQuests.find(quest => quest.questId === epicQuestId);
+
+        if (!epicQuest) {
+          throw new Error('Epic quest not found');
+        }
+
+        // Check if the epic quest has a ready roadmap
+        if (epicQuest.roadmapStatus !== 'ready') {
+          console.warn(`Epic quest ${epicQuestId} does not have a ready roadmap (status: ${epicQuest.roadmapStatus})`);
+          // Set a basic active roadmap without milestones
+          set({
+            activeRoadmap: {
+              epicQuestId,
+              epicQuest,
+              milestones: [],
+            }
+          });
+          return;
+        }
+
+        try {
+          const milestones = await state.fetchRoadmap(epicQuestId);
+
+          set({
+            activeRoadmap: {
+              epicQuestId,
+              epicQuest,
+              milestones,
+            }
+          });
+
+          // Note: Removed fetchActiveMilestoneData call as it was causing task clearing issues
+          // Tasks are now fetched consistently through fetchDailyQuests
+        } catch (error: any) {
+          console.error('Failed to set active roadmap:', error);
+          // Set a basic active roadmap even if roadmap fetch fails
+          set({
+            activeRoadmap: {
+              epicQuestId,
+              epicQuest,
+              milestones: [],
+            }
+          });
+        }
+      },
+
+      // Progressive Task Access
+      fetchFutureTasks: async () => {
+        // Implementation for fetching future tasks based on access rules
+        // This would be expanded based on specific business logic
+        set(state => ({
+          taskAccess: {
+            ...state.taskAccess,
+            futureTasks: [], // Placeholder
+          }
+        }));
+      },
+
+      checkTaskAccessRules: () => {
+        const state = get();
+        // Implement logic to determine if user can access future tasks
+        // Based on completion rate, milestone progress, etc.
+        const completionRate = state.taskAccess.todayTasks.length > 0
+          ? state.taskAccess.todayTasks.filter(task => task.status === 'completed').length / state.taskAccess.todayTasks.length
+          : 0;
+
+        const canAccessFuture = completionRate >= 0.8; // 80% completion rate threshold
+
+        set(prevState => ({
+          taskAccess: {
+            ...prevState.taskAccess,
+            canAccessFuture,
+          }
+        }));
+      },
+
+      getAvailableTasks: () => {
+        const state = get();
+        return {
+          today: state.taskAccess.todayTasks,
+          future: state.taskAccess.canAccessFuture ? state.taskAccess.futureTasks : [],
+          showFuture: state.taskAccess.canAccessFuture,
+        };
+      },
+
+      // Utility Actions
       refreshTodayData: async () => {
+        const state = get();
+
+        // Prevent concurrent refreshes
+        if (state.isRefreshing) {
+          return;
+        }
+
         set({ isRefreshing: true });
         try {
-          await get().fetchTodayTasks(true);
-          await get().fetchActiveMilestoneData();
+          const today = new Date().toISOString().split('T')[0];
+
+          // Fetch all today's tasks
+          await get().fetchDailyQuests(today, true);
+
+          // Update task access rules based on completion
+          get().checkTaskAccessRules();
+        } catch (error) {
+          console.error('Failed to refresh today data:', error);
         } finally {
           set({ isRefreshing: false });
         }
@@ -524,106 +622,66 @@ export const useTaskGoalStore = create<TaskGoalState>()(
       refreshQuestsData: async () => {
         set({ isRefreshing: true });
         try {
-          await get().fetchEpics(true);
-          // Clear roadmap cache to ensure fresh data
-          get().clearRoadmapCache();
+          await get().fetchEpicQuests(true);
+          await get().refreshTodayData();
+        } catch (error: any) {
+          console.error('Failed to refresh quest data:', error);
         } finally {
           set({ isRefreshing: false });
         }
       },
 
-      resetState: () =>
-        set({
-          epics: [],
-          roadmapCache: {},
-          activeRoadmap: {
-            epicId: null,
-            epic: null,
-            milestones: [],
-            activeMilestone: null,
-          },
-          activeMilestoneTasks: [],
-          goals: [],
-          tasks: [],
-          isLoading: false,
-          isRefreshing: false,
-          error: null,
-          lastFetch: null,
-          cacheExpiryTime: 5 * 60 * 1000,
-        }),
+      clearError: () => {
+        set({ error: null });
+      },
+
+      resetState: () => {
+        set(initialState);
+      },
     }),
     {
-      name: 'task-goal-store',
+      name: 'quest-store',
       storage: createJSONStorage(() => AsyncStorage),
-      // Persist quest data but not loading states or errors
       partialize: (state) => ({
-        epics: state.epics,
+        // Only persist essential data
+        epicQuests: state.epicQuests,
+        roadmapCache: state.roadmapCache,
         activeRoadmap: state.activeRoadmap,
-        activeMilestoneTasks: state.activeMilestoneTasks,
-        goals: state.goals,
-        tasks: state.tasks,
         lastFetch: state.lastFetch,
       }),
     }
   )
 );
 
-// New Selectors for Journey Planner
-export const useEpics = () => {
-  const epics = useTaskGoalStore((state) => state.epics);
-  return Array.isArray(epics) ? epics : [];
-};
+// Selector hooks for easy component consumption
+export const useEpicQuests = () => useQuestStore(state => state.epicQuests);
+export const useDailyQuests = () => useQuestStore(state => state.dailyQuests);
+export const useActiveRoadmap = () => useQuestStore(state => state.activeRoadmap);
+export const useActiveMilestoneTasks = () => useQuestStore(state => state.taskAccess.todayTasks);
+export const useTodayTasks = () => useQuestStore(state => state.taskAccess.todayTasks);
+export const useIsLoading = () => useQuestStore(state => state.isLoading);
+export const useIsRefreshing = () => useQuestStore(state => state.isRefreshing);
+export const useQuestError = () => useQuestStore(state => state.error);
 
-export const useActiveRoadmap = () =>
-  useTaskGoalStore((state) => state.activeRoadmap);
+// Individual action hooks to prevent infinite re-renders
+export const useFetchEpicQuests = () => useQuestStore(state => state.fetchEpicQuests);
+export const useCreateEpicQuest = () => useQuestStore(state => state.createEpicQuest);
+export const useDeleteEpicQuest = () => useQuestStore(state => state.deleteEpicQuest);
+export const useGenerateRoadmap = () => useQuestStore(state => state.generateRoadmap);
+export const useFetchRoadmap = () => useQuestStore(state => state.fetchRoadmap);
+export const useRefreshTodayData = () => useQuestStore(state => state.refreshTodayData);
+export const useRefreshQuestsData = () => useQuestStore(state => state.refreshQuestsData);
 
-export const useActiveMilestoneTasks = () =>
-  useTaskGoalStore((state) => state.activeMilestoneTasks);
+// Daily Quest action hooks
+export const useFetchDailyQuests = () => useQuestStore(state => state.fetchDailyQuests);
+export const useCreateDailyQuest = () => useQuestStore(state => state.createDailyQuest);
+export const useUpdateDailyQuest = () => useQuestStore(state => state.updateDailyQuest);
+export const useDeleteDailyQuest = () => useQuestStore(state => state.deleteDailyQuest);
 
-// Refresh state selector
-export const useIsRefreshing = () => useTaskGoalStore((state) => state.isRefreshing);
+// Legacy exports for backward compatibility
+export const useTaskGoalStore = useQuestStore;
+export const useGoals = () => useQuestStore(state => state.epicQuests);
+export const useTasks = () => useQuestStore(state => state.dailyQuests);
 
-// Legacy Selectors (for compatibility)
-export const useGoals = () => {
-  const goals = useTaskGoalStore((state) => state.goals);
-  return Array.isArray(goals) ? goals : [];
-};
-
-export const useTasks = () => useTaskGoalStore((state) => state.tasks);
-export const useTaskGoalLoading = () =>
-  useTaskGoalStore((state) => state.isLoading);
-export const useTaskGoalError = () => useTaskGoalStore((state) => state.error);
-
-// Enhanced Store Actions Access
-export const getTaskGoalStoreActions = () => {
-  const state = useTaskGoalStore.getState() as any;
-  return {
-    // New Journey Planner Actions
-    fetchEpics: state.fetchEpics,
-    createEpic: state.createEpic,
-    deleteEpic: state.deleteEpic,
-    fetchRoadmap: state.fetchRoadmap,
-    generateRoadmap: state.generateRoadmap,
-    completeMilestone: state.completeMilestone,
-    activateNextMilestone: state.activateNextMilestone,
-    fetchActiveMilestoneData: state.fetchActiveMilestoneData,
-    clearRoadmapCache: state.clearRoadmapCache,
-    refreshTodayData: state.refreshTodayData,
-    refreshQuestsData: state.refreshQuestsData,
-
-    // Legacy Actions (for compatibility)
-    fetchTodayTasks: state.fetchTodayTasks,
-    fetchGoals: state.fetchGoals,
-    fetchTasksFromCache: state.fetchTasksFromCache,
-    markTaskComplete: state.markTaskComplete,
-    markGoalComplete: state.markGoalComplete,
-    createTask: state.createTask,
-    createGoal: state.createGoal,
-    updateTask: state.updateTask,
-    updateGoal: state.updateGoal,
-    deleteTask: state.deleteTask,
-    deleteGoal: state.deleteGoal,
-    clearError: state.clearError,
-    resetState: state.resetState,
-  };
-};
+// Legacy action selector for backward compatibility
+export const getTaskGoalStoreActions = () => useQuestStore.getState();

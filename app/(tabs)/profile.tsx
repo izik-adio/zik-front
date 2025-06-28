@@ -18,7 +18,7 @@ import * as Notifications from 'expo-notifications';
 import {
   User,
   Mail,
-  CreditCard as Edit3,
+  Edit,
   LogOut,
   Save,
   X,
@@ -38,20 +38,33 @@ import {
   Calendar,
 } from 'lucide-react-native';
 import { useAuth } from '@/src/context/AuthContext';
+import { useProfile } from '@/src/context/ProfileContext';
 import { useTheme } from '@/src/context/ThemeContext';
-import { profileApi } from '@/src/api/profile';
+import { profileApi, ProfileApiError } from '@/src/api/profile';
 import { storage } from '@/src/utils/storage';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  // Remove unused needsProfileCreation from destructuring
+  const { profile, loading: profileLoading, refreshProfile } = useProfile();
   const { theme, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(user?.userName || '');
-  const [editEmail, setEditEmail] = useState(user?.email || '');
+  const [editName, setEditName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+
   // Notification settings state
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  // Initialize form data when profile loads
+  useEffect(() => {
+    if (profile) {
+      setEditName(profile.displayName);
+      setEditUsername(profile.username);
+    }
+  }, [profile]);
+
   // Load settings on component mount
   useEffect(() => {
     loadNotificationSettings();
@@ -66,54 +79,60 @@ export default function ProfileScreen() {
     }
   };
 
-  // Fetch profile data
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ['profile'],
-    queryFn: profileApi.getProfile,
-    enabled: !!user,
-    initialData: user
-      ? {
-          userId: user.userId,
-          userName: user.userName,
-          email: user.email,
-          createdAt: '',
-          updatedAt: '',
-        }
-      : undefined,
-  });
-
   // Update profile mutation
   const updateProfileMutation = useMutation({
-    mutationFn: profileApi.updateProfile,
+    mutationFn: async (data: { displayName?: string; username?: string }) => {
+      return await profileApi.updateProfile(data);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      refreshProfile();
       setIsEditing(false);
       Alert.alert('Success', 'Profile updated successfully');
     },
     onError: (error: any) => {
-      Alert.alert('Error', error.message || 'Failed to update profile');
+      if (error instanceof ProfileApiError) {
+        Alert.alert('Error', error.message);
+      } else {
+        Alert.alert('Error', 'Failed to update profile');
+      }
     },
   });
 
   const handleSave = async () => {
-    if (!editName.trim() || !editEmail.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!editName.trim()) {
+      Alert.alert('Error', 'Please enter your display name');
+      return;
+    }
+    if (!editUsername.trim()) {
+      Alert.alert('Error', 'Please enter a username');
       return;
     }
 
     try {
-      await updateProfileMutation.mutateAsync({
-        userName: editName.trim(),
-        email: editEmail.trim(),
-      });
+      const updateData: any = {};
+
+      if (editName.trim() !== profile?.displayName) {
+        updateData.displayName = editName.trim();
+      }
+      if (editUsername.trim() !== profile?.username) {
+        updateData.username = editUsername.trim();
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await updateProfileMutation.mutateAsync(updateData);
+      } else {
+        setIsEditing(false);
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
     }
   };
 
   const handleCancel = () => {
-    setEditName(user?.userName || '');
-    setEditEmail(user?.email || '');
+    if (profile) {
+      setEditName(profile.displayName);
+      setEditUsername(profile.username);
+    }
     setIsEditing(false);
   };
   const handleLogout = async () => {
@@ -257,7 +276,13 @@ export default function ProfileScreen() {
       },
     ]);
   };
-  if (isLoading) {
+
+  const handleSettings = () => {
+    router.push('/(tabs)/profile' as any); // Navigate to dedicated settings screen later
+    Alert.alert('Settings', 'Advanced settings coming soon!');
+  };
+
+  if (profileLoading || !profile) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -286,138 +311,128 @@ export default function ProfileScreen() {
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
           Profile
         </Text>
-        {!isEditing ? (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => setIsEditing(true)}
-          >
-            <Edit3 size={20} color={theme.colors.ctaPrimary} />
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.editActions}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={handleCancel}
-            >
-              <X size={20} color={theme.colors.error} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSave}
-              disabled={updateProfileMutation.isPending}
-            >
-              <Save size={20} color={theme.colors.ctaPrimary} />
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Profile Information Card */}
+        {/* Modern Profile Card */}
         <View
           style={[styles.profileCard, { backgroundColor: theme.colors.card }]}
         >
-          <View style={styles.avatarContainer}>
-            <View
-              style={[
-                styles.avatar,
-                { backgroundColor: theme.colors.ctaPrimary + '20' },
-              ]}
-            >
-              <User size={48} color={theme.colors.ctaPrimary} />
+          {/* Avatar Section */}
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarContainer}>
+              <View
+                style={[
+                  styles.avatar,
+                  { backgroundColor: theme.colors.ctaPrimary },
+                ]}
+              >
+                <Text style={styles.avatarText}>
+                  {profile?.displayName?.charAt(0)?.toUpperCase() || 'U'}
+                </Text>
+              </View>
+              {!isEditing && (
+                <TouchableOpacity
+                  style={[styles.editButton, { backgroundColor: theme.colors.ctaPrimary }]}
+                  onPress={() => setIsEditing(true)}
+                >
+                  <Edit size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
-          <View style={styles.profileInfo}>
-            <View style={styles.field}>
-              <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>
-                Name
-              </Text>
+
+          {/* Profile Info Section */}
+          <View style={styles.profileDetails}>
+            {/* Name */}
+            <View style={styles.profileField}>
               {isEditing ? (
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: theme.colors.inputBackground,
-                      borderColor: theme.colors.inputBorder,
-                      color: theme.colors.text,
-                    },
-                  ]}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Enter your name"
-                  placeholderTextColor={theme.colors.subtitle}
-                  autoCapitalize="words"
-                />
+                <View style={styles.editContainer}>
+                  <Text style={[styles.editLabel, { color: theme.colors.subtitle }]}>Name</Text>
+                  <TextInput
+                    style={[
+                      styles.editInput,
+                      {
+                        backgroundColor: theme.colors.inputBackground,
+                        borderColor: theme.colors.inputBorder,
+                        color: theme.colors.text,
+                      },
+                    ]}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Enter your name"
+                    placeholderTextColor={theme.colors.subtitle}
+                    autoCapitalize="words"
+                  />
+                </View>
               ) : (
-                <View
-                  style={[
-                    styles.fieldValue,
-                    { backgroundColor: theme.colors.background },
-                  ]}
-                >
-                  <User size={20} color={theme.colors.subtitle} />
-                  <Text
-                    style={[styles.fieldText, { color: theme.colors.text }]}
-                  >
-                    {profile?.userName || 'Not set'}
+                <View style={styles.infoContainer}>
+                  <Text style={[styles.profileName, { color: theme.colors.text }]}>
+                    {profile?.displayName || 'Not set'}
                   </Text>
                 </View>
               )}
             </View>
-            <View style={styles.field}>
-              <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>
-                Email
-              </Text>
+
+            {/* Username */}
+            <View style={styles.profileField}>
               {isEditing ? (
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: theme.colors.inputBackground,
-                      borderColor: theme.colors.inputBorder,
-                      color: theme.colors.text,
-                    },
-                  ]}
-                  value={editEmail}
-                  onChangeText={setEditEmail}
-                  placeholder="Enter your email"
-                  placeholderTextColor={theme.colors.subtitle}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
+                <View style={styles.editContainer}>
+                  <Text style={[styles.editLabel, { color: theme.colors.subtitle }]}>Username</Text>
+                  <TextInput
+                    style={[
+                      styles.editInput,
+                      {
+                        backgroundColor: theme.colors.inputBackground,
+                        borderColor: theme.colors.inputBorder,
+                        color: theme.colors.text,
+                      },
+                    ]}
+                    value={editUsername}
+                    onChangeText={setEditUsername}
+                    placeholder="Enter your username"
+                    placeholderTextColor={theme.colors.subtitle}
+                    autoCapitalize="none"
+                  />
+                </View>
               ) : (
-                <View
-                  style={[
-                    styles.fieldValue,
-                    { backgroundColor: theme.colors.background },
-                  ]}
-                >
-                  <Mail size={20} color={theme.colors.subtitle} />
-                  <Text
-                    style={[styles.fieldText, { color: theme.colors.text }]}
-                  >
+                <View style={styles.infoContainer}>
+                  <Text style={[styles.profileUsername, { color: theme.colors.ctaPrimary }]}>
+                    @{profile?.username || 'Not set'}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Email */}
+            <View style={styles.profileField}>
+              <View style={styles.infoContainer}>
+                <View style={styles.emailContainer}>
+                  <Mail size={16} color={theme.colors.subtitle} />
+                  <Text style={[styles.profileEmail, { color: theme.colors.subtitle }]}>
                     {profile?.email || 'Not set'}
                   </Text>
                 </View>
-              )}
+              </View>
             </View>
-            {profile?.createdAt && (
-              <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: theme.colors.text }]}>
-                  Member Since
-                </Text>
-                <View
-                  style={[
-                    styles.fieldValue,
-                    { backgroundColor: theme.colors.background },
-                  ]}
+
+            {/* Edit Actions */}
+            {isEditing && (
+              <View style={styles.editActions}>
+                <TouchableOpacity
+                  style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+                  onPress={handleCancel}
                 >
-                  <Calendar size={20} color={theme.colors.subtitle} />
-                  <Text
-                    style={[styles.fieldText, { color: theme.colors.text }]}
-                  >
-                    {new Date(profile.createdAt).toLocaleDateString()}
+                  <Text style={[styles.cancelButtonText, { color: theme.colors.text }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveButton, { backgroundColor: theme.colors.ctaPrimary }]}
+                  onPress={handleSave}
+                  disabled={updateProfileMutation.isPending}
+                >
+                  <Text style={styles.saveButtonText}>
+                    {updateProfileMutation.isPending ? 'Saving...' : 'Save'}
                   </Text>
-                </View>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -504,6 +519,28 @@ export default function ProfileScreen() {
                   ]}
                 >
                   {isDark ? 'Dark mode' : 'Light mode'}
+                </Text>
+              </View>
+            </View>
+            <ChevronRight size={20} color={theme.colors.subtitle} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem} onPress={handleSettings}>
+            <View style={styles.settingLeft}>
+              <Settings size={20} color={theme.colors.primary} />
+              <View style={styles.settingTextContainer}>
+                <Text
+                  style={[styles.settingLabel, { color: theme.colors.text }]}
+                >
+                  Advanced Settings
+                </Text>
+                <Text
+                  style={[
+                    styles.settingDescription,
+                    { color: theme.colors.subtitle },
+                  ]}
+                >
+                  Detailed preferences & privacy
                 </Text>
               </View>
             </View>
@@ -715,26 +752,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     padding: 20,
     borderBottomWidth: 1,
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',
     fontSize: 24,
-  },
-  editButton: {
-    padding: 8,
-  },
-  editActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    padding: 8,
-  },
-  saveButton: {
-    padding: 8,
   },
   content: {
     flex: 1,
@@ -750,55 +774,131 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   profileCard: {
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 24,
+    padding: 0,
     marginBottom: 20,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  avatarSection: {
+    alignItems: 'center',
+    paddingTop: 32,
+    paddingBottom: 24,
+    position: 'relative',
   },
   avatarContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
+    position: 'relative',
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  profileInfo: {
-    gap: 20,
+  avatarText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 32,
+    color: '#FFFFFF',
   },
-  field: {
-    gap: 8,
+  editButton: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  fieldLabel: {
+  profileDetails: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  profileField: {
+    marginBottom: 20,
+  },
+  infoContainer: {
+    alignItems: 'center',
+  },
+  profileName: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 24,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  profileUsername: {
     fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 8,
   },
-  fieldValue: {
+  emailContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+  },
+  profileEmail: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+  },
+  editContainer: {
+    gap: 8,
+  },
+  editLabel: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    marginLeft: 4,
+  },
+  editInput: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    fontFamily: 'Inter-Medium',
+    fontSize: 16,
+  },
+  editActions: {
+    flexDirection: 'row',
     gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    marginTop: 8,
   },
-  fieldText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
+  cancelButton: {
     flex: 1,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
     paddingVertical: 14,
-    fontFamily: 'Inter-Regular',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontFamily: 'Inter-SemiBold',
     fontSize: 16,
+  },
+  saveButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 16,
+    color: '#FFFFFF',
   },
   settingsCard: {
     borderRadius: 16,

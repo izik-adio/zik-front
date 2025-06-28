@@ -20,6 +20,7 @@ interface ChatState {
   isRefreshingQuests: boolean;
   error: string | null;
   currentStreamingMessageId: string | null;
+  prefilledInput: string | null;
 
   // Actions
   sendMessage: (message: string) => Promise<void>;
@@ -28,6 +29,8 @@ interface ChatState {
   finishStreaming: (messageId: string) => void;
   clearError: () => void;
   clearMessages: () => void;
+  setPrefilledInput: (text: string) => void;
+  clearPrefilledInput: () => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -47,7 +50,8 @@ export const useChatStore = create<ChatState>()(
       isStreaming: false,
       isRefreshingQuests: false,
       error: null,
-      currentStreamingMessageId: null, // Actions
+      currentStreamingMessageId: null,
+      prefilledInput: null,
       sendMessage: async (message: string) => {
         const { addMessage, updateStreamingMessage, finishStreaming } = get();
 
@@ -234,6 +238,12 @@ export const useChatStore = create<ChatState>()(
           currentStreamingMessageId: null,
         });
       },
+      setPrefilledInput: (text: string) => {
+        set({ prefilledInput: text });
+      },
+      clearPrefilledInput: () => {
+        set({ prefilledInput: null });
+      },
     }),
     {
       name: 'chat-store',
@@ -254,3 +264,4 @@ export const useChatStreaming = () =>
 export const useChatRefreshingQuests = () =>
   useChatStore((state) => state.isRefreshingQuests);
 export const useChatError = () => useChatStore((state) => state.error);
+export const useChatPrefilledInput = () => useChatStore((state) => state.prefilledInput);

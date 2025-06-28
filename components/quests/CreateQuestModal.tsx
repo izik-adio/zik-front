@@ -28,6 +28,12 @@ export function CreateQuestModal({
   const { theme } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [targetDate, setTargetDate] = useState(() => {
+    // Default to 30 days from now for epic quests
+    const defaultDate = new Date();
+    defaultDate.setDate(defaultDate.getDate() + 30);
+    return defaultDate.toISOString().split('T')[0];
+  });
   const [category, setCategory] = useState('wellness');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [milestones, setMilestones] = useState([
@@ -53,6 +59,7 @@ export function CreateQuestModal({
       title: title.trim(),
       description: description.trim(),
       category,
+      targetDate: targetDate, // Include target date for epic quests
       milestones: validMilestones.map((m) => ({
         ...m,
         title: m.title.trim(),
@@ -67,6 +74,9 @@ export function CreateQuestModal({
     setTitle('');
     setDescription('');
     setCategory('wellness');
+    const defaultDate = new Date();
+    defaultDate.setDate(defaultDate.getDate() + 30);
+    setTargetDate(defaultDate.toISOString().split('T')[0]);
     setMilestones([
       { id: '1', title: '', completed: false },
       { id: '2', title: '', completed: false },
@@ -186,6 +196,33 @@ export function CreateQuestModal({
               textAlignVertical="top"
             />
           </View>
+
+          {isEpicQuest && (
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: theme.colors.text }]}>
+                Target Completion Date
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.colors.inputBackground,
+                    borderColor:
+                      focusedField === 'targetDate'
+                        ? theme.colors.ctaPrimary
+                        : theme.colors.inputBorder,
+                    color: theme.colors.text,
+                  },
+                ]}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={theme.colors.subtitle}
+                value={targetDate}
+                onChangeText={setTargetDate}
+                onFocus={() => setFocusedField('targetDate')}
+                onBlur={() => setFocusedField(null)}
+              />
+            </View>
+          )}
 
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.colors.text }]}>

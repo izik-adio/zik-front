@@ -13,10 +13,18 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
-import { useGoals, getTaskGoalStoreActions, useIsRefreshing } from '../../src/store/questStore';
-import { Goal } from '../../src/api/quests';
+import {
+  useEpicQuests,
+  useIsRefreshing,
+  useFetchEpicQuests,
+  useRefreshQuestsData,
+  useCreateEpicQuest,
+  useDeleteEpicQuest,
+  useGenerateRoadmap
+} from '../../src/store/questStore';
+import { EpicQuest, CreateEpicQuestData, CreateDailyQuestData } from '../../src/api/quests';
 import { EpicQuestCard } from '../../components/quests/EpicQuestCard';
-import { CreateQuestModal } from '../../components/quests/CreateQuestModal';
+import { AddTaskModal } from '../../components/today/AddTaskModal';
 
 export default function EpicQuestsScreen() {
   const { user } = useAuth();
@@ -24,18 +32,21 @@ export default function EpicQuestsScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const insets = useSafeAreaInsets();
 
-  const goals = useGoals();
+  const epicQuests = useEpicQuests();
   const isRefreshing = useIsRefreshing();
 
-  // Get actions from store - memoize to prevent infinite loops
-  const actions = useMemo(() => getTaskGoalStoreActions(), []);
-  const { fetchGoals, createGoal, deleteGoal, refreshQuestsData } = actions;
+  // Get individual actions from store to prevent re-renders
+  const fetchEpicQuests = useFetchEpicQuests();
+  const refreshQuestsData = useRefreshQuestsData();
+  const createEpicQuest = useCreateEpicQuest();
+  const deleteEpicQuest = useDeleteEpicQuest();
+  const generateRoadmap = useGenerateRoadmap();
 
   useEffect(() => {
     if (user) {
-      fetchGoals();
+      fetchEpicQuests();
     }
-  }, [user]);
+  }, [user, fetchEpicQuests]);
 
   const handleRefresh = async () => {
     if (user) {
@@ -43,13 +54,29 @@ export default function EpicQuestsScreen() {
     }
   };
 
-  const handleCreateEpicQuest = async (goalData: any) => {
+  const handleCreateEpicQuest = async (questData: CreateEpicQuestData | CreateDailyQuestData) => {
     try {
-      await createGoal({
-        ...goalData,
-        roadmapStatus: 'none' // Initialize with no roadmap
-      });
+      // Only process epic quests in this screen
+      if (questData.type !== 'epic') {
+        Alert.alert('Error', 'Only epic quests can be created from this screen');
+        return;
+      }
+
+      const epic = await createEpicQuest(questData);
       setShowCreateModal(false);
+
+      // Check if this is a complex goal that needs a roadmap
+      const isComplexGoal = questData.description && questData.description.length > 50;
+      if (isComplexGoal) {
+        Alert.alert(
+          'Generating Your Journey',
+          'AI is creating a personalized roadmap for your Epic Quest. This may take a few moments.',
+          [{ text: 'OK' }]
+        );
+
+        // Start roadmap generation
+        await generateRoadmap(epic.questId);
+      }
     } catch (error) {
       Alert.alert(
         'Error',
@@ -100,7 +127,7 @@ export default function EpicQuestsScreen() {
           />
         }
       >
-        {goals.length === 0 ? (
+        {epicQuests.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Sparkles size={64} color={theme.colors.ctaPrimary} style={styles.emptyIcon} />
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
@@ -126,11 +153,11 @@ export default function EpicQuestsScreen() {
               </Text>
             </View>
 
-            {goals.map((goal: Goal) => (
+            {epicQuests.map((goal: EpicQuest) => (
               <EpicQuestCard
-                key={goal.goalId}
+                key={goal.questId}
                 epic={goal}
-                onPress={() => handleEpicQuestPress(goal.goalId)}
+                onPress={() => handleEpicQuestPress(goal.questId)}
               />
             ))}
           </>
@@ -138,11 +165,11 @@ export default function EpicQuestsScreen() {
       </ScrollView>
 
       {/* Create Quest Modal */}
-      <CreateQuestModal
+      <AddTaskModal
         visible={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onCreate={handleCreateEpicQuest}
-        isEpicQuest={true}
+        onAdd={handleCreateEpicQuest}
+        defaultEpicMode={true}
       />
     </View>
   );

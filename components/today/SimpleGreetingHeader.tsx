@@ -37,17 +37,6 @@ export function SimpleGreetingHeader({
                     {getDate()}
                 </Text>
             </View>
-
-            {completionRate > 0 && (
-                <View style={styles.progressSection}>
-                    <Text style={[styles.progressLabel, { color: theme.colors.subtitle }]}>
-                        Today&apos;s Progress
-                    </Text>
-                    <Text style={[styles.progressValue, { color: theme.colors.ctaPrimary }]}>
-                        {Math.round(completionRate)}%
-                    </Text>
-                </View>
-            )}
         </View>
     );
 }
@@ -71,16 +60,5 @@ const styles = StyleSheet.create({
     },
     date: {
         fontSize: 16,
-    },
-    progressSection: {
-        alignItems: 'flex-end',
-    },
-    progressLabel: {
-        fontSize: 12,
-        marginBottom: 2,
-    },
-    progressValue: {
-        fontSize: 20,
-        fontWeight: '700',
     },
 });

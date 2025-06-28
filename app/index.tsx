@@ -2,6 +2,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '@/src/context/AuthContext';
+import { useProfile } from '@/src/context/ProfileContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { storage } from '@/src/utils/storage';
 import { SplashScreen } from '@/components/onboarding/SplashScreen';
@@ -14,6 +15,7 @@ ExpoSplashScreen.preventAutoHideAsync();
 export default function App() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const { profile, onboardingCompleted, loading: profileLoading } = useProfile();
   const { theme } = useTheme();
   const [showSplash, setShowSplash] = useState(true);
   const [showAuthWelcome, setShowAuthWelcome] = useState(false);
@@ -29,41 +31,39 @@ export default function App() {
       // Hide expo splash screen
       await ExpoSplashScreen.hideAsync();
 
-      // Check if user has completed initial setup
-      const hasOnboarded = await storage.getItem('hasOnboarded');
-      const hasSeenAuthWelcome = await storage.getItem('hasSeenAuthWelcome');
-
-      // First time user - show auth welcome first
-      if (hasSeenAuthWelcome !== 'true') {
+      // If not authenticated, show auth welcome
+      if (!isAuthenticated) {
         setShowAuthWelcome(true);
         return;
       }
 
-      // User has seen auth welcome, check if they completed onboarding
-      if (hasOnboarded !== 'true') {
+      // User is authenticated, let ProfileGuard handle the rest
+      if (profile && !onboardingCompleted) {
+        // Profile exists but onboarding not complete
         router.replace('/onboarding');
         return;
       }
 
-      // User completed everything, check auth status
-      if (isAuthenticated) {
+      if (profile && onboardingCompleted) {
+        // User is fully set up, go to main app
         router.replace('/(tabs)');
-      } else {
-        // Return to auth welcome for login/signup
-        setShowAuthWelcome(true);
+        return;
       }
+
+      // If we get here, we're still loading profile data
+      // Just wait for the profile context to handle the routing
     } catch (error) {
       console.error('Error in app flow:', error);
       setShowAuthWelcome(true);
       await ExpoSplashScreen.hideAsync();
     }
-  }, [router, isAuthenticated]);
+  }, [router, isAuthenticated, profile, onboardingCompleted]);
 
   useEffect(() => {
-    if (!isLoading && isAppReady) {
+    if (!isLoading && !profileLoading && isAppReady) {
       checkAppFlow();
     }
-  }, [isLoading, isAppReady, checkAppFlow]);
+  }, [isLoading, profileLoading, isAppReady, checkAppFlow]);
 
   // Show splash screen initially
   if (showSplash) {

@@ -12,9 +12,10 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeft, Sparkles, Trash2 } from 'lucide-react-native';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useAuth } from '../../src/context/AuthContext';
-import { Goal, Milestone } from '../../src/api/quests';
-import { useGoals, getTaskGoalStoreActions, useActiveRoadmap } from '../../src/store/questStore';
+import { EpicQuest, Milestone } from '../../src/api/quests';
+import { useEpicQuests, getTaskGoalStoreActions, useActiveRoadmap } from '../../src/store/questStore';
 import { RoadmapVisualizer } from '../../components/quests/RoadmapVisualizer';
+import { RoadmapStatusIndicator } from '../../components/ui/RoadmapStatusIndicator';
 
 export default function EpicRoadmapScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,18 +25,18 @@ export default function EpicRoadmapScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const goals = useGoals();
+    const epicQuests = useEpicQuests();
     const activeRoadmap = useActiveRoadmap();
     const actions = getTaskGoalStoreActions();
     const { fetchRoadmap, generateRoadmap } = actions;
 
     // Find the epic quest from the store
-    const epic = goals.find((goal: Goal) => goal.goalId === id);
+    const epic = epicQuests.find((quest: EpicQuest) => quest.questId === id);
 
     useEffect(() => {
         if (id && user) {
             // Check if we already have roadmap data for this epic
-            if (activeRoadmap?.epicId === id && activeRoadmap.milestones.length > 0) {
+            if (activeRoadmap?.epicQuestId === id && activeRoadmap.milestones.length > 0) {
                 setMilestones(activeRoadmap.milestones);
                 setIsLoading(false);
             } else {
@@ -67,9 +68,12 @@ export default function EpicRoadmapScreen() {
             await generateRoadmap(id);
             Alert.alert(
                 'Roadmap Generation Started',
-                'Your personalized journey plan is being created. This may take a few moments.',
-                [{ text: 'OK', onPress: () => router.back() }]
+                'AI is creating your personalized journey plan. This may take a few moments.',
+                [{ text: 'OK' }]
             );
+
+            // Start polling for completion
+            actions.pollRoadmapGeneration(id);
         } catch (error) {
             Alert.alert(
                 'Error',
@@ -87,7 +91,7 @@ export default function EpicRoadmapScreen() {
 
         Alert.alert(
             'Delete Epic Quest',
-            `Are you sure you want to delete "${epic.goalName}"? This will permanently remove this goal and all its roadmap data.`,
+            `Are you sure you want to delete "${epic.title}"? This will permanently remove this goal and all its roadmap data.`,
             [
                 {
                     text: 'Cancel',
@@ -98,7 +102,7 @@ export default function EpicRoadmapScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await actions.deleteEpic(id);
+                            await actions.deleteEpicQuest(id);
                             Alert.alert(
                                 'Epic Quest Deleted',
                                 'Your epic quest has been successfully deleted.',
@@ -142,11 +146,17 @@ export default function EpicRoadmapScreen() {
                 </TouchableOpacity>
                 <View style={styles.headerContent}>
                     <Text style={[styles.title, { color: theme.colors.text }]}>
-                        {epic.goalName}
+                        {epic.title}
                     </Text>
-                    <Text style={[styles.subtitle, { color: theme.colors.subtitle }]}>
-                        Epic Quest Roadmap
-                    </Text>
+                    <View style={styles.headerStatus}>
+                        <Text style={[styles.subtitle, { color: theme.colors.subtitle }]}>
+                            Epic Quest Roadmap
+                        </Text>
+                        <RoadmapStatusIndicator
+                            status={epic.roadmapStatus || 'none'}
+                            compact={false}
+                        />
+                    </View>
                 </View>
                 <View style={styles.headerSpacer} />
             </View>
@@ -236,6 +246,10 @@ const styles = StyleSheet.create({
     headerContent: {
         flex: 1,
         alignItems: 'center',
+    },
+    headerStatus: {
+        alignItems: 'center',
+        gap: 8,
     },
     headerSpacer: {
         width: 40,

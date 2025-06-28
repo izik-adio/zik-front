@@ -12,36 +12,50 @@ export class ApiError extends Error {
 }
 
 /**
- * Task interface aligned with AWS backend data model
+ * DailyQuest interface aligned with unified data model
  */
-export interface Task {
-  taskId: string;
+export interface DailyQuest {
+  questId: string; // Renamed from taskId
   userId: string;
-  taskName: string;
+  title: string; // Renamed from taskName
   description: string;
   dueDate: string; // YYYY-MM-DD format
   priority: 'low' | 'medium' | 'high';
   status: 'pending' | 'in-progress' | 'completed';
-  goalId?: string; // Optional link to a goal
-  milestoneId?: string; // NEW: Optional link to a milestone
+  epicQuestId?: string; // Renamed from goalId
+  milestoneId?: string; // Optional link to a milestone
   createdAt: string; // ISO-8601
   updatedAt: string; // ISO-8601
 }
 
 /**
- * Goal interface aligned with AWS backend data model
+ * EpicQuest interface aligned with unified data model
  */
-export interface Goal {
-  goalId: string;
+export interface EpicQuest {
+  questId: string; // Renamed from goalId
   userId: string;
-  goalName: string;
+  title: string; // Renamed from goalName
   description: string;
   targetDate: string; // YYYY-MM-DD format
   category: string;
   status: 'active' | 'completed' | 'paused';
-  roadmapStatus: 'none' | 'generating' | 'ready'; // NEW: Roadmap generation status
+  roadmapStatus: 'none' | 'generating' | 'ready' | 'error'; // Enhanced roadmap generation status
   createdAt: string; // ISO-8601
   updatedAt: string; // ISO-8601
+}
+
+// Legacy interfaces for backward compatibility
+/** @deprecated Use DailyQuest instead */
+export interface Task extends Omit<DailyQuest, 'questId' | 'title' | 'epicQuestId'> {
+  taskId: string;
+  taskName: string;
+  goalId?: string;
+}
+
+/** @deprecated Use EpicQuest instead */
+export interface Goal extends Omit<EpicQuest, 'questId' | 'title'> {
+  goalId: string;
+  goalName: string;
 }
 
 /**
@@ -49,7 +63,7 @@ export interface Goal {
  */
 export interface Milestone {
   milestoneId: string;
-  epicId: string;
+  epicQuestId: string; // Renamed from epicId
   sequence: number; // Order of the milestone (1, 2, 3...)
   title: string;
   description: string;
@@ -62,28 +76,29 @@ export interface Milestone {
 /**
  * Union type for quest operations
  */
-export type Quest = Task | Goal;
+export type Quest = DailyQuest | EpicQuest;
 
 /**
- * Create Task request payload
+ * Create DailyQuest request payload
  */
-export interface CreateTaskData {
+export interface CreateDailyQuestData {
   title: string;
   dueDate: string; // YYYY-MM-DD format
-  type: 'task';
+  type: 'daily';
   description: string;
   priority: 'low' | 'medium' | 'high';
   category?: string;
-  goalId?: string; // Optional link to a goal
+  epicQuestId?: string; // Optional link to an epic quest
+  milestoneId?: string; // Optional link to a milestone
 }
 
 /**
- * Create Goal request payload
+ * Create EpicQuest request payload
  */
-export interface CreateGoalData {
+export interface CreateEpicQuestData {
   title: string;
-  dueDate: string; // YYYY-MM-DD format (targetDate)
-  type: 'goal';
+  targetDate: string; // YYYY-MM-DD format (corrected field name)
+  type: 'epic';
   description: string;
   priority?: 'low' | 'medium' | 'high';
   category: string;
@@ -92,23 +107,23 @@ export interface CreateGoalData {
 /**
  * Union type for creation payloads
  */
-export type CreateQuestData = CreateTaskData | CreateGoalData;
+export type CreateQuestData = CreateDailyQuestData | CreateEpicQuestData;
 
 /**
- * Update Task request payload
+ * Update DailyQuest request payload
  */
-export interface UpdateTaskData {
+export interface UpdateDailyQuestData {
   title?: string;
   description?: string;
   priority?: 'low' | 'medium' | 'high';
   status?: 'pending' | 'in-progress' | 'completed';
-  goalId?: string;
+  epicQuestId?: string;
 }
 
 /**
- * Update Goal request payload
+ * Update EpicQuest request payload
  */
-export interface UpdateGoalData {
+export interface UpdateEpicQuestData {
   title?: string;
   description?: string;
   category?: string;
@@ -118,7 +133,28 @@ export interface UpdateGoalData {
 /**
  * Union type for update payloads
  */
-export type UpdateQuestData = UpdateTaskData | UpdateGoalData;
+export type UpdateQuestData = UpdateDailyQuestData | UpdateEpicQuestData;
+
+// Legacy types for backward compatibility
+/** @deprecated Use CreateDailyQuestData instead */
+export interface CreateTaskData extends Omit<CreateDailyQuestData, 'type' | 'epicQuestId'> {
+  type: 'task';
+  goalId?: string;
+}
+
+/** @deprecated Use CreateEpicQuestData instead */
+export interface CreateGoalData extends Omit<CreateEpicQuestData, 'type' | 'targetDate'> {
+  type: 'goal';
+  dueDate: string;
+}
+
+/** @deprecated Use UpdateDailyQuestData instead */
+export interface UpdateTaskData extends Omit<UpdateDailyQuestData, 'epicQuestId'> {
+  goalId?: string;
+}
+
+/** @deprecated Use UpdateEpicQuestData instead */
+export interface UpdateGoalData extends UpdateEpicQuestData { }
 
 /**
  * Helper function to handle authentication errors
@@ -177,15 +213,15 @@ const retryRequest = async <T>(
 };
 
 /**
- * Main API client for Task operations
+ * Main API client for DailyQuest operations
  */
-export const tasksApi = {
+export const dailyQuestsApi = {
   /**
-   * Fetch tasks for a specific date
+   * Fetch daily quests for a specific date
    * @param date - Date in YYYY-MM-DD format
-   * @returns Promise<Task[]>
+   * @returns Promise<DailyQuest[]>
    */
-  async fetchTasksByDate(date: string): Promise<Task[]> {
+  async fetchDailyQuestsByDate(date: string): Promise<DailyQuest[]> {
     if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)) {
       throw new ApiError(400, 'Date must be in YYYY-MM-DD format');
     }
@@ -193,7 +229,48 @@ export const tasksApi = {
     return retryRequest(async () => {
       try {
         const response = await api.get(`/tasks`, { params: { date } });
-        return response.data as Task[];
+
+        // Debug logging to understand response structure
+        console.log('Tasks API response:', {
+          status: response.status,
+          dataType: typeof response.data,
+          isArray: Array.isArray(response.data),
+          dataKeys: response.data ? Object.keys(response.data) : 'null',
+          data: response.data
+        });
+
+        // Handle different response structures
+        let tasks: Task[];
+        if (Array.isArray(response.data)) {
+          tasks = response.data;
+        } else if (response.data && Array.isArray(response.data.tasks)) {
+          tasks = response.data.tasks;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          tasks = response.data.data;
+        } else {
+          // If no tasks found, return empty array
+          console.warn('No tasks found in response. Response structure:', {
+            type: typeof response.data,
+            keys: response.data ? Object.keys(response.data) : null,
+            value: response.data
+          });
+          return [];
+        }
+
+        // Transform legacy response to new format
+        return tasks.map(task => ({
+          questId: task.taskId,
+          userId: task.userId,
+          title: task.taskName,
+          description: task.description,
+          dueDate: task.dueDate,
+          priority: task.priority,
+          status: task.status,
+          epicQuestId: task.goalId,
+          milestoneId: task.milestoneId,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+        }));
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
@@ -202,7 +279,7 @@ export const tasksApi = {
         const message =
           error.response?.data?.message ||
           error.message ||
-          'Failed to fetch tasks';
+          'Failed to fetch daily quests';
         throw new ApiError(
           error.response?.status || 500,
           message,
@@ -213,19 +290,19 @@ export const tasksApi = {
   },
 
   /**
-   * Create a new task
-   * @param taskData - Task creation data
-   * @returns Promise<Task>
+   * Create a new daily quest
+   * @param questData - DailyQuest creation data
+   * @returns Promise<DailyQuest>
    */
-  async createTask(taskData: Omit<CreateTaskData, 'type'>): Promise<Task> {
+  async createDailyQuest(questData: Omit<CreateDailyQuestData, 'type'>): Promise<DailyQuest> {
     // Validate required fields
-    if (!taskData.title?.trim()) {
+    if (!questData.title?.trim()) {
       throw new ApiError(400, 'Title is required');
     }
-    if (!taskData.dueDate) {
+    if (!questData.dueDate) {
       throw new ApiError(400, 'Due date is required');
     }
-    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(taskData.dueDate)) {
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(questData.dueDate)) {
       throw new ApiError(400, 'Due date must be in YYYY-MM-DD format');
     }
 
@@ -233,15 +310,30 @@ export const tasksApi = {
       try {
         // Transform the data to match backend expectations
         const payload = {
-          taskName: taskData.title.trim(),
-          dueDate: taskData.dueDate,
-          description: taskData.description || '',
-          priority: taskData.priority || 'medium',
-          goalId: taskData.goalId,
+          taskName: questData.title.trim(),
+          dueDate: questData.dueDate,
+          description: questData.description || '',
+          priority: questData.priority || 'medium',
+          goalId: questData.epicQuestId,
+          milestoneId: questData.milestoneId,
         };
 
         const response = await api.post('/tasks', payload);
-        return response.data as Task;
+        const task = response.data as Task;
+        // Transform response to new format
+        return {
+          questId: task.taskId,
+          userId: task.userId,
+          title: task.taskName,
+          description: task.description,
+          dueDate: task.dueDate,
+          priority: task.priority,
+          status: task.status,
+          epicQuestId: task.goalId,
+          milestoneId: task.milestoneId,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+        };
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
@@ -250,7 +342,7 @@ export const tasksApi = {
         const message =
           error.response?.data?.message ||
           error.message ||
-          'Failed to create task';
+          'Failed to create daily quest';
         throw new ApiError(
           error.response?.status || 500,
           message,
@@ -261,32 +353,53 @@ export const tasksApi = {
   },
 
   /**
-   * Update a task
-   * @param taskId - The ID of the task to update
+   * Update a daily quest
+   * @param questId - The ID of the quest to update
    * @param updateData - Partial update data
-   * @returns Promise<Task>
+   * @returns Promise<DailyQuest>
    */
-  async updateTask(taskId: string, updateData: UpdateTaskData): Promise<Task> {
-    if (!taskId?.trim()) {
-      throw new ApiError(400, 'Task ID is required');
+  async updateDailyQuest(questId: string, updateData: UpdateDailyQuestData): Promise<DailyQuest> {
+    if (!questId?.trim()) {
+      throw new ApiError(400, 'Quest ID is required');
     }
 
     return retryRequest(async () => {
       try {
-        const response = await api.put(`/tasks/${taskId}`, updateData);
-        return response.data as Task;
+        // Transform update data to legacy format
+        const legacyUpdateData = {
+          ...updateData,
+          goalId: updateData.epicQuestId,
+        };
+        delete (legacyUpdateData as any).epicQuestId;
+
+        const response = await api.put(`/tasks/${questId}`, legacyUpdateData);
+        const task = response.data as Task;
+        // Transform response to new format
+        return {
+          questId: task.taskId,
+          userId: task.userId,
+          title: task.taskName,
+          description: task.description,
+          dueDate: task.dueDate,
+          priority: task.priority,
+          status: task.status,
+          epicQuestId: task.goalId,
+          milestoneId: task.milestoneId,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+        };
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
         }
         if (error.response?.status === 404) {
-          throw new ApiError(404, 'Task not found');
+          throw new ApiError(404, 'Daily quest not found');
         }
 
         const message =
           error.response?.data?.message ||
           error.message ||
-          'Failed to update task';
+          'Failed to update daily quest';
         throw new ApiError(
           error.response?.status || 500,
           message,
@@ -297,30 +410,30 @@ export const tasksApi = {
   },
 
   /**
-   * Delete a task
-   * @param taskId - The ID of the task to delete
+   * Delete a daily quest
+   * @param questId - The ID of the quest to delete
    * @returns Promise<void>
    */
-  async deleteTask(taskId: string): Promise<void> {
-    if (!taskId?.trim()) {
-      throw new ApiError(400, 'Task ID is required');
+  async deleteDailyQuest(questId: string): Promise<void> {
+    if (!questId?.trim()) {
+      throw new ApiError(400, 'Quest ID is required');
     }
 
     return retryRequest(async () => {
       try {
-        await api.delete(`/tasks/${taskId}`);
+        await api.delete(`/tasks/${questId}`);
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
         }
         if (error.response?.status === 404) {
-          throw new ApiError(404, 'Task not found');
+          throw new ApiError(404, 'Daily quest not found');
         }
 
         const message =
           error.response?.data?.message ||
           error.message ||
-          'Failed to delete task';
+          'Failed to delete daily quest';
         throw new ApiError(
           error.response?.status || 500,
           message,
@@ -332,18 +445,58 @@ export const tasksApi = {
 };
 
 /**
- * Main API client for Goal operations
+ * Main API client for EpicQuest operations
  */
-export const goalsApi = {
+export const epicQuestsApi = {
   /**
-   * Fetch all goals for the authenticated user
-   * @returns Promise<Goal[]>
+   * Fetch all epic quests for the authenticated user
+   * @returns Promise<EpicQuest[]>
    */
-  async fetchGoals(): Promise<Goal[]> {
+  async fetchEpicQuests(): Promise<EpicQuest[]> {
     return retryRequest(async () => {
       try {
         const response = await api.get('/goals');
-        return response.data.goals as Goal[];
+
+        // Debug logging to understand response structure
+        console.log('Goals API response:', {
+          status: response.status,
+          dataType: typeof response.data,
+          isArray: Array.isArray(response.data),
+          dataKeys: response.data ? Object.keys(response.data) : 'null',
+          data: response.data
+        });
+
+        // Handle different response structures
+        let goals: Goal[];
+        if (Array.isArray(response.data)) {
+          goals = response.data;
+        } else if (response.data && Array.isArray(response.data.goals)) {
+          goals = response.data.goals;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          goals = response.data.data;
+        } else {
+          // If no goals found, return empty array
+          console.warn('No goals found in response. Response structure:', {
+            type: typeof response.data,
+            keys: response.data ? Object.keys(response.data) : null,
+            value: response.data
+          });
+          return [];
+        }
+
+        // Transform legacy response to new format
+        return goals.map(goal => ({
+          questId: goal.goalId,
+          userId: goal.userId,
+          title: goal.goalName,
+          description: goal.description,
+          targetDate: goal.targetDate,
+          category: goal.category,
+          status: goal.status,
+          roadmapStatus: goal.roadmapStatus,
+          createdAt: goal.createdAt,
+          updatedAt: goal.updatedAt,
+        }));
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
@@ -352,7 +505,7 @@ export const goalsApi = {
         const message =
           error.response?.data?.message ||
           error.message ||
-          'Failed to fetch goals';
+          'Failed to fetch epic quests';
         throw new ApiError(
           error.response?.status || 500,
           message,
@@ -363,19 +516,19 @@ export const goalsApi = {
   },
 
   /**
-   * Create a new goal
-   * @param goalData - Goal creation data
-   * @returns Promise<Goal>
+   * Create a new epic quest
+   * @param questData - EpicQuest creation data
+   * @returns Promise<EpicQuest>
    */
-  async createGoal(goalData: Omit<CreateGoalData, 'type'>): Promise<Goal> {
+  async createEpicQuest(questData: Omit<CreateEpicQuestData, 'type'>): Promise<EpicQuest> {
     // Validate required fields
-    if (!goalData.title?.trim()) {
+    if (!questData.title?.trim()) {
       throw new ApiError(400, 'Title is required');
     }
-    if (!goalData.dueDate) {
+    if (!questData.targetDate) {
       throw new ApiError(400, 'Target date is required');
     }
-    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(goalData.dueDate)) {
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(questData.targetDate)) {
       throw new ApiError(400, 'Target date must be in YYYY-MM-DD format');
     }
 
@@ -383,14 +536,27 @@ export const goalsApi = {
       try {
         // Transform the data to match backend expectations
         const payload = {
-          goalName: goalData.title.trim(),
-          targetDate: goalData.dueDate,
-          description: goalData.description || '',
-          category: goalData.category || 'general',
+          goalName: questData.title.trim(),
+          targetDate: questData.targetDate,
+          description: questData.description || '',
+          category: questData.category || 'general',
         };
 
         const response = await api.post('/goals', payload);
-        return response.data as Goal;
+        const goal = response.data as Goal;
+        // Transform response to new format
+        return {
+          questId: goal.goalId,
+          userId: goal.userId,
+          title: goal.goalName,
+          description: goal.description,
+          targetDate: goal.targetDate,
+          category: goal.category,
+          status: goal.status,
+          roadmapStatus: goal.roadmapStatus,
+          createdAt: goal.createdAt,
+          updatedAt: goal.updatedAt,
+        };
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
@@ -399,7 +565,7 @@ export const goalsApi = {
         const message =
           error.response?.data?.message ||
           error.message ||
-          'Failed to create goal';
+          'Failed to create epic quest';
         throw new ApiError(
           error.response?.status || 500,
           message,
@@ -410,32 +576,45 @@ export const goalsApi = {
   },
 
   /**
-   * Update a goal
-   * @param goalId - The ID of the goal to update
+   * Update an epic quest
+   * @param questId - The ID of the quest to update
    * @param updateData - Partial update data
-   * @returns Promise<Goal>
+   * @returns Promise<EpicQuest>
    */
-  async updateGoal(goalId: string, updateData: UpdateGoalData): Promise<Goal> {
-    if (!goalId?.trim()) {
-      throw new ApiError(400, 'Goal ID is required');
+  async updateEpicQuest(questId: string, updateData: UpdateEpicQuestData): Promise<EpicQuest> {
+    if (!questId?.trim()) {
+      throw new ApiError(400, 'Quest ID is required');
     }
 
     return retryRequest(async () => {
       try {
-        const response = await api.put(`/goals/${goalId}`, updateData);
-        return response.data as Goal;
+        const response = await api.put(`/goals/${questId}`, updateData);
+        const goal = response.data as Goal;
+        // Transform response to new format
+        return {
+          questId: goal.goalId,
+          userId: goal.userId,
+          title: goal.goalName,
+          description: goal.description,
+          targetDate: goal.targetDate,
+          category: goal.category,
+          status: goal.status,
+          roadmapStatus: goal.roadmapStatus,
+          createdAt: goal.createdAt,
+          updatedAt: goal.updatedAt,
+        };
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
         }
         if (error.response?.status === 404) {
-          throw new ApiError(404, 'Goal not found');
+          throw new ApiError(404, 'Epic quest not found');
         }
 
         const message =
           error.response?.data?.message ||
           error.message ||
-          'Failed to update goal';
+          'Failed to update epic quest';
         throw new ApiError(
           error.response?.status || 500,
           message,
@@ -446,30 +625,74 @@ export const goalsApi = {
   },
 
   /**
-   * Delete a goal
-   * @param goalId - The ID of the goal to delete
+   * Delete an epic quest
+   * @param questId - The ID of the quest to delete
    * @returns Promise<void>
    */
-  async deleteGoal(goalId: string): Promise<void> {
-    if (!goalId?.trim()) {
-      throw new ApiError(400, 'Goal ID is required');
+  async deleteEpicQuest(questId: string): Promise<void> {
+    if (!questId?.trim()) {
+      throw new ApiError(400, 'Quest ID is required');
     }
 
     return retryRequest(async () => {
       try {
-        await api.delete(`/goals/${goalId}`);
+        await api.delete(`/goals/${questId}`);
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
         }
         if (error.response?.status === 404) {
-          throw new ApiError(404, 'Goal not found');
+          throw new ApiError(404, 'Epic quest not found');
         }
 
         const message =
           error.response?.data?.message ||
           error.message ||
-          'Failed to delete goal';
+          'Failed to delete epic quest';
+        throw new ApiError(
+          error.response?.status || 500,
+          message,
+          error.response?.data
+        );
+      }
+    });
+  },
+
+  /**
+   * Fetch a specific epic quest by ID
+   * @param questId - Quest ID
+   * @returns Promise<EpicQuest>
+   */
+  async getEpicQuestById(questId: string): Promise<EpicQuest> {
+    return retryRequest(async () => {
+      try {
+        const response = await api.get(`/goals/${questId}`);
+        const goal = response.data as Goal;
+        // Transform response to new format
+        return {
+          questId: goal.goalId,
+          userId: goal.userId,
+          title: goal.goalName,
+          description: goal.description,
+          targetDate: goal.targetDate,
+          category: goal.category,
+          status: goal.status,
+          roadmapStatus: goal.roadmapStatus,
+          createdAt: goal.createdAt,
+          updatedAt: goal.updatedAt,
+        };
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          await handleUnauthorized();
+        }
+        if (error.response?.status === 404) {
+          throw new ApiError(404, 'Epic quest not found');
+        }
+
+        const message =
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to fetch epic quest';
         throw new ApiError(
           error.response?.status || 500,
           message,
@@ -486,16 +709,16 @@ export const goalsApi = {
 export const roadmapApi = {
   /**
    * Fetch roadmap for a specific epic quest
-   * @param goalId - Goal ID (Epic Quest ID)
+   * @param epicQuestId - Epic Quest ID
    * @returns Promise<Milestone[]>
    */
-  async fetchRoadmap(goalId: string): Promise<Milestone[]> {
+  async fetchRoadmap(epicQuestId: string): Promise<Milestone[]> {
     return retryRequest(async () => {
       try {
-        const response = await api.get(`/goals/${goalId}/milestones`);
+        const response = await api.get(`/goals/${epicQuestId}/milestones`);
 
-        // Handle the new API response structure
-        let milestones: Milestone[];
+        // Handle the API response structure
+        let milestones: any[];
         if (response.data && Array.isArray(response.data.milestones)) {
           milestones = response.data.milestones;
         } else if (Array.isArray(response.data)) {
@@ -504,13 +727,17 @@ export const roadmapApi = {
           milestones = [];
         }
 
-        return milestones;
+        // Transform legacy response to new format
+        return milestones.map(milestone => ({
+          ...milestone,
+          epicQuestId: milestone.epicId || epicQuestId,
+        }));
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
         }
         if (error.response?.status === 404) {
-          throw new ApiError(404, 'Goal milestones not found');
+          throw new ApiError(404, 'Epic quest milestones not found');
         }
 
         const message =
@@ -528,13 +755,13 @@ export const roadmapApi = {
 
   /**
    * Generate roadmap for a specific epic quest
-   * @param epicId - Epic Quest ID
+   * @param epicQuestId - Epic Quest ID
    * @returns Promise<void>
    */
-  async generateRoadmap(epicId: string): Promise<void> {
+  async generateRoadmap(epicQuestId: string): Promise<void> {
     return retryRequest(async () => {
       try {
-        await api.post(`/goals/${epicId}/generate-roadmap`);
+        await api.post(`/goals/${epicQuestId}/generate-roadmap`);
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
@@ -558,14 +785,48 @@ export const roadmapApi = {
 
   /**
    * Fetch daily quests for a specific milestone
+   * This method filters tasks by milestone ID from the existing tasks endpoint
+   * since /milestones/{milestoneId}/daily-quests doesn't exist in the backend
    * @param milestoneId - Milestone ID
-   * @returns Promise<Task[]>
+   * @param date - Date to fetch tasks for (defaults to today)
+   * @returns Promise<DailyQuest[]>
    */
-  async fetchMilestoneQuests(milestoneId: string): Promise<Task[]> {
+  async fetchMilestoneQuests(milestoneId: string, date?: string): Promise<DailyQuest[]> {
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      const allTasks = await dailyQuestsApi.fetchDailyQuestsByDate(targetDate);
+
+      // Filter tasks that belong to the specified milestone
+      return allTasks.filter(task => task.milestoneId === milestoneId);
+    } catch (error: any) {
+      console.error('Failed to fetch milestone quests:', error);
+      throw new ApiError(
+        error.response?.status || 500,
+        'Failed to fetch milestone quests',
+        error.response?.data
+      );
+    }
+  },
+
+  /**
+   * Update milestone status
+   * @param epicQuestId - Epic Quest ID
+   * @param milestoneId - Milestone ID
+   * @param status - New status
+   * @returns Promise<Milestone>
+   */
+  async updateMilestoneStatus(epicQuestId: string, milestoneId: string, status: 'locked' | 'active' | 'completed'): Promise<Milestone> {
     return retryRequest(async () => {
       try {
-        const response = await api.get(`/milestones/${milestoneId}/daily-quests`);
-        return response.data as Task[];
+        const response = await api.patch(`/milestones/${milestoneId}`, {
+          status
+        });
+        const milestone = response.data;
+        // Transform response to new format
+        return {
+          ...milestone,
+          epicQuestId: milestone.epicId || epicQuestId,
+        };
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
@@ -577,7 +838,7 @@ export const roadmapApi = {
         const message =
           error.response?.data?.message ||
           error.message ||
-          'Failed to fetch milestone quests';
+          'Failed to update milestone status';
         throw new ApiError(
           error.response?.status || 500,
           message,
@@ -598,7 +859,12 @@ export const roadmapApi = {
         const response = await api.patch(`/milestones/${milestoneId}`, {
           status: 'completed'
         });
-        return response.data as Milestone;
+        const milestone = response.data;
+        // Transform response to new format
+        return {
+          ...milestone,
+          epicQuestId: milestone.epicId,
+        };
       } catch (error: any) {
         if (error.response?.status === 401) {
           await handleUnauthorized();
@@ -619,6 +885,22 @@ export const roadmapApi = {
       }
     });
   },
+};
+
+// Legacy API exports for backward compatibility
+export const tasksApi = {
+  fetchTasksByDate: dailyQuestsApi.fetchDailyQuestsByDate,
+  createTask: dailyQuestsApi.createDailyQuest,
+  updateTask: dailyQuestsApi.updateDailyQuest,
+  deleteTask: dailyQuestsApi.deleteDailyQuest,
+};
+
+export const goalsApi = {
+  fetchGoals: epicQuestsApi.fetchEpicQuests,
+  createGoal: epicQuestsApi.createEpicQuest,
+  updateGoal: epicQuestsApi.updateEpicQuest,
+  deleteGoal: epicQuestsApi.deleteEpicQuest,
+  fetchGoalById: epicQuestsApi.getEpicQuestById,
 };
 
 // Export the API base URL for external use

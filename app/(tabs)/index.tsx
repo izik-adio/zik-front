@@ -10,14 +10,29 @@ import {
 } from 'react-native';
 import { Plus, Target } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
 import { useAuth } from '../../src/context/AuthContext';
+import { useProfile } from '../../src/context/ProfileContext';
 import { useTheme } from '../../src/context/ThemeContext';
-import { useActiveMilestoneTasks, useActiveRoadmap, getTaskGoalStoreActions, useIsRefreshing, useGoals } from '../../src/store/questStore';
-import { Task } from '../../src/api/quests';
-import { QuestCard } from '../../components/today/QuestCard';
+import {
+  useActiveMilestoneTasks,
+  useTodayTasks,
+  useActiveRoadmap,
+  useIsRefreshing,
+  useEpicQuests,
+  useRefreshTodayData,
+  useUpdateDailyQuest,
+  useCreateDailyQuest,
+  useCreateEpicQuest,
+  useQuestStore,
+  useQuestError
+} from '../../src/store/questStore';
+import { DailyQuest } from '../../src/api/quests';
 import { AddTaskModal } from '../../components/today/AddTaskModal';
+import { CreateDailyQuestData, CreateEpicQuestData } from '@/src/api/quests';
 import { EmptyStateCard } from '../../components/today/EmptyStateCard';
+import { ProgressiveTaskList } from '../../components/today/ProgressiveTaskList';
+import { TodaysFocusSection } from '../../components/today/TodaysFocusSection';
+import { MilestoneFocusCard } from '../../components/today/MilestoneFocusCard';
 
 // Import simplified components for cleaner UI
 import { SimpleGreetingHeader } from '../../components/today/SimpleGreetingHeader';
@@ -26,47 +41,97 @@ import { GoalsOverviewCard } from '../../components/today/GoalsOverviewCard';
 
 export default function TodayScreen() {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isLocalRefreshing, setIsLocalRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
 
   const activeMilestoneTasks = useActiveMilestoneTasks();
+  const todayTasks = useTodayTasks();
   const activeRoadmap = useActiveRoadmap();
-  const allGoals = useGoals();
+  const allEpicQuests = useEpicQuests();
   const isRefreshing = useIsRefreshing();
+  const questError = useQuestError();
 
-  // Get actions from store
-  const actions = useMemo(() => getTaskGoalStoreActions(), []);
-  const {
-    fetchActiveMilestoneData,
-    markTaskComplete,
-    createTask,
-    deleteTask,
-    refreshTodayData,
-  } = actions;
+  // Get individual actions from store to prevent re-renders
+  const refreshTodayData = useRefreshTodayData();
+  const updateDailyQuest = useUpdateDailyQuest();
+  const createDailyQuest = useCreateDailyQuest();
+  const createEpicQuest = useCreateEpicQuest();
 
+  // Get the store instance for actions that need to be called
+  const questStore = useQuestStore.getState();
+
+  // Initialize data on mount
   useEffect(() => {
-    if (user) {
-      fetchActiveMilestoneData();
+    const initializeData = async () => {
+      try {
+        // Ensure we have epic quests loaded
+        await questStore.fetchEpicQuests();
+
+        // Refresh today's data if we don't have tasks or they're stale
+        if (todayTasks.length === 0) {
+          await refreshTodayData();
+        }
+      } catch (error) {
+        console.error('Failed to initialize today screen data:', error);
+      }
+    };
+
+    initializeData();
+  }, []); // Only run on mount
+
+  // Clear errors when user interacts with the screen
+  useEffect(() => {
+    if (questError) {
+      const timer = setTimeout(() => {
+        questStore.clearError();
+      }, 5000); // Auto clear error after 5 seconds
+
+      return () => clearTimeout(timer);
     }
-  }, [user, fetchActiveMilestoneData]);
+  }, [questError]);
+
+  // Calculate completion percentage for today's tasks
+  const completionPercentage = useMemo(() => {
+    if (!todayTasks || todayTasks.length === 0) return 0;
+    const completedTasks = todayTasks.filter((task: DailyQuest) => task.status === 'completed');
+    return (completedTasks.length / todayTasks.length) * 100;
+  }, [todayTasks]);
+
+  // Get available tasks for the UI - use consistent data source
+  const availableTasks = useMemo(() => {
+    const availableTasksData = questStore.getAvailableTasks();
+    return {
+      today: todayTasks, // Use consistent data source
+      future: availableTasksData.future,
+      showFuture: availableTasksData.showFuture
+    };
+  }, [todayTasks]);
 
   const handleRefresh = async () => {
-    if (user && !isRefreshing) {
+    setIsLocalRefreshing(true);
+    try {
       await refreshTodayData();
+    } finally {
+      setIsLocalRefreshing(false);
     }
   };
 
-  // Calculate completion percentage for active milestone
-  const completionPercentage = useMemo(() => {
-    if (!activeMilestoneTasks || activeMilestoneTasks.length === 0) return 0;
-    const completedTasks = activeMilestoneTasks.filter((task: Task) => task.status === 'completed');
-    return (completedTasks.length / activeMilestoneTasks.length) * 100;
-  }, [activeMilestoneTasks]);
-
   const handleToggleTask = async (taskId: string) => {
     try {
-      await markTaskComplete(taskId);
+      // Find the task and toggle its status
+      const taskToUpdate = activeMilestoneTasks.find(task => task.questId === taskId);
+      if (!taskToUpdate) return;
+
+      const newStatus = taskToUpdate.status === 'completed' ? 'pending' : 'completed';
+
+      await updateDailyQuest(taskId, { status: newStatus });
+      questStore.checkTaskAccessRules();
+
+      // Note: Removed milestone completion checking logic as it's not implemented
+      // This simplifies the task toggling and prevents unnecessary complexity
     } catch (error) {
       Alert.alert(
         'Error',
@@ -77,7 +142,7 @@ export default function TodayScreen() {
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      await deleteTask(taskId);
+      await questStore.deleteDailyQuest(taskId);
     } catch (error) {
       Alert.alert(
         'Error',
@@ -87,29 +152,26 @@ export default function TodayScreen() {
   };
 
   const handleAddTask = async (
-    title: string,
-    time: string,
-    isEpic: boolean
+    questData: CreateDailyQuestData | CreateEpicQuestData
   ) => {
     try {
-      const taskData: any = {
-        title,
-        dueDate: time,
-        description: '',
-        priority: 'medium',
-      };
+      if (questData.type === 'epic') {
+        await createEpicQuest(questData);
+      } else {
+        // For daily quests, no milestone linking since that logic is removed
+        const taskData: CreateDailyQuestData = {
+          ...questData,
+          // Note: Removed milestoneId assignment as milestone logic is not implemented
+        };
 
-      // If there's an active milestone, associate the task with it
-      if (activeRoadmap?.activeMilestone) {
-        taskData.milestoneId = activeRoadmap.activeMilestone.milestoneId;
+        await createDailyQuest(taskData);
       }
 
-      await createTask(taskData);
       setShowAddModal(false);
     } catch (error) {
       Alert.alert(
         'Error',
-        error instanceof Error ? error.message : 'Failed to add task'
+        error instanceof Error ? error.message : `Failed to ${questData.type === 'epic' ? 'create Epic Quest' : 'add task'}`
       );
     }
   };
@@ -125,7 +187,7 @@ export default function TodayScreen() {
         contentContainerStyle={{ flexGrow: 1 }}
         refreshControl={
           <RefreshControl
-            refreshing={isRefreshing}
+            refreshing={isRefreshing || isLocalRefreshing}
             onRefresh={handleRefresh}
             tintColor={theme.colors.ctaPrimary}
             colors={[theme.colors.ctaPrimary]}
@@ -137,72 +199,38 @@ export default function TodayScreen() {
       >
         {/* Simplified Greeting - Clean and personal */}
         <SimpleGreetingHeader
-          userName={user?.userName || 'User'}
+          userName={profile?.displayName || user?.userName || 'User'}
           completionRate={completionPercentage}
         />
 
-        {/* Today's Tasks Section with Progress Indicator - Most immediate/actionable */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.tasksHeaderLeft}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Today&apos;s Tasks
+        {/* Error Display */}
+        {questError && (
+          <View style={[styles.errorContainer, {
+            backgroundColor: (theme.colors.error || '#ff4444') + '20',
+            borderColor: theme.colors.error || '#ff4444'
+          }]}>
+            <Text style={[styles.errorText, { color: theme.colors.error || '#ff4444' }]}>
+              {questError}
             </Text>
-            {/* Circular Progress Indicator */}
-            {activeMilestoneTasks && activeMilestoneTasks.length > 0 && (
-              <View style={styles.progressContainer}>
-                <Svg width={32} height={32} style={styles.progressSvg}>
-                  {/* Background circle */}
-                  <Circle
-                    cx={16}
-                    cy={16}
-                    r={12}
-                    stroke={theme.colors.border}
-                    strokeWidth={3}
-                    fill="none"
-                  />
-                  {/* Progress circle */}
-                  <Circle
-                    cx={16}
-                    cy={16}
-                    r={12}
-                    stroke={theme.colors.ctaPrimary}
-                    strokeWidth={3}
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 12}`}
-                    strokeDashoffset={`${2 * Math.PI * 12 * (1 - completionPercentage / 100)}`}
-                    strokeLinecap="round"
-                    transform="rotate(-90 16 16)"
-                  />
-                </Svg>
-                <Text style={[styles.progressText, { color: theme.colors.ctaPrimary }]}>
-                  {Math.round(completionPercentage)}%
-                </Text>
-              </View>
-            )}
+            <TouchableOpacity onPress={() => questStore.clearError()}>
+              <Text style={[styles.errorDismiss, { color: theme.colors.error || '#ff4444' }]}>
+                Dismiss
+              </Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => setShowAddModal(true)}>
-            <Plus size={24} color={theme.colors.ctaPrimary} />
-          </TouchableOpacity>
-        </View>
+        )}
 
-        {/* Tasks List */}
-        <View style={styles.tasksContent}>
-          {Array.isArray(activeMilestoneTasks) && activeMilestoneTasks.length === 0 ? (
-            <EmptyStateCard
-              type="quests"
-              onAddPress={() => setShowAddModal(true)}
-            />
-          ) : (
-            (Array.isArray(activeMilestoneTasks) ? activeMilestoneTasks : []).map((task: Task) => (
-              <QuestCard
-                key={task.taskId}
-                quest={task}
-                onToggle={() => handleToggleTask(task.taskId)}
-                onDelete={() => handleDeleteTask(task.taskId)}
-              />
-            ))
-          )}
-        </View>
+        {/* Today's Focus Card - Cohesive design with psychology-based UX */}
+        <TodaysFocusSection
+          todayTasks={availableTasks.today}
+          futureTasks={availableTasks.future}
+          showFuture={availableTasks.showFuture}
+          completionPercentage={completionPercentage}
+          onTaskComplete={handleToggleTask}
+          onTaskDelete={handleDeleteTask}
+          onAddTask={() => setShowAddModal(true)}
+          isLoading={isRefreshing || isLocalRefreshing}
+        />
 
         {/* Simplified Wellness - Keep functionality, minimal UI */}
         <SimpleWellnessCard />
@@ -215,8 +243,8 @@ export default function TodayScreen() {
           </Text>
         </View>
         <GoalsOverviewCard
-          goals={allGoals}
-          activeGoalId={activeRoadmap?.epicId}
+          goals={allEpicQuests}
+          activeGoalId={activeRoadmap?.epicQuestId}
         />
       </ScrollView>
 
@@ -230,19 +258,6 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  content: {
-    padding: 16,
-  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -251,33 +266,28 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
   },
-  tasksHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  progressContainer: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressSvg: {
-    transform: [{ rotate: '0deg' }],
-  },
-  progressText: {
-    position: 'absolute',
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     flex: 1,
   },
-  tasksContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+  errorContainer: {
+    marginHorizontal: 20,
+    marginVertical: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    marginRight: 8,
+  },
+  errorDismiss: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

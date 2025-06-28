@@ -22,7 +22,7 @@ import Animated, {
   interpolateColor,
 } from 'react-native-reanimated';
 import { useTheme } from '@/src/context/ThemeContext';
-import { useChatStore } from '@/src/store/chatStore';
+import { useChatStore, useChatPrefilledInput } from '@/src/store/chatStore';
 import { LogoImage } from '@/components/onboarding/LogoImage';
 import { ChatBubble } from '@/components/zik/ChatBubble';
 import { SuggestionChip } from '@/components/zik/SuggestionChip';
@@ -43,7 +43,10 @@ export default function ZikScreen() {
     sendMessage,
     clearError,
     clearMessages,
+    clearPrefilledInput,
   } = useChatStore();
+
+  const prefilledInput = useChatPrefilledInput();
 
   // Animation values
   const sendButtonScale = useSharedValue(1);
@@ -73,7 +76,19 @@ export default function ZikScreen() {
       Alert.alert('Error', error);
       clearError();
     }
-  }, [messages, error, clearError]); // Show toast when quest refresh completes
+  }, [messages, error, clearError]);
+
+  // Handle prefilled input from task creation
+  useEffect(() => {
+    if (prefilledInput) {
+      setInputText(prefilledInput);
+      clearPrefilledInput();
+      // Focus input to show the prefilled text
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [prefilledInput, clearPrefilledInput]); // Show toast when quest refresh completes
   useEffect(() => {
     let previousRefreshing = false;
 
@@ -396,7 +411,13 @@ export default function ZikScreen() {
                 placeholder="Type your message..."
                 placeholderTextColor={theme.colors.subtitle}
                 value={inputText}
-                onChangeText={setInputText}
+                onChangeText={(text) => {
+                  setInputText(text);
+                  // Clear any remaining prefilled input state when user manually edits
+                  if (prefilledInput && text !== prefilledInput) {
+                    clearPrefilledInput();
+                  }
+                }}
                 onFocus={handleInputFocus}
                 onBlur={handleInputBlur}
                 multiline

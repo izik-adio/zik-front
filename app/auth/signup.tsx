@@ -57,6 +57,9 @@ export default function SignupScreen() {
 
     setIsLoading(true);
     try {
+      // Store the name for auto profile creation
+      await storage.setItem('signupName', name.trim());
+
       const result = await signup(email.trim(), password, name.trim());
       if (result.requiresConfirmation) {
         setShowConfirmation(true);
@@ -66,6 +69,8 @@ export default function SignupScreen() {
         );
       }
     } catch (error: any) {
+      // Clear stored name on error
+      await storage.removeItem('signupName');
       Alert.alert(
         'Signup Failed',
         error.message || 'An error occurred during signup'
@@ -83,11 +88,28 @@ export default function SignupScreen() {
 
     setIsLoading(true);
     try {
+      // Confirm the account
       await confirmSignup(email.trim(), confirmationCode.trim());
-      // Clear the preferred name after successful signup
+
+      // After successful confirmation, the user is automatically logged in
+      // We'll let the app's routing logic handle profile creation
+
+      // Clear any stored onboarding data
       await storage.removeItem('preferredName');
-      Alert.alert('Success', 'Account confirmed successfully! Please sign in.');
-      router.replace('/auth/login');
+
+      Alert.alert(
+        'Welcome to Zik!',
+        'Your account has been confirmed. Let\'s set up your profile!',
+        [
+          {
+            text: 'Continue',
+            onPress: () => {
+              // The ProfileGuard will handle routing to profile creation or onboarding
+              router.replace('/');
+            }
+          }
+        ]
+      );
     } catch (error: any) {
       Alert.alert(
         'Confirmation Failed',

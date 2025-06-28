@@ -7,7 +7,6 @@ import {
   EpicQuest,
   DailyQuest,
   GetQuestsResponse,
-  GetGoalsResponse,
   CreateQuestRequest,
   UpdateQuestRequest,
   ChatRequest,
@@ -24,7 +23,7 @@ class ApiService {
     this.baseURL = isDevMode
       ? 'http://localhost:3000'
       : process.env.EXPO_PUBLIC_API_URL ||
-        'https://h5k4oat3hi.execute-api.us-east-1.amazonaws.com/';
+      'https://h5k4oat3hi.execute-api.us-east-1.amazonaws.com/';
 
     this.api = axios.create({
       baseURL: this.baseURL,
@@ -130,6 +129,7 @@ class ApiService {
             category: goal.category || 'general',
             status: goal.status,
             targetDate: goal.targetDate,
+            roadmapStatus: goal.roadmapStatus || 'none',
             createdAt: goal.createdAt,
             updatedAt: goal.updatedAt,
           }));
@@ -143,7 +143,7 @@ class ApiService {
         dailyQuests = tasksResponse.data.map((task: any) => ({
           questId: task.taskId,
           userId: task.userId,
-          epicId: task.goalId,
+          epicQuestId: task.goalId,
           title: task.taskName,
           status: task.status,
           dueDate: task.dueDate,
@@ -191,7 +191,7 @@ class ApiService {
       return {
         questId: response.data.taskId,
         userId: response.data.userId,
-        epicId: response.data.goalId,
+        epicQuestId: response.data.goalId,
         title: response.data.taskName,
         status: response.data.status,
         dueDate: response.data.dueDate,
@@ -228,6 +228,7 @@ class ApiService {
         category: response.data.category,
         status: response.data.status,
         targetDate: response.data.targetDate,
+        roadmapStatus: response.data.roadmapStatus || 'none',
         createdAt: response.data.createdAt,
         updatedAt: response.data.updatedAt,
       };
@@ -248,7 +249,7 @@ class ApiService {
       return {
         questId: response.data.taskId,
         userId: response.data.userId,
-        epicId: response.data.goalId,
+        epicQuestId: response.data.goalId,
         title: response.data.taskName,
         status: response.data.status,
         dueDate: response.data.dueDate,
@@ -279,6 +280,7 @@ class ApiService {
         category: response.data.category,
         status: response.data.status,
         targetDate: response.data.targetDate,
+        roadmapStatus: response.data.roadmapStatus || 'none',
         createdAt: response.data.createdAt,
         updatedAt: response.data.updatedAt,
       };
@@ -460,7 +462,7 @@ class ApiService {
    * Fetch all Epic Quests (goals) for the authenticated user
    */ async getGoals(): Promise<EpicQuest[]> {
     try {
-      const response: AxiosResponse<GetGoalsResponse> = await this.api.get(
+      const response: AxiosResponse<any> = await this.api.get(
         '/goals'
       );
 
@@ -468,7 +470,7 @@ class ApiService {
         const goalsData = response.data.goals;
 
         // Transform goals to epic quests format
-        const epicQuests: EpicQuest[] = goalsData.map((goal) => ({
+        const epicQuests: EpicQuest[] = goalsData.map((goal: any) => ({
           questId: goal.goalId,
           userId: goal.userId,
           title: goal.goalName,
@@ -478,9 +480,10 @@ class ApiService {
             goal.status === 'completed'
               ? 'completed'
               : goal.status === 'paused'
-              ? 'paused'
-              : 'active',
+                ? 'paused'
+                : 'active',
           targetDate: goal.targetDate,
+          roadmapStatus: goal.roadmapStatus || 'none',
           createdAt: goal.createdAt,
           updatedAt: goal.updatedAt,
         }));

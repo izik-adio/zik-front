@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Map, Clock, CheckCircle, Loader, RefreshCw, ArrowRight } from 'lucide-react-native';
 import { useTheme } from '../../src/context/ThemeContext';
-import { Goal, Milestone } from '../../src/api/quests';
-import { getTaskGoalStoreActions } from '../../src/store/questStore';
+import { EpicQuest, Milestone } from '../../src/api/quests';
+import { useFetchRoadmap } from '../../src/store/questStore';
+import { RoadmapStatusIndicator } from '../ui/RoadmapStatusIndicator';
 
 interface EpicQuestCardProps {
-    epic: Goal;
+    epic: EpicQuest;
     onPress: () => void;
 }
 
@@ -14,19 +15,19 @@ export function EpicQuestCard({ epic, onPress }: EpicQuestCardProps) {
     const { theme } = useTheme();
     const [milestones, setMilestones] = useState<Milestone[]>([]);
     const [isLoadingProgress, setIsLoadingProgress] = useState(false);
-    const actions = getTaskGoalStoreActions();
+    const fetchRoadmap = useFetchRoadmap();
 
     // Fetch milestone progress when roadmap is ready
     useEffect(() => {
         if (epic.roadmapStatus === 'ready') {
             loadMilestoneProgress();
         }
-    }, [epic.goalId, epic.roadmapStatus]);
+    }, [epic.questId, epic.roadmapStatus]);
 
     const loadMilestoneProgress = async () => {
         setIsLoadingProgress(true);
         try {
-            const roadmapData = await actions.fetchRoadmap(epic.goalId, false); // Use cache if available
+            const roadmapData = await fetchRoadmap(epic.questId, false); // Use cache if available
             setMilestones(roadmapData || []);
         } catch (error) {
             // Silently fail for progress loading
@@ -40,7 +41,7 @@ export function EpicQuestCard({ epic, onPress }: EpicQuestCardProps) {
         if (epic.roadmapStatus === 'ready') {
             setIsLoadingProgress(true);
             try {
-                const roadmapData = await actions.fetchRoadmap(epic.goalId, true); // Force refresh
+                const roadmapData = await fetchRoadmap(epic.questId, true); // Force refresh
                 setMilestones(roadmapData || []);
             } catch (error) {
                 console.warn('Failed to refresh milestone progress:', error);
@@ -124,7 +125,7 @@ export function EpicQuestCard({ epic, onPress }: EpicQuestCardProps) {
                 </View>
                 <View style={styles.titleContainer}>
                     <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={2}>
-                        {epic.goalName}
+                        {epic.title}
                     </Text>
                     <Text
                         style={[
@@ -149,12 +150,10 @@ export function EpicQuestCard({ epic, onPress }: EpicQuestCardProps) {
                         <Text style={[styles.status, { color: theme.colors.ctaPrimary }]}>
                             {epic.status} •
                         </Text>
-                        <View style={styles.roadmapStatus}>
-                            {getRoadmapStatusIcon(epic.roadmapStatus || 'none')}
-                            <Text style={[styles.roadmapText, { color: theme.colors.subtitle }]}>
-                                {getRoadmapStatusText(epic.roadmapStatus || 'none')}
-                            </Text>
-                        </View>
+                        <RoadmapStatusIndicator
+                            status={epic.roadmapStatus || 'none'}
+                            compact={true}
+                        />
                     </View>
                     {epic.targetDate && (
                         <Text style={[styles.targetDate, { color: theme.colors.subtitle }]}>
