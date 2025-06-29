@@ -301,8 +301,10 @@ export default function LoginScreen() {
               placeholderTextColor={theme.colors.subtitle}
               value={email}
               onChangeText={setEmail}
-              onFocus={() => setFocusedField('email')}
+              onFocus={() => {
+                setFocusedField('email');
                 setLoginError(null);
+              }}
               onBlur={() => setFocusedField(null)}
               keyboardType="email-address"
               autoCorrect={false}
@@ -332,10 +334,13 @@ export default function LoginScreen() {
               placeholderTextColor={theme.colors.subtitle}
               value={password}
               onChangeText={setPassword}
-              onFocus={() => setFocusedField('password')}
+              onFocus={() => {
+                setFocusedField('password');
                 setLoginError(null);
+              }}
               onBlur={() => setFocusedField(null)}
               secureTextEntry={!showPassword}
+            />
             <TouchableOpacity
               style={styles.eyeIcon}
               onPress={() => setShowPassword(!showPassword)}
