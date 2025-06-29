@@ -15,6 +15,47 @@ const api = axios.create({
   },
 });
 
+// Add request logging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
+      params: config.params,
+      data: config.data,
+      headers: {
+        ...config.headers,
+        Authorization: config.headers.Authorization ? 'Bearer ***' : undefined,
+      },
+    });
+    return config;
+  },
+  (error) => {
+    console.error('🌐 API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response logging
+api.interceptors.response.use(
+  (response) => {
+    console.log(`🌐 API Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      data: response.data,
+      headers: response.headers,
+    });
+    return response;
+  },
+  (error) => {
+    console.error('🌐 API Response Error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+      },
+    });
+    return Promise.reject(error);
+  }
+);
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {

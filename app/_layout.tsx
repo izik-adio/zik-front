@@ -17,6 +17,7 @@ import { ThemeProvider } from '@/src/context/ThemeContext';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { Analytics } from '@/components/Analytics';
 import { DesktopHandler } from '@/components/ui/DesktopHandler';
+import { DebugPanel } from '@/components/ui/DebugPanel';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -60,6 +61,7 @@ export default function RootLayout() {
                 </Stack>
                 <StatusBar style="auto" />
                 <Analytics />
+                <DebugPanel />
               </DesktopHandler>
             </QueryProvider>
           </ProfileProvider>

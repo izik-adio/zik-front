@@ -29,6 +29,8 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
     } = useProfile();
     const router = useRouter();
     const [creatingProfile, setCreatingProfile] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
+    const MAX_RETRIES = 3;
 
     /**
      * Auto-create profile for new users to reduce friction
@@ -131,50 +133,52 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
         }
     };
 
+    // Split effects to handle different concerns
     useEffect(() => {
-        if (!authLoading && isAuthenticated && user) {
-            // User is authenticated, ensure profile is loaded
-            if (!profile && !profileLoading && !needsProfileCreation && !creatingProfile) {
-                console.log('User authenticated but no profile, fetching...');
-                fetchProfile();
-            }
+        // Only handle authentication state
+        if (!authLoading && !isAuthenticated) {
+            console.log('User not authenticated, redirecting to login');
+            router.replace('/auth/login');
+        }
+    }, [authLoading, isAuthenticated, router]);
+    
+    useEffect(() => {
+        // Only handle profile fetching
+        if (!authLoading && isAuthenticated && user && !profile && !profileLoading && !needsProfileCreation && !creatingProfile) {
+            console.log('User authenticated but no profile, fetching...');
+            fetchProfile();
         }
     }, [authLoading, isAuthenticated, user, profile, profileLoading, needsProfileCreation, fetchProfile, creatingProfile]);
 
     useEffect(() => {
-        if (!authLoading && !profileLoading) {
-            if (!isAuthenticated) {
-                // Not authenticated, redirect to auth
-                console.log('User not authenticated, redirecting to login');
-                router.replace('/auth/login');
-                return;
-            }
-
+        // Only handle profile creation and onboarding
+        if (!authLoading && !profileLoading && isAuthenticated) {
             if (needsProfileCreation && user && !creatingProfile) {
-                // Profile doesn't exist, auto-create one for better UX
                 console.log('Profile creation needed, starting auto-creation');
                 handleAutoProfileCreation();
-                return;
-            }
-
-            if (profile && !onboardingCompleted) {
-                // Profile exists but onboarding not complete
+            } else if (profile && !onboardingCompleted) {
                 console.log('Profile exists but onboarding incomplete, redirecting to onboarding');
                 router.replace('/onboarding');
-                return;
             }
         }
-    }, [
-        authLoading,
-        profileLoading,
-        isAuthenticated,
-        needsProfileCreation,
-        profile,
-        onboardingCompleted,
-        user,
-        creatingProfile,
-        router
-    ]);
+    }, [authLoading, profileLoading, isAuthenticated, needsProfileCreation, profile, onboardingCompleted, user, creatingProfile]);
+    
+    // Add retry mechanism for profile fetching
+    useEffect(() => {
+        // If we're authenticated but profile fetch failed, retry a few times
+        if (!authLoading && isAuthenticated && user && !profile && !profileLoading && !needsProfileCreation && !creatingProfile && retryCount < MAX_RETRIES) {
+            const retryDelay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+            
+            console.log(`Retrying profile fetch (attempt ${retryCount + 1}/${MAX_RETRIES}) in ${retryDelay}ms`);
+            
+            const timer = setTimeout(() => {
+                setRetryCount(prev => prev + 1);
+                fetchProfile();
+            }, retryDelay);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [authLoading, isAuthenticated, user, profile, profileLoading, needsProfileCreation, creatingProfile, retryCount, fetchProfile]);
 
     // Show loading state
     if (authLoading || profileLoading || needsProfileCreation || creatingProfile || (profile && !onboardingCompleted)) {

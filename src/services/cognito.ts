@@ -352,7 +352,10 @@ class CognitoService {
   }
 
   async logout(): Promise<void> {
+    console.log('Logging out user, clearing auth tokens');
     await storage.removeItem('authTokens');
+    await storage.removeItem('userProfile');
+    await storage.removeItem('userData');
   }
 
   private decodeIdToken(idToken: string): UserAttributes {

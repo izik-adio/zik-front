@@ -24,6 +24,7 @@ export default function LoginScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [resetStep, setResetStep] = useState<'email' | 'code'>('email');
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const { login, forgotPassword, confirmForgotPassword } = useAuth();
   const { theme } = useTheme();
@@ -36,14 +37,13 @@ export default function LoginScreen() {
     }
 
     setIsLoading(true);
+    setLoginError(null);
     try {
       await login(email.trim(), password);
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert(
-        'Login Failed',
-        error.message || 'An error occurred during login'
-      );
+      console.error('Login error:', error);
+      setLoginError(error.message || 'An error occurred during login');
     } finally {
       setIsLoading(false);
     }
@@ -270,6 +270,13 @@ export default function LoginScreen() {
           Sign in to continue your journey
         </Text>
 
+        {loginError && (
+          <View style={[styles.errorContainer, { backgroundColor: theme.colors.error + '20', borderColor: theme.colors.error }]}>
+            <Text style={[styles.errorText, { color: theme.colors.error }]}>
+              {loginError}
+            </Text>
+          </View>
+        )}
         <View style={styles.form}>
           <View
             style={[
@@ -295,6 +302,7 @@ export default function LoginScreen() {
               value={email}
               onChangeText={setEmail}
               onFocus={() => setFocusedField('email')}
+                setLoginError(null);
               onBlur={() => setFocusedField(null)}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -326,6 +334,7 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
               onFocus={() => setFocusedField('password')}
+                setLoginError(null);
               onBlur={() => setFocusedField(null)}
               secureTextEntry={!showPassword}
             />
@@ -413,6 +422,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 40,
+  },
+  errorContainer: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  errorText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    textAlign: 'center',
   },
   form: {
     gap: 20,

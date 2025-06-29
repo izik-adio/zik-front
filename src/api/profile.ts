@@ -53,8 +53,13 @@ const handleApiError = (error: any): never => {
   if (error.response) {
     // Server responded with error status
     const status = error.response.status;
-    const message = error.response.data?.error || error.response.data?.message || 'Request failed';
-    const details = error.response.data;
+    // Extract error message from the nested structure
+    const errorData = error.response.data;
+    const message = errorData?.error || 
+                   (errorData?.data && errorData.data.message) || 
+                   errorData?.message ||
+                   'Request failed';
+    const details = errorData;
 
     throw new ProfileApiError(status, message, details);
   } else if (error.request) {
@@ -84,14 +89,18 @@ export const profileApi = {
         throw new ProfileApiError(0, 'Invalid response format: no data received');
       }
 
-      const data: ProfileResponse = response.data;
-
-      // Check if profile exists in the response
-      if (!data.profile) {
-        throw new ProfileApiError(404, 'Profile not found in response');
+      // Handle the nested structure from backend
+      const responseData = response.data;
+      
+      // Check if the response has the expected structure
+      if (responseData.data && responseData.data.profile) {
+        return responseData.data.profile;
+      } else if (responseData.profile) {
+        // Fallback for simpler response structure
+        return responseData.profile;
       }
 
-      return data.profile;
+      throw new ProfileApiError(404, 'Profile not found in response');
     } catch (error) {
       return handleApiError(error);
     }
@@ -120,14 +129,18 @@ export const profileApi = {
         throw new ProfileApiError(0, 'Invalid response format: no data received');
       }
 
-      const data: ProfileCreateResponse = response.data;
-
-      // Check if profile exists in the response
-      if (!data.profile) {
-        throw new ProfileApiError(400, 'Profile not found in create response');
+      // Handle the nested structure from backend
+      const responseData = response.data;
+      
+      // Check if the response has the expected structure
+      if (responseData.data && responseData.data.profile) {
+        return responseData.data.profile;
+      } else if (responseData.profile) {
+        // Fallback for simpler response structure
+        return responseData.profile;
       }
 
-      return data.profile;
+      throw new ProfileApiError(400, 'Profile not found in create response');
     } catch (error) {
       return handleApiError(error);
     }
@@ -148,14 +161,18 @@ export const profileApi = {
         throw new ProfileApiError(0, 'Invalid response format: no data received');
       }
 
-      const data: ProfileUpdateResponse = response.data;
-
-      // Check if profile exists in the response
-      if (!data.profile) {
-        throw new ProfileApiError(400, 'Profile not found in update response');
+      // Handle the nested structure from backend
+      const responseData = response.data;
+      
+      // Check if the response has the expected structure
+      if (responseData.data && responseData.data.profile) {
+        return responseData.data.profile;
+      } else if (responseData.profile) {
+        // Fallback for simpler response structure
+        return responseData.profile;
       }
 
-      return data.profile;
+      throw new ProfileApiError(400, 'Profile not found in update response');
     } catch (error) {
       return handleApiError(error);
     }
@@ -313,17 +330,46 @@ export const createAutoProfile = async (fullName: string, email: string): Promis
     },
   };
 
-  try {
-    return await profileApi.createProfile(profileData);
-  } catch (error) {
-    // If username is taken, try with a suffix
-    if (error instanceof ProfileApiError && error.message.includes('username')) {
-      const timestamp = Date.now().toString().slice(-4);
-      profileData.username = `${baseUsername}${timestamp}`;
+  // Try to create profile with retries for common issues
+  let attempts = 0;
+  const maxAttempts = 3;
+  
+  while (attempts < maxAttempts) {
+    try {
       return await profileApi.createProfile(profileData);
+    } catch (error) {
+      attempts++;
+      
+      // Handle username conflicts
+      if (error instanceof ProfileApiError && 
+          (error.message.includes('username') || 
+           error.message.toLowerCase().includes('already exists'))) {
+        const timestamp = Date.now().toString().slice(-4);
+        profileData.username = `${baseUsername}${timestamp}`;
+        // Continue to retry with new username
+        console.log(`Username conflict, trying with: ${profileData.username}`);
+      } 
+      // Handle validation errors
+      else if (error instanceof ProfileApiError && error.status === 400) {
+        // Try to fix validation issues
+        if (error.message.includes('firstName')) {
+          profileData.firstName = 'User';
+        }
+        if (error.message.includes('lastName')) {
+          profileData.lastName = 'Account';
+        }
+        console.log('Fixing validation issues in profile data');
+        // Continue to retry with fixed data
+      }
+      // If last attempt or other error, throw
+      else if (attempts >= maxAttempts) {
+        console.error('Failed to create profile after multiple attempts:', error);
+        throw error;
+      }
     }
-    throw error;
   }
+  
+  throw new Error('Failed to create profile after multiple attempts');
 };
 
 // Backwards compatibility export

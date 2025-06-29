@@ -63,6 +63,20 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
     // Computed values
     const onboardingCompleted = profile?.onboardingCompleted ?? false;
 
+    // Debug logging function
+    const logProfileState = (prefix: string) => {
+      console.log(`${prefix} Profile State:`, {
+        hasProfile: !!profile,
+        profileId: profile?.userId,
+        loading,
+        error,
+        needsProfileCreation,
+        profileExists,
+        onboardingCompleted: profile?.onboardingCompleted,
+        isAuthenticated,
+        hasUser: !!user,
+      });
+    };
     // Cache utility functions
     const getCachedProfile = async (): Promise<UserProfile | null> => {
         try {
@@ -106,6 +120,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
     };
 
     useEffect(() => {
+        logProfileState('Auth State Changed:');
         if (isAuthenticated && user) {
             // Only fetch profile if we don't already have one and aren't in the middle of creating one
             if (!profile && !loading && !needsProfileCreation) {
@@ -123,11 +138,37 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
         }
     }, [isAuthenticated, user]);
 
+    // Improved error handling function
+    const handleProfileError = useCallback((error: any, operation: string): string => {
+      console.error(`Error during ${operation}:`, error);
+      
+      if (error instanceof ProfileApiError) {
+        if (error.status === 401) {
+          // Auth error - will be handled by AuthContext
+          return 'Authentication required';
+        } else if (error.status === 404) {
+          // Not found - specific handling
+          setProfileExists(false);
+          setNeedsProfileCreation(true);
+          return 'Profile not found';
+        } else {
+          // Other API errors
+          return `API Error: ${error.message}`;
+        }
+      } else if (error instanceof Error) {
+        // Generic errors
+        return `Error: ${error.message}`;
+      }
+      
+      // Unknown errors
+      return 'An unknown error occurred';
+    }, []);
     const fetchProfile = async (): Promise<UserProfile | null> => {
         if (!isAuthenticated) {
             return null;
         }
 
+        logProfileState('Before fetchProfile:');
         setLoading(true);
         setError(null);
 
@@ -140,10 +181,12 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
             setProfileExists(true);
             setNeedsProfileCreation(false);
             setLoading(false);
+            logProfileState('After fetchProfile (from cache):');
             return cachedProfile;
         }
 
         try {
+            console.log('Fetching profile from API...');
             const profileData = await profileApi.getProfileWithRetry();
 
             if (profileData) {
@@ -153,46 +196,20 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
 
                 // Update cache
                 await setCachedProfile(profileData);
+                logProfileState('After fetchProfile (from API):');
             } else {
                 // Profile doesn't exist, user needs to create one
                 setProfile(null);
                 setProfileExists(false);
                 setNeedsProfileCreation(true);
+                logProfileState('After fetchProfile (no profile):');
             }
 
             return profileData;
         } catch (error) {
-            console.error('Error fetching profile:', error);
-
-            if (error instanceof ProfileApiError) {
-                if (error.status === 404) {
-                    // Profile doesn't exist
-                    console.log('Profile not found, user needs to create one');
-                    setProfile(null);
-                    setProfileExists(false);
-                    setNeedsProfileCreation(true);
-                } else if (error.status === 401) {
-                    // Auth error - will be handled by AuthContext
-                    console.log('Authentication error while fetching profile');
-                    setError('Authentication required');
-                } else if (error.status === 0) {
-                    // Network error - this is likely what you're experiencing
-                    console.log('Network error while fetching profile, checking if profile creation needed');
-                    setProfile(null);
-                    setProfileExists(false);
-                    setNeedsProfileCreation(true);
-                    setError('Network connection issue - please check your internet connection');
-                } else {
-                    setError(`Profile API Error: ${error.message}`);
-                }
-            } else {
-                // For any other error, assume profile creation might be needed
-                console.log('Unknown error fetching profile, assuming profile creation needed');
-                setProfile(null);
-                setProfileExists(false);
-                setNeedsProfileCreation(true);
-                setError('Failed to load profile - will attempt to create one');
-            }
+            const errorMessage = handleProfileError(error, 'profile fetch');
+            setError(errorMessage);
+            logProfileState('After fetchProfile (error):');
 
             return null;
         } finally {
@@ -201,9 +218,48 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
     };
 
     const refreshProfile = async (): Promise<void> => {
+        // Prevent refreshing if already loading
+        if (loading) {
+            console.log('Skipping profile refresh - already loading');
+            return;
+        }
+        
+        console.log('Forcing profile refresh...');
         // Clear cache before fetching to ensure fresh data
         await clearProfileCache();
-        await fetchProfile();
+        setLoading(true);
+        setError(null);
+        
+        try {
+            const response = await api.get('/profile');
+            
+            // Parse response according to backend structure
+            let profileData: UserProfile | null = null;
+            
+            if (response.data?.data?.profile) {
+                // New backend structure
+                profileData = response.data.data.profile;
+            } else if (response.data?.profile) {
+                // Legacy structure
+                profileData = response.data.profile;
+            } else {
+                throw new ProfileApiError(404, 'Profile not found in response');
+            }
+            
+            setProfile(profileData);
+            setProfileExists(true);
+            setNeedsProfileCreation(false);
+            
+            // Update cache with fresh data
+            await setCachedProfile(profileData);
+            logProfileState('After refreshProfile (success):');
+        } catch (error) {
+            const errorMessage = handleProfileError(error, 'profile refresh');
+            setError(errorMessage);
+            logProfileState('After refreshProfile (error):');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const updateProfile = useCallback(async (data: UpdateProfileRequest): Promise<UserProfile | null> => {
@@ -228,15 +284,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
 
             return updatedProfile;
         } catch (error) {
-            console.error('Error updating profile:', error);
-            let errorMessage = 'Failed to update profile';
-
-            if (error instanceof ProfileApiError) {
-                errorMessage = `Profile Update Error: ${error.message}`;
-            } else if (error && typeof error === 'object' && 'message' in error) {
-                errorMessage = `Profile Update Error: ${(error as Error).message}`;
-            }
-
+            const errorMessage = handleProfileError(error, 'profile update');
             setError(errorMessage);
             return null;
         } finally {
@@ -258,10 +306,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
             setProfile(updatedProfile);
             return updatedProfile;
         } catch (error) {
-            console.error('Error updating preferences:', error);
-            const errorMessage = error instanceof ProfileApiError
-                ? error.message
-                : 'Failed to update preferences';
+            const errorMessage = handleProfileError(error, 'preferences update');
             setError(errorMessage);
             return null;
         } finally {
@@ -292,10 +337,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
 
             return true;
         } catch (error) {
-            console.error('Error completing onboarding:', error);
-            const errorMessage = error instanceof ProfileApiError
-                ? error.message
-                : 'Failed to complete onboarding';
+            const errorMessage = handleProfileError(error, 'onboarding completion');
             setError(errorMessage);
             return false;
         } finally {
@@ -320,6 +362,9 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
         setNeedsProfileCreation(false);
         setError(null);
         setValidationErrors({});
+        // Also update the cache
+        setCachedProfile(newProfile);
+        logProfileState('After setProfileCreated:');
     }, []);
 
     const value: ProfileContextType = {
