@@ -24,7 +24,8 @@ import {
   useCreateDailyQuest,
   useCreateEpicQuest,
   useQuestStore,
-  useQuestError
+  useQuestError,
+  useRefreshAllPages
 } from '../../src/store/questStore';
 import { DailyQuest } from '../../src/api/quests';
 import { AddTaskModal } from '../../components/today/AddTaskModal';
@@ -61,7 +62,8 @@ export default function TodayScreen() {
   const createEpicQuest = useCreateEpicQuest();
 
   // Get the store instance for actions that need to be called
-  const questStore = useQuestStore.getState();
+  const refreshAllPages = useRefreshAllPages();
+  const questStore = useQuestStore.getState(); // Get store instance for direct method calls
 
   // Initialize data on mount
   useEffect(() => {
@@ -167,6 +169,8 @@ export default function TodayScreen() {
         await createDailyQuest(taskData);
       }
 
+      // Refresh all pages to ensure both today and goals pages are updated
+      await refreshAllPages();
       setShowAddModal(false);
     } catch (error) {
       Alert.alert(

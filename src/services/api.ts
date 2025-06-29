@@ -13,17 +13,17 @@ import {
   ChatResponse,
   DeleteQuestResponse,
   ApiError,
+  ChatHistoryResponse,
+  ClearChatResponse,
 } from '../types/api';
 
 class ApiService {
   private api: AxiosInstance;
   private baseURL: string;
   constructor() {
-    const isDevMode = process.env.EXPO_PUBLIC_DEV_MODE === 'true';
-    this.baseURL = isDevMode
-      ? 'http://localhost:3000'
-      : process.env.EXPO_PUBLIC_API_URL ||
-      'https://h5k4oat3hi.execute-api.us-east-1.amazonaws.com/';
+    // Always use the AWS endpoint - remove localhost dependency for dev mode
+    this.baseURL = process.env.EXPO_PUBLIC_API_URL ||
+      'https://h5k4oat3hi.execute-api.us-east-1.amazonaws.com';
 
     this.api = axios.create({
       baseURL: this.baseURL,
@@ -494,6 +494,34 @@ class ApiService {
       }
     } catch (error) {
       console.error('Error fetching goals:', error);
+      throw this.handleApiError(error);
+    }
+  }
+
+  // Current Chat History API methods for persistence
+
+  /**
+   * Get current user's chat history (for restoring conversation)
+   * GET /chat-history - No parameters accepted
+   */
+  async getChatHistory(): Promise<ChatHistoryResponse> {
+    try {
+      const response: AxiosResponse<ChatHistoryResponse> = await this.api.get('/chat-history');
+      return response.data;
+    } catch (error) {
+      throw this.handleApiError(error);
+    }
+  }
+
+  /**
+   * Clear all chat history for current user
+   * DELETE /chat-history - No parameters accepted
+   */
+  async clearChatHistory(): Promise<ClearChatResponse> {
+    try {
+      const response: AxiosResponse<ClearChatResponse> = await this.api.delete('/chat-history');
+      return response.data;
+    } catch (error) {
       throw this.handleApiError(error);
     }
   }

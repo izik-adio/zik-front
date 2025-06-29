@@ -96,6 +96,7 @@ interface QuestStoreState {
   // Utility Actions
   refreshTodayData: () => Promise<void>;
   refreshQuestsData: () => Promise<void>;
+  refreshAllPages: () => Promise<void>;
   clearError: () => void;
   resetState: () => void;
 }
@@ -631,6 +632,33 @@ export const useQuestStore = create<QuestStoreState>()(
         }
       },
 
+      // Comprehensive refresh method for when new items are created
+      refreshAllPages: async () => {
+        const state = get();
+
+        // Prevent concurrent refreshes
+        if (state.isRefreshing) {
+          return;
+        }
+
+        set({ isRefreshing: true });
+        try {
+          // Force refresh both epic quests and daily quests
+          const [epicQuests, todayData] = await Promise.all([
+            get().fetchEpicQuests(true),
+            (async () => {
+              const today = new Date().toISOString().split('T')[0];
+              await get().fetchDailyQuests(today, true);
+              get().checkTaskAccessRules();
+            })()
+          ]);
+        } catch (error: any) {
+          console.error('Failed to refresh all pages:', error);
+        } finally {
+          set({ isRefreshing: false });
+        }
+      },
+
       clearError: () => {
         set({ error: null });
       },
@@ -671,6 +699,7 @@ export const useGenerateRoadmap = () => useQuestStore(state => state.generateRoa
 export const useFetchRoadmap = () => useQuestStore(state => state.fetchRoadmap);
 export const useRefreshTodayData = () => useQuestStore(state => state.refreshTodayData);
 export const useRefreshQuestsData = () => useQuestStore(state => state.refreshQuestsData);
+export const useRefreshAllPages = () => useQuestStore(state => state.refreshAllPages);
 
 // Daily Quest action hooks
 export const useFetchDailyQuests = () => useQuestStore(state => state.fetchDailyQuests);

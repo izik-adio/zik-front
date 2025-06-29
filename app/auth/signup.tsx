@@ -92,19 +92,19 @@ export default function SignupScreen() {
       await confirmSignup(email.trim(), confirmationCode.trim());
 
       // After successful confirmation, the user is automatically logged in
-      // We'll let the app's routing logic handle profile creation
+      // The ProfileGuard will handle auto-profile creation
 
       // Clear any stored onboarding data
       await storage.removeItem('preferredName');
 
       Alert.alert(
         'Welcome to Zik!',
-        'Your account has been confirmed. Let\'s set up your profile!',
+        'Your account has been confirmed successfully!',
         [
           {
             text: 'Continue',
             onPress: () => {
-              // The ProfileGuard will handle routing to profile creation or onboarding
+              // The ProfileGuard will handle profile creation and routing
               router.replace('/');
             }
           }

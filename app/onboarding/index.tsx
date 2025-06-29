@@ -11,6 +11,7 @@ import { storage } from '@/src/utils/storage';
 import Animated, { SlideInRight, SlideOutLeft } from 'react-native-reanimated';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useAuth } from '@/src/context/AuthContext';
+import { useProfile } from '@/src/context/ProfileContext';
 import { X } from 'lucide-react-native';
 import { WelcomeScreen } from '@/components/onboarding/WelcomeScreen';
 import { GoalsSelectionScreen } from '@/components/onboarding/GoalsSelectionScreen';
@@ -24,6 +25,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
+  const { refreshProfile, completeOnboarding: completeProfileOnboarding } = useProfile();
   const steps = [
     { component: WelcomeScreen, key: 'welcome' },
     { component: GoalsSelectionScreen, key: 'goals' },
@@ -63,7 +65,17 @@ export default function OnboardingScreen() {
   };
   const completeOnboarding = async () => {
     try {
-      // Mark onboarding as completed
+      // Mark onboarding as completed in the backend first
+      if (isAuthenticated) {
+        const success = await completeProfileOnboarding();
+        if (success) {
+          console.log('Backend onboarding completed successfully');
+        } else {
+          console.log('Backend onboarding completion failed, but continuing...');
+        }
+      }
+
+      // Mark onboarding as completed locally
       await storage.setItem('hasOnboarded', 'true');
 
       // Store any selected goals
@@ -95,8 +107,23 @@ export default function OnboardingScreen() {
       }
     } catch (error) {
       console.error('Error completing onboarding:', error);
-      // Fallback redirect
-      router.replace('/auth/login');
+
+      // Still mark as completed locally even if backend fails
+      try {
+        await storage.setItem('hasOnboarded', 'true');
+      } catch (storageError) {
+        console.error('Failed to save onboarding status locally:', storageError);
+      }
+
+      // Continue with the redirect based on auth status
+      if (isAuthenticated) {
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 100);
+      } else {
+        // Fallback redirect
+        router.replace('/auth/login');
+      }
     }
   };
   const handleSkip = async () => {

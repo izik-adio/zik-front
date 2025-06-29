@@ -11,8 +11,10 @@ import {
   ScrollView,
   Alert,
   Platform,
+  KeyboardAvoidingView,
+  Dimensions,
 } from 'react-native';
-import { X, Sparkles, Edit3, Calendar, Clock, Flag, Tag, Target, ChevronDown } from 'lucide-react-native';
+import { X, Sparkles, Edit3, Calendar, Clock, Flag, Tag, Target, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useChatStore } from '@/src/store/chatStore';
 import { CreateDailyQuestData, CreateEpicQuestData } from '@/src/api/quests';
@@ -60,6 +62,8 @@ export function AddTaskModal({
   const [creationMode, setCreationMode] = useState<CreationMode>('manual');
   const [isEpic, setIsEpic] = useState(defaultEpicMode);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [showModeSelector, setShowModeSelector] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // AI mode state
   const [aiPrompt, setAiPrompt] = useState('');
@@ -72,7 +76,6 @@ export function AddTaskModal({
   const [priority, setPriority] = useState<Priority>('medium');
   const [category, setCategory] = useState('');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Initialize default dates and epic mode
   useEffect(() => {
@@ -95,6 +98,8 @@ export function AddTaskModal({
     setCreationMode('manual');
     setIsEpic(defaultEpicMode);
     setFocusedField(null);
+    setShowModeSelector(false);
+    setShowAdvanced(false);
     setAiPrompt('');
     setTitle('');
     setDescription('');
@@ -103,7 +108,6 @@ export function AddTaskModal({
     setPriority('medium');
     setCategory('');
     setShowCategoryPicker(false);
-    setShowAdvanced(false);
     onClose();
   };
 
@@ -113,10 +117,10 @@ export function AddTaskModal({
       return;
     }
 
-    // Generate contextual prompt based on quest type
+    // Simple, direct prompts
     const contextPrompt = isEpic
-      ? `Help me create a comprehensive roadmap for this long-term goal: "${aiPrompt.trim()}". Please break it down into milestones, actionable steps, and suggest a realistic timeline. I want to understand what daily tasks and weekly goals I should focus on to achieve this epic quest.`
-      : `Help me break down this daily task: "${aiPrompt.trim()}". Please suggest specific steps, time estimates, and any tips to complete it efficiently. If it's too big for one day, help me split it into manageable parts.`;
+      ? `Help me create a goal: "${aiPrompt.trim()}"`
+      : `Help me create a task: "${aiPrompt.trim()}"`;
 
     // Set the prompt in chat store and navigate to chat
     setPrefilledInput(contextPrompt);
@@ -162,102 +166,116 @@ export function AddTaskModal({
     handleClose();
   };
 
-  const renderModeSelector = () => (
-    <View style={[styles.modeSelector, { backgroundColor: theme.colors.card }]}>
-      <TouchableOpacity
-        style={[
-          styles.modeButton,
-          creationMode === 'manual' && [styles.modeButtonActive, { backgroundColor: theme.colors.primary }],
-          { borderColor: theme.colors.border }
-        ]}
-        onPress={() => setCreationMode('manual')}
-      >
-        <Edit3 size={18} color={creationMode === 'manual' ? '#ffffff' : theme.colors.subtitle} />
-        <Text style={[
-          styles.modeButtonText,
-          { color: creationMode === 'manual' ? '#ffffff' : theme.colors.subtitle }
-        ]}>
-          Manual
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.modeButton,
-          creationMode === 'ai' && [styles.modeButtonActive, { backgroundColor: theme.colors.primary }],
-          { borderColor: theme.colors.border }
-        ]}
-        onPress={() => setCreationMode('ai')}
-      >
-        <Sparkles size={18} color={creationMode === 'ai' ? '#ffffff' : theme.colors.subtitle} />
-        <Text style={[
-          styles.modeButtonText,
-          { color: creationMode === 'ai' ? '#ffffff' : theme.colors.subtitle }
-        ]}>
-          AI Generate
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderEpicToggle = () => (
-    <View style={[styles.toggleCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-      <View style={styles.toggleContent}>
-        <View style={styles.toggleText}>
-          <Text style={[styles.toggleLabel, { color: theme.colors.text }]}>
-            Epic Quest {defaultEpicMode && <Text style={[styles.lockIndicator, { color: theme.colors.primary }]}>🔒</Text>}
+  const renderCompactHeader = () => (
+    <View style={[styles.compactHeader, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+      {/* Top row with title and close */}
+      <View style={styles.headerTop}>
+        <View style={styles.headerLeft}>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Create Quest
           </Text>
-          <Text style={[styles.toggleDescription, { color: theme.colors.subtitle }]}>
-            {isEpic
-              ? 'Create a long-term goal with milestones and roadmap'
-              : 'Create a single-day task to complete today'
+          <TouchableOpacity
+            style={[styles.modeToggle, { backgroundColor: theme.colors.background }]}
+            onPress={() => setShowModeSelector(!showModeSelector)}
+          >
+            <Text style={[styles.modeToggleText, { color: theme.colors.primary }]}>
+              {creationMode === 'manual' ? 'Manual' : 'AI'}
+            </Text>
+            {showModeSelector ?
+              <ChevronUp size={16} color={theme.colors.primary} /> :
+              <ChevronDown size={16} color={theme.colors.primary} />
             }
-            {defaultEpicMode && '\n(Fixed to Epic mode in Goals tab)'}
-          </Text>
+          </TouchableOpacity>
         </View>
-        <Switch
-          value={isEpic}
-          onValueChange={defaultEpicMode ? undefined : setIsEpic}
-          disabled={defaultEpicMode}
-          trackColor={{
-            false: theme.colors.border,
-            true: theme.colors.primary + '50',
-          }}
-          thumbColor={isEpic ? theme.colors.primary : theme.colors.card}
-        />
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+          <X size={24} color={theme.colors.subtitle} />
+        </TouchableOpacity>
       </View>
+
+      {/* Epic toggle row */}
+      <View style={styles.headerBottom}>
+        <View style={styles.epicToggleCompact}>
+          <Text style={[styles.epicLabel, { color: theme.colors.text }]}>
+            Epic Quest
+            {defaultEpicMode && <Text style={[styles.lockIndicator, { color: theme.colors.primary }]}> 🔒</Text>}
+          </Text>
+          <Switch
+            value={isEpic}
+            onValueChange={defaultEpicMode ? undefined : setIsEpic}
+            disabled={defaultEpicMode}
+            trackColor={{
+              false: theme.colors.border,
+              true: theme.colors.primary + '50',
+            }}
+            thumbColor={isEpic ? theme.colors.primary : theme.colors.card}
+            style={styles.compactSwitch}
+          />
+        </View>
+        <Text style={[styles.epicDescription, { color: theme.colors.subtitle }]}>
+          {isEpic ? 'Long-term goal' : 'Daily task'}
+        </Text>
+      </View>
+
+      {/* Expandable mode selector */}
+      {showModeSelector && (
+        <View style={[styles.expandedModeSelector, { backgroundColor: theme.colors.background }]}>
+          <TouchableOpacity
+            style={[
+              styles.modeOptionCompact,
+              creationMode === 'manual' && [styles.modeOptionActive, { backgroundColor: theme.colors.primary }],
+              { borderColor: theme.colors.border }
+            ]}
+            onPress={() => {
+              setCreationMode('manual');
+              setShowModeSelector(false);
+            }}
+          >
+            <Edit3 size={16} color={creationMode === 'manual' ? '#ffffff' : theme.colors.subtitle} />
+            <Text style={[
+              styles.modeOptionText,
+              { color: creationMode === 'manual' ? '#ffffff' : theme.colors.subtitle }
+            ]}>
+              Manual Entry
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.modeOptionCompact,
+              creationMode === 'ai' && [styles.modeOptionActive, { backgroundColor: theme.colors.primary }],
+              { borderColor: theme.colors.border }
+            ]}
+            onPress={() => {
+              setCreationMode('ai');
+              setShowModeSelector(false);
+            }}
+          >
+            <Sparkles size={16} color={creationMode === 'ai' ? '#ffffff' : theme.colors.subtitle} />
+            <Text style={[
+              styles.modeOptionText,
+              { color: creationMode === 'ai' ? '#ffffff' : theme.colors.subtitle }
+            ]}>
+              AI Generate
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
   const renderAiMode = () => (
     <View style={styles.content}>
-      <View style={[styles.aiCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <View style={styles.aiHeader}>
-          <Sparkles size={24} color={theme.colors.primary} />
-          <Text style={[styles.aiTitle, { color: theme.colors.text }]}>
-            AI-Powered Creation
-          </Text>
-        </View>
-        <Text style={[styles.aiDescription, { color: theme.colors.subtitle }]}>
-          Describe what you want to {isEpic ? 'achieve' : 'do'}, and I'll help you create a structured plan
-        </Text>
-
-        {/* AI Mode Examples */}
-        <View style={styles.examplesContainer}>
-          <Text style={[styles.examplesTitle, { color: theme.colors.text }]}>
-            Examples:
-          </Text>
-          <Text style={[styles.exampleText, { color: theme.colors.subtitle }]}>
-            {isEpic
-              ? '• "Learn Spanish fluently"\n• "Run a half marathon"\n• "Build a mobile app"'
-              : '• "Organize my home office"\n• "Plan next week\'s meals"\n• "Review project proposal"'
-            }
+      <View style={[styles.aiCardCompact, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={styles.aiHeaderCompact}>
+          <Sparkles size={20} color={theme.colors.primary} />
+          <Text style={[styles.aiTitleCompact, { color: theme.colors.text }]}>
+            Describe your {isEpic ? 'goal' : 'task'}
           </Text>
         </View>
 
         <TextInput
           style={[
-            styles.aiInput,
+            styles.aiInputCompact,
             {
               backgroundColor: theme.colors.inputBackground,
               borderColor: focusedField === 'aiPrompt' ? theme.colors.primary : theme.colors.inputBorder,
@@ -265,8 +283,8 @@ export function AddTaskModal({
             },
           ]}
           placeholder={isEpic
-            ? 'e.g., "Learn to play guitar", "Get in shape", "Start a side business"'
-            : 'e.g., "Organize my workspace", "Prepare for tomorrow\'s meeting", "Read 20 pages"'
+            ? 'What goal do you want to achieve?'
+            : 'What task do you need to complete?'
           }
           placeholderTextColor={theme.colors.subtitle}
           value={aiPrompt}
@@ -274,48 +292,67 @@ export function AddTaskModal({
           onFocus={() => setFocusedField('aiPrompt')}
           onBlur={() => setFocusedField(null)}
           multiline
-          numberOfLines={3}
+          numberOfLines={4}
           textAlignVertical="top"
           autoFocus
         />
 
         <TouchableOpacity
           style={[
-            styles.aiGenerateButton,
+            styles.aiGenerateButtonCompact,
             { backgroundColor: theme.colors.primary },
             !aiPrompt.trim() && { backgroundColor: theme.colors.border }
           ]}
           onPress={handleAiGenerate}
           disabled={!aiPrompt.trim()}
         >
-          <Sparkles size={20} color="#ffffff" />
-          <Text style={styles.aiGenerateButtonText}>
+          <Sparkles size={18} color="#ffffff" />
+          <Text style={styles.aiGenerateButtonTextCompact}>
             Generate with AI
           </Text>
         </TouchableOpacity>
 
-        <Text style={[styles.aiNote, { color: theme.colors.subtitle }]}>
-          💡 This will take you to Zik chat with a structured prompt
+        <Text style={[styles.aiNoteCompact, { color: theme.colors.subtitle }]}>
+          💡 Opens Zik chat with: "Help me create a {isEpic ? 'goal' : 'task'}: [your input]"
         </Text>
+      </View>
+
+      {/* Quick examples */}
+      <View style={[styles.examplesCardCompact, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <Text style={[styles.examplesTitleCompact, { color: theme.colors.text }]}>
+          Quick examples:
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.examplesScrollCompact}>
+          {(isEpic
+            ? ['Learn Spanish', 'Get fit', 'Build an app', 'Start a business']
+            : ['Organize office', 'Plan meals', 'Review proposal', 'Exercise 30min']
+          ).map((example, index) => (
+            <TouchableOpacity
+              key={`example-${example}-${index}`}
+              style={[styles.exampleChipCompact, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}
+              onPress={() => setAiPrompt(example)}
+            >
+              <Text style={[styles.exampleChipTextCompact, { color: theme.colors.subtitle }]}>
+                {example}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
     </View>
   );
 
   const renderManualMode = () => (
-    <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Basic Fields */}
-      <View style={[styles.fieldCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-          Basic Information
-        </Text>
-
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>
-            <Target size={16} color={theme.colors.primary} /> Title *
+    <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      {/* Primary Fields */}
+      <View style={[styles.fieldCardCompact, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={styles.fieldCompact}>
+          <Text style={[styles.labelCompact, { color: theme.colors.text }]}>
+            <Target size={14} color={theme.colors.primary} /> Title *
           </Text>
           <TextInput
             style={[
-              styles.input,
+              styles.inputCompact,
               {
                 backgroundColor: theme.colors.inputBackground,
                 borderColor: focusedField === 'title' ? theme.colors.primary : theme.colors.inputBorder,
@@ -323,8 +360,8 @@ export function AddTaskModal({
               },
             ]}
             placeholder={isEpic
-              ? 'e.g., Learn to play guitar, Get in shape, Start a business'
-              : 'What do you want to accomplish today?'
+              ? 'e.g., Learn to play guitar, Get in shape'
+              : 'What do you want to accomplish?'
             }
             placeholderTextColor={theme.colors.subtitle}
             value={title}
@@ -335,14 +372,14 @@ export function AddTaskModal({
           />
         </View>
 
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>
-            <Edit3 size={16} color={theme.colors.primary} /> Description *
+        <View style={styles.fieldCompact}>
+          <Text style={[styles.labelCompact, { color: theme.colors.text }]}>
+            <Edit3 size={14} color={theme.colors.primary} /> Description *
           </Text>
           <TextInput
             style={[
-              styles.input,
-              styles.textArea,
+              styles.inputCompact,
+              styles.textAreaCompact,
               {
                 backgroundColor: theme.colors.inputBackground,
                 borderColor: focusedField === 'description' ? theme.colors.primary : theme.colors.inputBorder,
@@ -351,7 +388,7 @@ export function AddTaskModal({
             ]}
             placeholder={isEpic
               ? 'Describe your long-term goal and what success looks like'
-              : 'Describe what you need to do and any specific requirements'
+              : 'Describe what you need to do'
             }
             placeholderTextColor={theme.colors.subtitle}
             value={description}
@@ -364,109 +401,125 @@ export function AddTaskModal({
           />
         </View>
 
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>
-            <Calendar size={16} color={theme.colors.primary} /> {isEpic ? 'Target Date *' : 'Due Date *'}
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: theme.colors.inputBackground,
-                borderColor: focusedField === 'date' ? theme.colors.primary : theme.colors.inputBorder,
-                color: theme.colors.text,
-              },
-            ]}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={theme.colors.subtitle}
-            value={isEpic ? targetDate : dueDate}
-            onChangeText={isEpic ? setTargetDate : setDueDate}
-            onFocus={() => setFocusedField('date')}
-            onBlur={() => setFocusedField(null)}
-          />
-        </View>
-      </View>
-
-      {/* Priority and Category */}
-      <View style={[styles.fieldCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-          Settings
-        </Text>
-
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>
-            <Flag size={16} color={theme.colors.primary} /> Priority
-          </Text>
-          <View style={styles.priorityContainer}>
-            {PRIORITY_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.priorityButton,
-                  { borderColor: theme.colors.border },
-                  priority === option.value && {
-                    backgroundColor: option.color + '20',
-                    borderColor: option.color
-                  }
-                ]}
-                onPress={() => setPriority(option.value)}
-              >
-                <View style={[styles.priorityDot, { backgroundColor: option.color }]} />
-                <Text style={[
-                  styles.priorityText,
-                  { color: priority === option.value ? theme.colors.text : theme.colors.subtitle }
-                ]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>
-            <Tag size={16} color={theme.colors.primary} /> Category {isEpic && '*'}
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.input,
-              styles.categorySelector,
-              {
-                backgroundColor: theme.colors.inputBackground,
-                borderColor: showCategoryPicker ? theme.colors.primary : theme.colors.inputBorder,
-              },
-            ]}
-            onPress={() => setShowCategoryPicker(!showCategoryPicker)}
-          >
-            <Text style={[
-              styles.categoryText,
-              { color: category ? theme.colors.text : theme.colors.subtitle }
-            ]}>
-              {category || 'Select a category'}
+        {/* Inline Priority and Date */}
+        <View style={styles.rowFields}>
+          <View style={[styles.fieldCompact, { flex: 1, marginRight: 8 }]}>
+            <Text style={[styles.labelCompact, { color: theme.colors.text }]}>
+              <Flag size={14} color={theme.colors.primary} /> Priority
             </Text>
-            <ChevronDown size={20} color={theme.colors.subtitle} />
-          </TouchableOpacity>
-
-          {showCategoryPicker && (
-            <View style={[styles.categoryPicker, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              {CATEGORY_OPTIONS.map((option) => (
+            <View style={styles.priorityContainerCompact}>
+              {PRIORITY_OPTIONS.map((option) => (
                 <TouchableOpacity
-                  key={option}
-                  style={styles.categoryOption}
-                  onPress={() => {
-                    setCategory(option);
-                    setShowCategoryPicker(false);
-                  }}
+                  key={option.value}
+                  style={[
+                    styles.priorityButtonCompact,
+                    { borderColor: theme.colors.border },
+                    priority === option.value && {
+                      backgroundColor: option.color + '20',
+                      borderColor: option.color
+                    }
+                  ]}
+                  onPress={() => setPriority(option.value)}
                 >
-                  <Text style={[styles.categoryOptionText, { color: theme.colors.text }]}>
-                    {option}
+                  <View style={[styles.priorityDotCompact, { backgroundColor: option.color }]} />
+                  <Text style={[
+                    styles.priorityTextCompact,
+                    { color: priority === option.value ? theme.colors.text : theme.colors.subtitle }
+                  ]}>
+                    {option.label.charAt(0)}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-          )}
+          </View>
+
+          <View style={[styles.fieldCompact, { flex: 1, marginLeft: 8 }]}>
+            <Text style={[styles.labelCompact, { color: theme.colors.text }]}>
+              <Calendar size={14} color={theme.colors.primary} /> {isEpic ? 'Target' : 'Due'} *
+            </Text>
+            <TextInput
+              style={[
+                styles.inputCompact,
+                {
+                  backgroundColor: theme.colors.inputBackground,
+                  borderColor: focusedField === 'date' ? theme.colors.primary : theme.colors.inputBorder,
+                  color: theme.colors.text,
+                },
+              ]}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={theme.colors.subtitle}
+              value={isEpic ? targetDate : dueDate}
+              onChangeText={isEpic ? setTargetDate : setDueDate}
+              onFocus={() => setFocusedField('date')}
+              onBlur={() => setFocusedField(null)}
+            />
+          </View>
         </View>
       </View>
+
+      {/* Optional Fields */}
+      <TouchableOpacity
+        style={[styles.advancedToggle, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+        onPress={() => setShowAdvanced(!showAdvanced)}
+      >
+        <Text style={[styles.advancedToggleText, { color: theme.colors.text }]}>
+          <Tag size={14} color={theme.colors.primary} /> Category {isEpic && '*'} {!isEpic && '(optional)'}
+        </Text>
+        {showAdvanced ?
+          <ChevronUp size={16} color={theme.colors.subtitle} /> :
+          <ChevronDown size={16} color={theme.colors.subtitle} />
+        }
+      </TouchableOpacity>
+
+      {showAdvanced && (
+        <View style={[styles.fieldCardCompact, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <View style={styles.fieldCompact}>
+            <TouchableOpacity
+              style={[
+                styles.inputCompact,
+                styles.categorySelectorCompact,
+                {
+                  backgroundColor: theme.colors.inputBackground,
+                  borderColor: showCategoryPicker ? theme.colors.primary : theme.colors.inputBorder,
+                },
+              ]}
+              onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+            >
+              <Text style={[
+                styles.categoryTextCompact,
+                { color: category ? theme.colors.text : theme.colors.subtitle }
+              ]}>
+                {category || 'Select a category'}
+              </Text>
+              <ChevronDown size={16} color={theme.colors.subtitle} />
+            </TouchableOpacity>
+
+            {showCategoryPicker && (
+              <View style={[styles.categoryPickerCompact, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <ScrollView style={styles.categoryScrollCompact} nestedScrollEnabled={true}>
+                  {CATEGORY_OPTIONS.map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={styles.categoryOptionCompact}
+                      onPress={() => {
+                        setCategory(option);
+                        setShowCategoryPicker(false);
+                      }}
+                    >
+                      <Text style={[styles.categoryOptionTextCompact, { color: theme.colors.text }]}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Add some bottom padding for keyboard */}
+      <View style={{ height: 100 }} />
     </ScrollView>
   );
 
@@ -477,61 +530,54 @@ export function AddTaskModal({
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-            Create {isEpic ? 'Epic Quest' : 'Daily Quest'}
-          </Text>
-          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <X size={24} color={theme.colors.subtitle} />
-          </TouchableOpacity>
-        </View>
+      <KeyboardAvoidingView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <SafeAreaView style={styles.container}>
+          {/* Compact Header */}
+          {renderCompactHeader()}
 
-        {/* Mode Selector */}
-        {renderModeSelector()}
+          {/* Content based on mode */}
+          {creationMode === 'ai' ? renderAiMode() : renderManualMode()}
 
-        {/* Epic Quest Toggle */}
-        {renderEpicToggle()}
-
-        {/* Content based on mode */}
-        {creationMode === 'ai' ? renderAiMode() : renderManualMode()}
-
-        {/* Footer */}
-        <View style={[styles.footer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
-          <TouchableOpacity
-            style={[styles.cancelButton, { borderColor: theme.colors.border }]}
-            onPress={handleClose}
-          >
-            <Text style={[styles.cancelButtonText, { color: theme.colors.text }]}>
-              Cancel
-            </Text>
-          </TouchableOpacity>
-
-          {creationMode === 'manual' && (
+          {/* Footer */}
+          <View style={[styles.footer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
             <TouchableOpacity
-              style={[
-                styles.createButton,
-                { backgroundColor: theme.colors.primary },
-                (!title.trim() || !description.trim() || (isEpic && !category.trim())) && {
-                  backgroundColor: theme.colors.border
-                }
-              ]}
-              onPress={handleManualCreate}
-              disabled={!title.trim() || !description.trim() || (isEpic && !category.trim())}
+              style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+              onPress={handleClose}
             >
-              <Text style={[
-                styles.createButtonText,
-                (!title.trim() || !description.trim() || (isEpic && !category.trim())) && {
-                  color: theme.colors.subtitle
-                }
-              ]}>
-                Create {isEpic ? 'Epic Quest' : 'Daily Quest'}
+              <Text style={[styles.cancelButtonText, { color: theme.colors.text }]}>
+                Cancel
               </Text>
             </TouchableOpacity>
-          )}
-        </View>
-      </SafeAreaView>
+
+            {creationMode === 'manual' && (
+              <TouchableOpacity
+                style={[
+                  styles.createButton,
+                  { backgroundColor: theme.colors.primary },
+                  (!title.trim() || !description.trim() || (isEpic && !category.trim())) && {
+                    backgroundColor: theme.colors.border
+                  }
+                ]}
+                onPress={handleManualCreate}
+                disabled={!title.trim() || !description.trim() || (isEpic && !category.trim())}
+              >
+                <Text style={[
+                  styles.createButtonText,
+                  (!title.trim() || !description.trim() || (isEpic && !category.trim())) && {
+                    color: theme.colors.subtitle
+                  }
+                ]}>
+                  Create {isEpic ? 'Epic Quest' : 'Daily Quest'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -540,11 +586,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
+
+  // Compact Header
+  compactHeader: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     elevation: 2,
     shadowColor: '#000',
@@ -552,273 +598,316 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   headerTitle: {
     fontFamily: 'Inter-Bold',
-    fontSize: 22,
+    fontSize: 20,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  modeToggleText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
   },
   closeButton: {
     padding: 8,
     borderRadius: 20,
   },
-
-  // Mode Selector
-  modeSelector: {
+  headerBottom: {
     flexDirection: 'row',
-    margin: 16,
-    borderRadius: 12,
-    padding: 4,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  modeButton: {
+  epicToggleCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  epicLabel: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+  },
+  lockIndicator: {
+    fontSize: 10,
+  },
+  compactSwitch: {
+    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
+  },
+  epicDescription: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+
+  // Expandable Mode Selector
+  expandedModeSelector: {
+    marginTop: 8,
+    flexDirection: 'row',
+    borderRadius: 8,
+    padding: 2,
+    gap: 4,
+  },
+  modeOptionCompact: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
     borderWidth: 1,
-    gap: 8,
+    gap: 6,
   },
-  modeButtonActive: {
+  modeOptionActive: {
     borderWidth: 0,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  modeButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-  },
-
-  // Epic Toggle
-  toggleCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    borderWidth: 1,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  toggleContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  toggleText: {
-    flex: 1,
-    marginRight: 16,
-  },
-  toggleLabel: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  lockIndicator: {
+  modeOptionText: {
+    fontFamily: 'Inter-Medium',
     fontSize: 12,
-  },
-  toggleDescription: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    lineHeight: 20,
   },
 
   // Content
   content: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingTop: 8,
   },
 
-  // AI Mode
-  aiCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  aiHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  aiTitle: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 18,
-  },
-  aiDescription: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  examplesContainer: {
-    marginBottom: 16,
-  },
-  examplesTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  exampleText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  aiInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    minHeight: 80,
-    marginBottom: 20,
-  },
-  aiGenerateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  aiGenerateButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    color: '#ffffff',
-  },
-  aiNote: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-
-  // Manual Mode
-  fieldCard: {
+  // AI Mode - Compact
+  aiCardCompact: {
     borderRadius: 12,
     borderWidth: 1,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 12,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
-  sectionTitle: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  field: {
-    marginBottom: 16,
-  },
-  label: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    marginBottom: 8,
+  aiHeaderCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 12,
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontFamily: 'Inter-Regular',
+  aiTitleCompact: {
+    fontFamily: 'Inter-SemiBold',
     fontSize: 16,
   },
-  textArea: {
-    minHeight: 80,
+  aiInputCompact: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 14,
+    fontFamily: 'Inter-Regular',
+    fontSize: 15,
+    minHeight: 100,
+    marginBottom: 16,
+  },
+  aiGenerateButtonCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 10,
+    gap: 6,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  aiGenerateButtonTextCompact: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 15,
+    color: '#ffffff',
+  },
+  aiNoteCompact: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+
+  // AI Examples
+  examplesCardCompact: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  examplesTitleCompact: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  examplesScrollCompact: {
+    flexDirection: 'row',
+  },
+  exampleChipCompact: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  exampleChipTextCompact: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 11,
+  },
+
+  // Manual Mode - Compact
+  fieldCardCompact: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  fieldCompact: {
+    marginBottom: 12,
+  },
+  labelCompact: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  inputCompact: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: 'Inter-Regular',
+    fontSize: 15,
+  },
+  textAreaCompact: {
+    minHeight: 70,
     textAlignVertical: 'top',
   },
 
-  // Priority
-  priorityContainer: {
+  // Row fields for inline elements
+  rowFields: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'flex-start',
   },
-  priorityButton: {
+
+  // Priority - Compact
+  priorityContainerCompact: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  priorityButtonCompact: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    gap: 4,
+  },
+  priorityDotCompact: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  priorityTextCompact: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 11,
+  },
+
+  // Advanced Toggle
+  advancedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    gap: 6,
+    marginBottom: 8,
   },
-  priorityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  priorityText: {
+  advancedToggleText: {
     fontFamily: 'Inter-Medium',
     fontSize: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 
-  // Category
-  categorySelector: {
+  // Category - Compact
+  categorySelectorCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  categoryText: {
+  categoryTextCompact: {
     fontFamily: 'Inter-Regular',
-    fontSize: 16,
+    fontSize: 15,
   },
-  categoryPicker: {
+  categoryPickerCompact: {
     marginTop: 8,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    maxHeight: 200,
+    maxHeight: 120,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  categoryOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  categoryScrollCompact: {
+    maxHeight: 120,
+  },
+  categoryOptionCompact: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(0,0,0,0.1)',
   },
-  categoryOptionText: {
+  categoryOptionTextCompact: {
     fontFamily: 'Inter-Regular',
-    fontSize: 14,
+    fontSize: 13,
   },
 
   // Footer
   footer: {
     flexDirection: 'row',
-    padding: 20,
+    padding: 16,
     gap: 12,
     borderTopWidth: 1,
     elevation: 4,
@@ -829,19 +918,19 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
   },
   cancelButtonText: {
     fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
+    fontSize: 15,
   },
   createButton: {
     flex: 2,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
     elevation: 2,
     shadowColor: '#000',
@@ -851,7 +940,7 @@ const styles = StyleSheet.create({
   },
   createButtonText: {
     fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
+    fontSize: 15,
     color: '#ffffff',
   },
 });

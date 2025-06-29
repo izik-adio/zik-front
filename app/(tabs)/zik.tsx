@@ -12,7 +12,7 @@ import {
   Keyboard,
   Alert,
 } from 'react-native';
-import { Send, Mic, CheckCircle, MoreVertical, Trash2 } from 'lucide-react-native';
+import { Send, Mic, CheckCircle, Trash2 } from 'lucide-react-native';
 import Animated, {
   FadeInUp,
   FadeInDown,
@@ -25,10 +25,13 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { useChatStore, useChatPrefilledInput } from '@/src/store/chatStore';
 import { LogoImage } from '@/components/onboarding/LogoImage';
 import { ChatBubble } from '@/components/zik/ChatBubble';
-import { SuggestionChip } from '@/components/zik/SuggestionChip';
+import { ToastContainer, useToast } from '@/components/ui/Toast';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 export default function ZikScreen() {
   const { theme } = useTheme();
+  const { showToast } = useToast();
+  const { isConnected } = useNetworkStatus();
   const [inputText, setInputText] = useState('');
   const [showQuestCreatedToast, setShowQuestCreatedToast] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -44,6 +47,8 @@ export default function ZikScreen() {
     clearError,
     clearMessages,
     clearPrefilledInput,
+    loadChatHistory,
+    setOnlineStatus,
   } = useChatStore();
 
   const prefilledInput = useChatPrefilledInput();
@@ -56,27 +61,25 @@ export default function ZikScreen() {
   const toastOpacity = useSharedValue(0);
   const toastTranslateY = useSharedValue(-50);
 
-  const suggestions = [
-    'How was my day?',
-    'Set a new goal',
-    'I need motivation',
-    'Plan tomorrow',
-    'What should I focus on?',
-    'Help me reflect',
-  ];
+
 
   useEffect(() => {
-    // Add initial greeting if no messages exist
-    if (messages.length === 0) {
-      // This will be handled by the chat store initialization
-    }
+    // Load chat history on app start
+    loadChatHistory();
+  }, [loadChatHistory]);
 
+  useEffect(() => {
+    // Sync network status with chat store
+    setOnlineStatus(isConnected);
+  }, [isConnected, setOnlineStatus]);
+
+  useEffect(() => {
     // Handle errors
     if (error) {
       Alert.alert('Error', error);
       clearError();
     }
-  }, [messages, error, clearError]);
+  }, [error, clearError]);
 
   // Handle prefilled input from task creation
   useEffect(() => {
@@ -93,11 +96,14 @@ export default function ZikScreen() {
     let previousRefreshing = false;
 
     const unsubscribe = useChatStore.subscribe((state) => {
-      if (previousRefreshing && !state.isRefreshingQuests) {
-        // Quest refresh just completed, show success toast
+      if (previousRefreshing && !state.isRefreshingQuests && state.questsWereModified) {
+        // Quest refresh just completed and quests were actually modified, show success toast
         setShowQuestCreatedToast(true);
         toastOpacity.value = withSpring(1);
         toastTranslateY.value = withSpring(0);
+
+        // Reset the flag so we don't show the toast again
+        useChatStore.getState().resetQuestModificationFlag();
 
         // Hide toast after 3 seconds
         setTimeout(() => {
@@ -169,6 +175,17 @@ export default function ZikScreen() {
       return;
     }
 
+    // Check network connection before sending
+    if (!isConnected) {
+      showToast({
+        type: 'error',
+        title: 'No Network Connection',
+        message: 'Please check your internet connection and try again.',
+        duration: 4000,
+      });
+      return;
+    }
+
     // Animate send button
     sendButtonScale.value = withSpring(0.8, {}, () => {
       sendButtonScale.value = withSpring(1);
@@ -183,10 +200,7 @@ export default function ZikScreen() {
     }
   };
 
-  const handleSuggestionPress = (suggestion: string) => {
-    setInputText(suggestion);
-    inputRef.current?.focus();
-  };
+
 
   const handleClearChat = () => {
     // Simple confirmation - KISS principle
@@ -201,12 +215,17 @@ export default function ZikScreen() {
         {
           text: 'Clear',
           style: 'destructive',
-          onPress: () => {
-            clearMessages();
-            // Simple feedback - scroll to top smoothly
-            setTimeout(() => {
-              scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-            }, 200);
+          onPress: async () => {
+            try {
+              await clearMessages();
+              // Simple feedback - scroll to top smoothly
+              setTimeout(() => {
+                scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+              }, 200);
+            } catch (error) {
+              console.error('Error clearing chat:', error);
+              Alert.alert('Error', 'Failed to clear chat. Please try again.');
+            }
           },
         },
       ]
@@ -223,7 +242,7 @@ export default function ZikScreen() {
 
   // Animated styles
   const sendButtonAnimatedStyle = useAnimatedStyle(() => {
-    const isDisabled = !inputText.trim() || isLoading || isStreaming;
+    const isDisabled = !inputText.trim() || isLoading || isStreaming || !isConnected;
     return {
       transform: [{ scale: sendButtonScale.value }],
       backgroundColor: isDisabled
@@ -293,7 +312,7 @@ export default function ZikScreen() {
               <Animated.View
                 style={[
                   styles.onlineIndicator,
-                  { backgroundColor: '#10B981' },
+                  { backgroundColor: isConnected ? '#10B981' : '#EF4444' },
                   onlineIndicatorAnimatedStyle,
                 ]}
               />
@@ -309,7 +328,9 @@ export default function ZikScreen() {
                     ? 'Typing...'
                     : isLoading
                       ? 'Thinking...'
-                      : 'Online • Ready to help'}
+                      : isConnected
+                        ? 'Online • Ready to help'
+                        : 'Offline • Using cached data'}
               </Text>
             </View>
           </View>
@@ -372,29 +393,7 @@ export default function ZikScreen() {
             },
           ]}
         >
-          {/* Suggestions */}
-          {messages.length <= 1 && (
-            <Animated.View entering={FadeInUp.delay(300)}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.suggestionsContainer}
-                contentContainerStyle={styles.suggestionsContent}
-              >
-                {suggestions.map((suggestion, index) => (
-                  <Animated.View
-                    key={index}
-                    entering={FadeInUp.delay(400 + index * 50)}
-                  >
-                    <SuggestionChip
-                      text={suggestion}
-                      onPress={() => handleSuggestionPress(suggestion)}
-                    />
-                  </Animated.View>
-                ))}
-              </ScrollView>
-            </Animated.View>
-          )}
+
 
           {/* Input Row */}
           <View style={styles.inputRow}>
@@ -430,13 +429,13 @@ export default function ZikScreen() {
               <TouchableOpacity
                 style={styles.sendButtonInner}
                 onPress={() => handleSendMessage(inputText)}
-                disabled={!inputText.trim() || isLoading || isStreaming}
+                disabled={!inputText.trim() || isLoading || isStreaming || !isConnected}
                 activeOpacity={0.8}
               >
                 <Send
                   size={20}
                   color={
-                    inputText.trim() && !isLoading && !isStreaming
+                    inputText.trim() && !isLoading && !isStreaming && isConnected
                       ? '#ffffff'
                       : theme.colors.subtitle
                   }
@@ -475,6 +474,9 @@ export default function ZikScreen() {
           </Text>
         </Animated.View>
       )}
+
+      {/* Toast Container */}
+      <ToastContainer />
     </SafeAreaView>
   );
 }
@@ -571,13 +573,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 8,
-  },
-  suggestionsContainer: {
-    marginBottom: 16,
-    maxHeight: 44,
-  },
-  suggestionsContent: {
-    paddingRight: 16,
   },
   inputRow: {
     flexDirection: 'row',

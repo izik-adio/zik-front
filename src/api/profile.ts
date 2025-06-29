@@ -35,11 +35,11 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     email: true,
     push: true,
     dailyReminders: true,
-    weeklyDigest: false,
+    weeklyDigest: true,
   },
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+  timezone: 'UTC',
   language: 'en',
-  questCategories: ['health', 'career', 'personal', 'learning'],
+  questCategories: [],
   privacySettings: {
     shareProgress: false,
     publicProfile: false,
@@ -78,7 +78,19 @@ export const profileApi = {
   async getProfile(): Promise<UserProfile> {
     try {
       const response = await api.get('/profile');
+
+      // Check if response has the expected structure
+      if (!response || !response.data) {
+        throw new ProfileApiError(0, 'Invalid response format: no data received');
+      }
+
       const data: ProfileResponse = response.data;
+
+      // Check if profile exists in the response
+      if (!data.profile) {
+        throw new ProfileApiError(404, 'Profile not found in response');
+      }
+
       return data.profile;
     } catch (error) {
       return handleApiError(error);
@@ -102,7 +114,19 @@ export const profileApi = {
       };
 
       const response = await api.post('/profile', requestData);
+
+      // Check if response has the expected structure
+      if (!response || !response.data) {
+        throw new ProfileApiError(0, 'Invalid response format: no data received');
+      }
+
       const data: ProfileCreateResponse = response.data;
+
+      // Check if profile exists in the response
+      if (!data.profile) {
+        throw new ProfileApiError(400, 'Profile not found in create response');
+      }
+
       return data.profile;
     } catch (error) {
       return handleApiError(error);
@@ -118,7 +142,19 @@ export const profileApi = {
   async updateProfile(updatedData: UpdateProfileRequest): Promise<UserProfile> {
     try {
       const response = await api.put('/profile', updatedData);
+
+      // Check if response has the expected structure
+      if (!response || !response.data) {
+        throw new ProfileApiError(0, 'Invalid response format: no data received');
+      }
+
       const data: ProfileUpdateResponse = response.data;
+
+      // Check if profile exists in the response
+      if (!data.profile) {
+        throw new ProfileApiError(400, 'Profile not found in update response');
+      }
+
       return data.profile;
     } catch (error) {
       return handleApiError(error);
@@ -148,26 +184,6 @@ export const profileApi = {
   },
 
   /**
-   * Check if a username is available
-   * @param username The username to check
-   * @returns Promise<boolean> True if available, false if taken
-   */
-  async checkUsernameAvailability(username: string): Promise<boolean> {
-    try {
-      // This would need to be implemented as a separate endpoint
-      // For now, we'll catch the error from create/update attempts
-      const response = await api.get(`/profile/username/check?username=${encodeURIComponent(username)}`);
-      return response.data.available;
-    } catch (error: any) {
-      // If endpoint doesn't exist, return true (optimistic)
-      if (error.response?.status === 404) {
-        return true;
-      }
-      return false;
-    }
-  },
-
-  /**
    * Validate profile data before submission
    * @param data Profile data to validate
    * @returns Object with validation results
@@ -187,10 +203,38 @@ export const profileApi = {
       }
     }
 
-    // Name validation (required for creation)
-    if ('displayName' in data) {
-      if (!data.displayName || data.displayName.length > 100) {
-        errors.displayName = 'Display name is required and must be less than 100 characters';
+    // For CreateProfileRequest, firstName and lastName are required
+    if ('firstName' in data && 'lastName' in data) {
+      if (!data.firstName || data.firstName.trim().length === 0) {
+        errors.firstName = 'First name is required';
+      } else if (data.firstName.length > 50) {
+        errors.firstName = 'First name must be less than 50 characters';
+      }
+
+      if (!data.lastName || data.lastName.trim().length === 0) {
+        errors.lastName = 'Last name is required';
+      } else if (data.lastName.length > 50) {
+        errors.lastName = 'Last name must be less than 50 characters';
+      }
+    }
+
+    // For UpdateProfileRequest, firstName and lastName are optional but must be valid if provided
+    if ('firstName' in data && data.firstName !== undefined) {
+      if (data.firstName.length > 50) {
+        errors.firstName = 'First name must be less than 50 characters';
+      }
+    }
+
+    if ('lastName' in data && data.lastName !== undefined) {
+      if (data.lastName.length > 50) {
+        errors.lastName = 'Last name must be less than 50 characters';
+      }
+    }
+
+    // Display Name validation (optional for updates, but if provided should be valid)
+    if ('displayName' in data && data.displayName !== undefined) {
+      if (data.displayName && data.displayName.length > 100) {
+        errors.displayName = 'Display name must be less than 100 characters';
       }
     }
 
@@ -243,16 +287,23 @@ export const profileApi = {
  * This is used after signup to create a basic profile without user friction
  */
 export const createAutoProfile = async (fullName: string, email: string): Promise<UserProfile> => {
-  // Use the full name as display name
-  const displayName = fullName.trim() || email.split('@')[0];
+  // Parse the full name into first and last name
+  const nameParts = fullName.trim().split(' ');
+  const firstName = nameParts[0] || email.split('@')[0];
+  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'User';
+
+  // Use the full name as display name if provided
+  const displayName = fullName.trim() || `${firstName} ${lastName}`;
 
   // Generate a default username from email or name
   const emailPart = email.split('@')[0];
   const baseUsername = emailPart.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
-  // Create profile with defaults
+  // Create profile with defaults matching backend requirements
   const profileData: CreateProfileRequest = {
     username: baseUsername,
+    firstName,
+    lastName,
     displayName,
     preferences: {
       ...DEFAULT_PREFERENCES,

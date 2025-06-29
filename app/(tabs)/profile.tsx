@@ -60,8 +60,8 @@ export default function ProfileScreen() {
   // Initialize form data when profile loads
   useEffect(() => {
     if (profile) {
-      setEditName(profile.displayName);
-      setEditUsername(profile.username);
+      setEditName(profile.displayName || '');
+      setEditUsername(profile.username || '');
     }
   }, [profile]);
 
@@ -130,8 +130,8 @@ export default function ProfileScreen() {
 
   const handleCancel = () => {
     if (profile) {
-      setEditName(profile.displayName);
-      setEditUsername(profile.username);
+      setEditName(profile.displayName || '');
+      setEditUsername(profile.username || '');
     }
     setIsEditing(false);
   };

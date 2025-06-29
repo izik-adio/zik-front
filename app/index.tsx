@@ -2,9 +2,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '@/src/context/AuthContext';
-import { useProfile } from '@/src/context/ProfileContext';
 import { useTheme } from '@/src/context/ThemeContext';
-import { storage } from '@/src/utils/storage';
 import { SplashScreen } from '@/components/onboarding/SplashScreen';
 import { AuthWelcomeScreen } from '@/components/onboarding/AuthWelcomeScreen';
 import * as ExpoSplashScreen from 'expo-splash-screen';
@@ -15,7 +13,6 @@ ExpoSplashScreen.preventAutoHideAsync();
 export default function App() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  const { profile, onboardingCompleted, loading: profileLoading } = useProfile();
   const { theme } = useTheme();
   const [showSplash, setShowSplash] = useState(true);
   const [showAuthWelcome, setShowAuthWelcome] = useState(false);
@@ -37,33 +34,20 @@ export default function App() {
         return;
       }
 
-      // User is authenticated, let ProfileGuard handle the rest
-      if (profile && !onboardingCompleted) {
-        // Profile exists but onboarding not complete
-        router.replace('/onboarding');
-        return;
-      }
-
-      if (profile && onboardingCompleted) {
-        // User is fully set up, go to main app
-        router.replace('/(tabs)');
-        return;
-      }
-
-      // If we get here, we're still loading profile data
-      // Just wait for the profile context to handle the routing
+      // User is authenticated, ProfileGuard will handle the rest
+      router.replace('/(tabs)');
     } catch (error) {
       console.error('Error in app flow:', error);
       setShowAuthWelcome(true);
       await ExpoSplashScreen.hideAsync();
     }
-  }, [router, isAuthenticated, profile, onboardingCompleted]);
+  }, [router, isAuthenticated]);
 
   useEffect(() => {
-    if (!isLoading && !profileLoading && isAppReady) {
+    if (!isLoading && isAppReady) {
       checkAppFlow();
     }
-  }, [isLoading, profileLoading, isAppReady, checkAppFlow]);
+  }, [isLoading, isAppReady, checkAppFlow]);
 
   // Show splash screen initially
   if (showSplash) {
@@ -82,7 +66,7 @@ export default function App() {
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         <Text style={[styles.loading, { color: theme.colors.text }]}>
-          Loading...
+          Loading app...
         </Text>
       </View>
     );
@@ -93,7 +77,7 @@ export default function App() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <Text style={[styles.loading, { color: theme.colors.text }]}>
-        Loading...
+        Initializing...
       </Text>
     </View>
   );

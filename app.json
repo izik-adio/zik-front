@@ -4,7 +4,7 @@
     "slug": "zik-mobile-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icons/ios/iTunesArtwork@2x.png",
+    "icon": "./assets/icons/android/playstore-icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,6 +13,7 @@
       "icon": "./assets/icons/ios/iTunesArtwork@2x.png"
     },
     "android": {
+      "icon": "./assets/icons/android/mipmap-xxxhdpi/ic_launcher.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/android/mipmap-xxxhdpi/ic_launcher_foreground.png",
         "backgroundColor": "#F8F9FA"
@@ -32,7 +33,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icons/android/mipmap-xxxhdpi/ic_launcher_foreground.png",
+          "icon": "./assets/icons/android/mipmap-hdpi/ic_launcher.png",
           "color": "#ffffff",
           "sounds": []
         }

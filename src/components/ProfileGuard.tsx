@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { useRouter } from 'expo-router';
-import { createAutoProfile } from '../api/profile';
+import { createAutoProfile, ProfileApiError } from '../api/profile';
 import { storage } from '../utils/storage';
+import { UserProfile } from '../types/api';
 
 interface ProfileGuardProps {
     children: React.ReactNode;
@@ -23,7 +24,8 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
         loading: profileLoading,
         needsProfileCreation,
         onboardingCompleted,
-        fetchProfile
+        fetchProfile,
+        setProfileCreated
     } = useProfile();
     const router = useRouter();
     const [creatingProfile, setCreatingProfile] = useState(false);
@@ -32,7 +34,11 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
      * Auto-create profile for new users to reduce friction
      */
     const handleAutoProfileCreation = async () => {
-        if (!user?.email) return;
+        if (!user?.email) {
+            console.error('No user email available for profile creation');
+            router.replace('/auth/login');
+            return;
+        }
 
         setCreatingProfile(true);
         try {
@@ -40,20 +46,86 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
             const storedName = await storage.getItem<string>('signupName');
             const fullName = storedName || user.userName || user.email.split('@')[0];
 
+            console.log('Auto-creating profile for:', user.email, 'with name:', fullName);
+
             // Auto-create profile with smart defaults
-            await createAutoProfile(fullName, user.email);
+            const newProfile = await createAutoProfile(fullName, user.email);
 
             // Clean up stored name
             await storage.removeItem('signupName');
 
-            // Refresh profile data
-            await fetchProfile();
+            // Update context with the new profile
+            setProfileCreated(newProfile);
+
+            console.log('Profile auto-created successfully:', newProfile.userId);
 
         } catch (error) {
             console.error('Auto profile creation failed:', error);
-            // If auto-creation fails, show error and redirect to auth
-            // This should be rare, but provides a fallback
-            router.replace('/auth/login');
+
+            // Clear any cached state that might be causing issues
+            await storage.removeItem('signupName');
+
+            // Check if it's a network error
+            if (error instanceof Error && error.message.includes('connect')) {
+                // Network issue - for better UX, create a temporary offline profile
+                console.log('Network error during profile creation, creating temporary profile');
+
+                // Create a temporary profile to allow app usage
+                const storedName = await storage.getItem<string>('signupName');
+                const fullName = storedName || user.userName || user.email.split('@')[0];
+                const nameParts = fullName.trim().split(' ');
+                const firstName = nameParts[0] || user.email.split('@')[0];
+                const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'User';
+
+                const tempProfile: UserProfile = {
+                    userId: 'temp-' + Date.now(),
+                    username: user.userName?.toLowerCase().replace(/[^a-zA-Z0-9]/g, '') || 'tempuser',
+                    email: user.email,
+                    firstName,
+                    lastName,
+                    displayName: fullName || `${firstName} ${lastName}`,
+                    preferences: {
+                        theme: 'system' as const,
+                        notifications: {
+                            email: true,
+                            push: true,
+                            dailyReminders: true,
+                            weeklyDigest: false,
+                        },
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+                        language: 'en',
+                        questCategories: ['health', 'career', 'personal', 'learning'],
+                        privacySettings: {
+                            shareProgress: false,
+                            publicProfile: false,
+                        },
+                    },
+                    onboardingCompleted: false,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                };
+
+                // Set this as the current profile
+                setProfileCreated(tempProfile);
+
+                Alert.alert(
+                    'Offline Mode',
+                    'Unable to connect to server. You can still use the app with basic features. Your data will sync when connection is restored.',
+                    [{ text: 'OK' }]
+                );
+            } else {
+                // Other error - show alert and redirect to auth
+                Alert.alert(
+                    'Setup Required',
+                    'We need to set up your profile. Please try signing in again.',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => router.replace('/auth/login')
+                        }
+                    ]
+                );
+            }
         } finally {
             setCreatingProfile(false);
         }
@@ -62,28 +134,32 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
     useEffect(() => {
         if (!authLoading && isAuthenticated && user) {
             // User is authenticated, ensure profile is loaded
-            if (!profile && !profileLoading && !needsProfileCreation) {
+            if (!profile && !profileLoading && !needsProfileCreation && !creatingProfile) {
+                console.log('User authenticated but no profile, fetching...');
                 fetchProfile();
             }
         }
-    }, [authLoading, isAuthenticated, user, profile, profileLoading, needsProfileCreation, fetchProfile]);
+    }, [authLoading, isAuthenticated, user, profile, profileLoading, needsProfileCreation, fetchProfile, creatingProfile]);
 
     useEffect(() => {
         if (!authLoading && !profileLoading) {
             if (!isAuthenticated) {
                 // Not authenticated, redirect to auth
+                console.log('User not authenticated, redirecting to login');
                 router.replace('/auth/login');
                 return;
             }
 
-            if (needsProfileCreation && user) {
+            if (needsProfileCreation && user && !creatingProfile) {
                 // Profile doesn't exist, auto-create one for better UX
+                console.log('Profile creation needed, starting auto-creation');
                 handleAutoProfileCreation();
                 return;
             }
 
             if (profile && !onboardingCompleted) {
                 // Profile exists but onboarding not complete
+                console.log('Profile exists but onboarding incomplete, redirecting to onboarding');
                 router.replace('/onboarding');
                 return;
             }
@@ -95,6 +171,8 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
         needsProfileCreation,
         profile,
         onboardingCompleted,
+        user,
+        creatingProfile,
         router
     ]);
 

@@ -20,7 +20,8 @@ import {
   useRefreshQuestsData,
   useCreateEpicQuest,
   useDeleteEpicQuest,
-  useGenerateRoadmap
+  useGenerateRoadmap,
+  useRefreshAllPages
 } from '../../src/store/questStore';
 import { EpicQuest, CreateEpicQuestData, CreateDailyQuestData } from '../../src/api/quests';
 import { EpicQuestCard } from '../../components/quests/EpicQuestCard';
@@ -41,6 +42,7 @@ export default function EpicQuestsScreen() {
   const createEpicQuest = useCreateEpicQuest();
   const deleteEpicQuest = useDeleteEpicQuest();
   const generateRoadmap = useGenerateRoadmap();
+  const refreshAllPages = useRefreshAllPages();
 
   useEffect(() => {
     if (user) {
@@ -64,6 +66,9 @@ export default function EpicQuestsScreen() {
 
       const epic = await createEpicQuest(questData);
       setShowCreateModal(false);
+
+      // Refresh all pages to ensure both today and goals pages are updated
+      await refreshAllPages();
 
       // Check if this is a complex goal that needs a roadmap
       const isComplexGoal = questData.description && questData.description.length > 50;

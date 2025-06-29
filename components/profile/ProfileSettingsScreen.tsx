@@ -17,23 +17,37 @@ import { useProfile } from '../../src/context/ProfileContext';
 
 const ProfileSettingsScreen: React.FC = () => {
     const router = useRouter();
-    const { profile, loading: profileLoading, updatePreferences, refreshProfile } = useProfile();
+    const {
+        profile,
+        loading: profileLoading,
+        updateProfile,
+        updatePreferences,
+        refreshProfile,
+        validationErrors,
+        clearError
+    } = useProfile();
 
     const [formData, setFormData] = useState<UpdateProfileRequest>({
         username: '',
+        firstName: '',
+        lastName: '',
         displayName: '',
     });
 
     const [preferences, setPreferences] = useState<Partial<UserPreferences>>({});
     const [loading, setLoading] = useState(false);
-    const [errors, setErrors] = useState<Record<string, string>>({});
     const [hasChanges, setHasChanges] = useState(false);
+
+    // Use validation errors from context
+    const errors = validationErrors;
 
     // Initialize form data when profile loads
     useEffect(() => {
         if (profile) {
             setFormData({
                 username: profile.username,
+                firstName: profile.firstName,
+                lastName: profile.lastName,
                 displayName: profile.displayName || '',
             });
             setPreferences(profile.preferences);
@@ -46,6 +60,8 @@ const ProfileSettingsScreen: React.FC = () => {
 
         const dataChanged =
             formData.username !== profile.username ||
+            formData.firstName !== profile.firstName ||
+            formData.lastName !== profile.lastName ||
             formData.displayName !== (profile.displayName || '');
 
         const prefsChanged = JSON.stringify(preferences) !== JSON.stringify(profile.preferences);
@@ -54,19 +70,13 @@ const ProfileSettingsScreen: React.FC = () => {
     }, [formData, preferences, profile]);
 
     const validateForm = (): boolean => {
-        const validation = profileApi.validateProfile(formData);
-        setErrors(validation.errors);
-        return validation.isValid;
+        // We'll rely on the context's validation when updateProfile is called
+        return true;
     };
 
     const handleSaveProfile = async () => {
-        if (!validateForm()) {
-            Alert.alert('Validation Error', 'Please fix the errors below');
-            return;
-        }
-
         setLoading(true);
-        setErrors({});
+        clearError();
 
         try {
             // Filter out unchanged fields
@@ -75,26 +85,24 @@ const ProfileSettingsScreen: React.FC = () => {
             if (formData.username !== profile?.username) {
                 changedData.username = formData.username;
             }
+            if (formData.firstName !== profile?.firstName) {
+                changedData.firstName = formData.firstName;
+            }
+            if (formData.lastName !== profile?.lastName) {
+                changedData.lastName = formData.lastName;
+            }
             if (formData.displayName !== (profile?.displayName || '')) {
                 changedData.displayName = formData.displayName;
             }
 
-            await profileApi.updateProfile(changedData);
-            await refreshProfile();
-
-            Alert.alert('Success', 'Profile updated successfully');
+            const result = await updateProfile(changedData);
+            if (result) {
+                await refreshProfile();
+                Alert.alert('Success', 'Profile updated successfully');
+            }
         } catch (error) {
             console.error('Profile update error:', error);
-
-            if (error instanceof ProfileApiError) {
-                if (error.status === 400 && error.message.includes('username')) {
-                    setErrors({ username: 'This username is already taken' });
-                } else {
-                    Alert.alert('Error', error.message);
-                }
-            } else {
-                Alert.alert('Error', 'Failed to update profile. Please try again.');
-            }
+            Alert.alert('Error', 'Failed to update profile. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -104,8 +112,10 @@ const ProfileSettingsScreen: React.FC = () => {
         setLoading(true);
 
         try {
-            await updatePreferences(preferences);
-            Alert.alert('Success', 'Preferences updated successfully');
+            const result = await updatePreferences(preferences);
+            if (result) {
+                Alert.alert('Success', 'Preferences updated successfully');
+            }
         } catch (error) {
             Alert.alert('Error', 'Failed to update preferences. Please try again.');
         } finally {
@@ -121,10 +131,7 @@ const ProfileSettingsScreen: React.FC = () => {
 
         // Clear error for this field when user types
         if (errors[field]) {
-            setErrors(prev => ({
-                ...prev,
-                [field]: '',
-            }));
+            clearError();
         }
     };
 
@@ -162,6 +169,38 @@ const ProfileSettingsScreen: React.FC = () => {
                 {/* Profile Information Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Profile Information</Text>
+
+                    {/* First Name */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>First Name</Text>
+                        <TextInput
+                            style={[styles.input, errors.firstName && styles.inputError]}
+                            value={formData.firstName}
+                            onChangeText={(value) => updateFormData('firstName', value)}
+                            placeholder="First name"
+                            autoCapitalize="words"
+                            maxLength={50}
+                        />
+                        {errors.firstName ? (
+                            <Text style={styles.errorText}>{errors.firstName}</Text>
+                        ) : null}
+                    </View>
+
+                    {/* Last Name */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Last Name</Text>
+                        <TextInput
+                            style={[styles.input, errors.lastName && styles.inputError]}
+                            value={formData.lastName}
+                            onChangeText={(value) => updateFormData('lastName', value)}
+                            placeholder="Last name"
+                            autoCapitalize="words"
+                            maxLength={50}
+                        />
+                        {errors.lastName ? (
+                            <Text style={styles.errorText}>{errors.lastName}</Text>
+                        ) : null}
+                    </View>
 
                     {/* Username */}
                     <View style={styles.inputGroup}>

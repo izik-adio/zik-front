@@ -8,7 +8,7 @@ const isDevMode = process.env.EXPO_PUBLIC_DEV_MODE === 'true';
 const API_BASE = 'https://h5k4oat3hi.execute-api.us-east-1.amazonaws.com';
 
 const api = axios.create({
-  baseURL: isDevMode ? 'http://localhost:3000' : API_BASE,
+  baseURL: API_BASE,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -78,97 +78,148 @@ api.interceptors.response.use(
         const mockQuest = {
           ...(requestData.type === 'task'
             ? {
-                taskId: 'mock-task-' + Date.now(),
-                taskName: requestData.title,
-              }
+              taskId: 'mock-task-' + Date.now(),
+              taskName: requestData.title,
+            }
             : {
-                goalId: 'mock-goal-' + Date.now(),
-                goalName: requestData.title,
-                targetDate: requestData.dueDate,
-                category: requestData.category,
-              }),
+              goalId: 'mock-goal-' + Date.now(),
+              goalName: requestData.title,
+              targetDate: requestData.dueDate,
+              category: requestData.category,
+            }),
           userId: 'mock-user-id',
           description: requestData.description,
           ...(requestData.type === 'task'
             ? {
-                dueDate: requestData.dueDate,
-                priority: requestData.priority,
-                status: 'pending',
-              }
+              dueDate: requestData.dueDate,
+              priority: requestData.priority,
+              status: 'pending',
+            }
             : {
-                status: 'active',
-              }),
+              status: 'active',
+            }),
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
         return { ...response, data: mockQuest };
       }
-      // Keep legacy endpoints for backward compatibility during migration
-      if (response.config.url.includes('/goals')) {
-        return { ...response, data: [] };
-      }
-      if (
-        response.config.url.includes('/quests') &&
-        !response.config.url.includes('date=')
-      ) {
-        return { ...response, data: [] };
-      }
-      if (response.config.url.includes('/profile')) {
-        return {
-          ...response,
-          data: {
-            userId: 'mock-user-id',
-            userName: 'Demo User',
-            email: 'demo@example.com',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        };
-      }
+      // Profile endpoints now use real API calls - no mocking
+      // Quest and Goals endpoints now use real API calls - no mocking
+      // Profile endpoints now use real API calls - no mocking
     }
     return response;
   },
-  async (error) => {
-    // In dev mode, return mock data instead of errors
-    if (isDevMode) {
-      const mockResponse = {
-        data: [],
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: error.config,
-      };
-      return Promise.resolve(mockResponse);
-    }
-
+  async (error: any) => {
     const originalRequest = error.config;
 
+    // Check if the error is 401 and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        const tokens = await storage.getItem<AuthTokens>('authTokens');
-        if (tokens?.RefreshToken) {
-          const { tokens: newTokens, user } =
-            await cognitoService.refreshTokens(tokens.RefreshToken);
+        console.log('Attempting to refresh auth token...');
+        const newTokens = await cognitoService.refreshSession();
 
-          await storage.setItem('authTokens', newTokens);
-          await storage.setItem('userData', user);
-
-          // Retry the original request with new token
+        if (newTokens) {
+          console.log('Token refreshed successfully');
+          // Update the header for the original request
           originalRequest.headers.Authorization = `Bearer ${newTokens.AccessToken}`;
+          // Retry the original request
           return api(originalRequest);
+        } else {
+          console.log('Token refresh failed, logging out.');
+          await cognitoService.logout();
+          return Promise.reject(new Error('Session expired. Please log in again.'));
         }
       } catch (refreshError) {
-        // Refresh failed, clear storage and redirect to login
-        await storage.clear();
-        // Note: Navigation should be handled by AuthContext
-        console.error('Token refresh failed:', refreshError);
+        console.error('Error during token refresh:', refreshError);
+        await cognitoService.logout();
+        return Promise.reject(refreshError);
       }
     }
 
+    // In dev mode, only return mock responses for specific cases
+    if (isDevMode && originalRequest?.url) {
+      // All API endpoints now use real backend - no mocking in dev mode
+      // This ensures all requests go to the actual API
+    }
+
+    // For other errors, just reject
     return Promise.reject(error);
   }
 );
+
+// Mock response function for development mode
+function getMockResponse(method: string, url: string, data?: any) {
+  if (!isDevMode) return null;
+
+  // Parse request data if it's a string
+  let requestData = data;
+  if (typeof data === 'string') {
+    try {
+      requestData = JSON.parse(data);
+    } catch {
+      requestData = {};
+    }
+  }
+
+  // Profile endpoints - no mocking, use real API
+  // This ensures profile requests always go to the actual backend
+
+  // Quest endpoints
+  if (url.includes('/quests')) {
+    if (url.includes('date=')) {
+      // Mock tasks by date
+      return [
+        {
+          taskId: 'mock-task-1',
+          userId: 'mock-user-id',
+          taskName: 'Complete project documentation',
+          taskDescription: 'Finish writing the documentation for the new feature',
+          category: 'work',
+          isCompleted: false,
+          dueDate: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+    } else if (url.match(/\/quests\/[^\/]+$/)) {
+      // Mock single quest
+      return {
+        questId: 'mock-quest-1',
+        userId: 'mock-user-id',
+        questName: 'Learn TypeScript',
+        questDescription: 'Master TypeScript fundamentals',
+        milestones: Array.from({ length: 5 }, (_, i) => ({
+          milestoneId: `milestone-${i + 1}`,
+          questId: 'mock-quest-1',
+          milestoneName: `Milestone ${i + 1}`,
+          milestoneDescription: `Complete milestone ${i + 1}`,
+          isCompleted: i < 2,
+          orderIndex: i,
+          tasks: Array.from({ length: 3 }, (_, j) => ({
+            taskId: `task-${i + 1}-${j + 1}`,
+            milestoneId: `milestone-${i + 1}`,
+            taskName: `Task ${j + 1} for Milestone ${i + 1}`,
+            taskDescription: `Complete task ${j + 1}`,
+            isCompleted: i < 2 || (i === 2 && j === 0),
+            orderIndex: j,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })),
+        })),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    } else {
+      // Mock quest list
+      return [];
+    }
+  }
+
+  // Goals and Quest endpoints now use real API - no mocking
+
+  return null;
+}
 
 export default api;

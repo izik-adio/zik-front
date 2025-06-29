@@ -104,7 +104,9 @@ export interface UserProfile {
   userId: string;
   username: string;
   email: string;
-  displayName: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string;
   avatarUrl?: string;
   preferences: UserPreferences;
   onboardingCompleted: boolean;
@@ -115,12 +117,16 @@ export interface UserProfile {
 
 export interface CreateProfileRequest {
   username: string;
-  displayName: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string;
   preferences?: Partial<UserPreferences>;
 }
 
 export interface UpdateProfileRequest {
   username?: string;
+  firstName?: string;
+  lastName?: string;
   displayName?: string;
   avatarUrl?: string;
   preferences?: Partial<UserPreferences>;
@@ -128,28 +134,20 @@ export interface UpdateProfileRequest {
 
 export interface ProfileResponse {
   profile: UserProfile;
-  timestamp: string;
-  requestId: string;
 }
 
 export interface ProfileCreateResponse {
   message: string;
   profile: UserProfile;
-  timestamp: string;
-  requestId: string;
 }
 
 export interface ProfileUpdateResponse {
   message: string;
   profile: UserProfile;
-  timestamp: string;
-  requestId: string;
 }
 
 export interface OnboardingCompleteResponse {
   message: string;
-  timestamp: string;
-  requestId: string;
 }
 
 // Error response type
@@ -158,4 +156,33 @@ export interface ApiError {
   message: string;
   statusCode: number;
   timestamp: string;
+}
+
+// Chat History types for current conversation persistence
+export interface ChatHistoryMessage {
+  messageId: string;
+  content: string;
+  role: 'user' | 'assistant'; // API uses 'role' not 'sender'
+  timestamp: string;
+  userId: string;
+  ttl: number;
+  metadata?: {
+    questsCreated?: number;
+    goalsUpdated?: number;
+    model?: string;
+  };
+}
+
+export interface ChatHistoryResponse {
+  messages: ChatHistoryMessage[];
+  lastSyncTime: string;
+}
+
+export interface SaveChatRequest {
+  messages: ChatHistoryMessage[];
+}
+
+export interface ClearChatResponse {
+  success: boolean;
+  message?: string;
 }

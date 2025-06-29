@@ -1,5 +1,6 @@
 import AWS from 'aws-sdk';
 import { jwtDecode } from 'jwt-decode';
+import { storage } from '../utils/storage';
 
 interface CognitoConfig {
   region: string;
@@ -117,7 +118,7 @@ class CognitoService {
 
       const mockUser: UserAttributes = {
         userId: 'mock-user-id',
-        userName: 'Demo User',
+        userName: email.split('@')[0], // Use email prefix as username
         email: email,
       };
 
@@ -214,8 +215,8 @@ class CognitoService {
 
       const mockUser: UserAttributes = {
         userId: 'mock-user-id',
-        userName: 'Demo User',
-        email: 'demo@example.com',
+        userName: 'Current User', // Generic name for dev mode
+        email: 'current@user.com',
       };
 
       return { tokens: mockTokens, user: mockUser };
@@ -256,8 +257,8 @@ class CognitoService {
       // Mock response for development
       return {
         userId: 'mock-user-id',
-        userName: 'Demo User',
-        email: 'demo@example.com',
+        userName: 'Current User',
+        email: 'current@user.com',
       };
     }
 
@@ -287,13 +288,80 @@ class CognitoService {
     }
   }
 
+  async resendConfirmationCode(email: string): Promise<void> {
+    if (this.isDevMode) {
+      // Mock response for development
+      return;
+    }
+
+    const params = {
+      ClientId: this.config.clientId,
+      Username: email,
+    };
+    try {
+      this.ensureServiceInitialized();
+      await this.cognitoIdentityServiceProvider!.resendConfirmationCode(
+        params
+      ).promise();
+    } catch (error: any) {
+      throw new Error(error.message || 'Resend confirmation code failed');
+    }
+  }
+
+  async refreshSession(): Promise<AuthTokens | null> {
+    if (this.isDevMode) {
+      // In dev mode, we can't refresh, so we'll just return the existing tokens
+      return await storage.getItem<AuthTokens>('authTokens');
+    }
+
+    try {
+      const tokens = await storage.getItem<AuthTokens>('authTokens');
+      if (!tokens?.RefreshToken) {
+        return null;
+      }
+
+      const params = {
+        AuthFlow: 'REFRESH_TOKEN_AUTH',
+        ClientId: this.config.clientId,
+        AuthParameters: {
+          REFRESH_TOKEN: tokens.RefreshToken,
+        },
+      };
+
+      this.ensureServiceInitialized();
+      const result = await this.cognitoIdentityServiceProvider!.initiateAuth(params).promise();
+
+      if (result.AuthenticationResult) {
+        const newTokens: AuthTokens = {
+          AccessToken: result.AuthenticationResult.AccessToken!,
+          IdToken: result.AuthenticationResult.IdToken!,
+          RefreshToken: tokens.RefreshToken, // Cognito doesn't always return a new refresh token
+          TokenType: result.AuthenticationResult.TokenType!,
+          ExpiresIn: result.AuthenticationResult.ExpiresIn!,
+        };
+        await storage.setItem('authTokens', newTokens);
+        return newTokens;
+      }
+      return null;
+    } catch (error: any) {
+      console.error('Error refreshing session:', error);
+      // If refresh fails, the user needs to log in again
+      await this.logout();
+      return null;
+    }
+  }
+
+  async logout(): Promise<void> {
+    await storage.removeItem('authTokens');
+  }
+
   private decodeIdToken(idToken: string): UserAttributes {
     if (this.isDevMode) {
       // Mock decoded token for development
       return {
         userId: 'mock-user-id',
-        userName: 'Demo User',
-        email: 'demo@example.com',
+        userName: 'Current User',
+        email: 'current@user.com',
       };
     }
 
