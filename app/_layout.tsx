@@ -16,6 +16,7 @@ import { QueryProvider } from '@/src/context/QueryProvider';
 import { ThemeProvider } from '@/src/context/ThemeContext';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { Analytics } from '@/components/Analytics';
+import { DesktopHandler } from '@/components/ui/DesktopHandler';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -49,15 +50,17 @@ export default function RootLayout() {
         <AuthProvider>
           <ProfileProvider>
             <QueryProvider>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="auth" />
-                <Stack.Screen name="onboarding/index" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              <StatusBar style="auto" />
-              <Analytics />
+              <DesktopHandler>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="auth" />
+                  <Stack.Screen name="onboarding/index" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
+                <StatusBar style="auto" />
+                <Analytics />
+              </DesktopHandler>
             </QueryProvider>
           </ProfileProvider>
         </AuthProvider>
