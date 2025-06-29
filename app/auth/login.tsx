@@ -305,7 +305,6 @@ export default function LoginScreen() {
                 setLoginError(null);
               onBlur={() => setFocusedField(null)}
               keyboardType="email-address"
-              autoCapitalize="none"
               autoCorrect={false}
             />
           </View>
@@ -337,7 +336,6 @@ export default function LoginScreen() {
                 setLoginError(null);
               onBlur={() => setFocusedField(null)}
               secureTextEntry={!showPassword}
-            />
             <TouchableOpacity
               style={styles.eyeIcon}
               onPress={() => setShowPassword(!showPassword)}
