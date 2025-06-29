@@ -15,6 +15,7 @@ import { ProfileProvider } from '@/src/context/ProfileContext';
 import { QueryProvider } from '@/src/context/QueryProvider';
 import { ThemeProvider } from '@/src/context/ThemeContext';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { Analytics } from '@/components/Analytics';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -56,6 +57,7 @@ export default function RootLayout() {
                 <Stack.Screen name="+not-found" />
               </Stack>
               <StatusBar style="auto" />
+              <Analytics />
             </QueryProvider>
           </ProfileProvider>
         </AuthProvider>
