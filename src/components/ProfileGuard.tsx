@@ -30,7 +30,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
     const router = useRouter();
     const [creatingProfile, setCreatingProfile] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 2;
 
     /**
      * Auto-create profile for new users to reduce friction
@@ -38,7 +38,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
     const handleAutoProfileCreation = async () => {
         if (!user?.email) {
             console.error('No user email available for profile creation');
-            router.replace('/auth/login');
+            await triggerGlobalLogout();
             return;
         }
 
@@ -48,7 +48,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
             const storedName = await storage.getItem<string>('signupName');
             const fullName = storedName || user.userName || user.email.split('@')[0];
 
-            console.log('Auto-creating profile for:', user.email, 'with name:', fullName);
+            console.log('🔄 Auto-creating profile for:', user.email, 'with name:', fullName);
 
             // Auto-create profile with smart defaults
             const newProfile = await createAutoProfile(fullName, user.email);
@@ -59,7 +59,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
             // Update context with the new profile
             setProfileCreated(newProfile);
 
-            console.log('Profile auto-created successfully:', newProfile.userId);
+            console.log('✅ Profile auto-created successfully:', newProfile.userId);
 
         } catch (error) {
             console.error('Auto profile creation failed:', error);
@@ -69,7 +69,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
 
             // Check if it's a network error
             if (error instanceof Error && error.message.includes('connect')) {
-                // Network issue - for better UX, create a temporary offline profile
+                // Network issue - create a temporary offline profile
                 console.log('Network error during profile creation, creating temporary profile');
 
                 // Create a temporary profile to allow app usage
@@ -120,7 +120,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
                 Alert.alert(
                     'Setup Required',
                     'We need to set up your profile. Please try signing in again.',
-                    [
+                    [{
                         {
                             text: 'OK',
                             onPress: () => router.replace('/auth/login')
@@ -133,6 +133,14 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
         }
     };
 
+    // Debug function to log the current state
+    const logState = () => {
+        console.log('ProfileGuard State:', {
+            isAuthenticated, profileLoading, needsProfileCreation, profile, 
+            onboardingCompleted, creatingProfile, retryCount
+        });
+    };
+
     // Split effects to handle different concerns
     useEffect(() => {
         // Only handle authentication state
@@ -140,6 +148,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
             console.log('User not authenticated, redirecting to login');
             router.replace('/auth/login');
         }
+        logState();
     }, [authLoading, isAuthenticated, router]);
     
     useEffect(() => {
@@ -148,6 +157,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
             console.log('User authenticated but no profile, fetching...');
             fetchProfile();
         }
+        logState();
     }, [authLoading, isAuthenticated, user, profile, profileLoading, needsProfileCreation, fetchProfile, creatingProfile]);
 
     useEffect(() => {
@@ -161,6 +171,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
                 router.replace('/onboarding');
             }
         }
+        logState();
     }, [authLoading, profileLoading, isAuthenticated, needsProfileCreation, profile, onboardingCompleted, user, creatingProfile]);
     
     // Add retry mechanism for profile fetching
@@ -168,7 +179,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
         // If we're authenticated but profile fetch failed, retry a few times
         if (!authLoading && isAuthenticated && user && !profile && !profileLoading && !needsProfileCreation && !creatingProfile && retryCount < MAX_RETRIES) {
             const retryDelay = Math.pow(2, retryCount) * 1000; // Exponential backoff
-            
+            logState();
             console.log(`Retrying profile fetch (attempt ${retryCount + 1}/${MAX_RETRIES}) in ${retryDelay}ms`);
             
             const timer = setTimeout(() => {
@@ -179,6 +190,19 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
             return () => clearTimeout(timer);
         }
     }, [authLoading, isAuthenticated, user, profile, profileLoading, needsProfileCreation, creatingProfile, retryCount, fetchProfile]);
+    
+    // Add effect to handle max retries exceeded
+    useEffect(() => {
+        if (retryCount >= MAX_RETRIES && !profile && isAuthenticated && !profileLoading && !creatingProfile) {
+            console.log('Max profile fetch retries exceeded, forcing profile creation');
+            // After max retries, force profile creation
+            if (user) {
+                setNeedsProfileCreation(true);
+            } else {
+                router.replace('/auth/login');
+            }
+        }
+    }, [retryCount, profile, isAuthenticated, profileLoading, creatingProfile, user, router]);
 
     // Show loading state
     if (authLoading || profileLoading || needsProfileCreation || creatingProfile || (profile && !onboardingCompleted)) {

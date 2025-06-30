@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { cognitoService, AuthTokens, UserAttributes } from '../services/cognito';
 import { storage } from '../utils/storage';
 import { setGlobalLogout } from '../utils/authUtils';
+import { router } from 'expo-router';
 
 interface AuthContextType {
   user: UserAttributes | null;
@@ -35,9 +36,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAuthenticated = !!user;
   
-  // Register the logout function with the global auth utils
+  // Register the logout function with the global auth utils on mount
   useEffect(() => {
-    setGlobalLogout(logout);
+    console.log('Registering global logout function');
+    setGlobalLogout(() => logout);
+    
+    return () => {
+      // Clear the global logout function when component unmounts
+      setGlobalLogout(() => async () => {
+        console.warn('Default logout called after AuthContext unmounted');
+        await storage.clear();
+      });
+    };
   }, []);
 
   useEffect(() => {
@@ -46,11 +56,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuthState = async () => {
     try {
+      console.log('Checking auth state...');
       const tokens = await storage.getItem<AuthTokens>('authTokens');
       const userData = await storage.getItem<UserAttributes>('userData');
 
       if (tokens && userData) {
+        console.log('Found auth tokens and user data');
         setUser(userData);
+      } else {
+        console.log('No auth tokens or user data found');
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
@@ -61,13 +75,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('Attempting login for:', email);
       const { tokens, user: userData } = await cognitoService.signIn(email, password);
 
       await storage.setItem('authTokens', tokens);
       await storage.setItem('userData', userData);
 
       setUser(userData);
+      console.log('Login successful for:', email);
     } catch (error) {
+      console.error('Login failed:', error);
       throw error;
     }
   };
@@ -106,9 +123,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
+      console.log('Logging out user');
       await storage.clear();
       await cognitoService.logout();
       setUser(null);
+      
+      // Force navigation to login screen
+      router.replace('/auth/login');
     } catch (error) {
       console.error('Error during logout:', error);
     }

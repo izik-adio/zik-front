@@ -78,77 +78,6 @@ api.interceptors.request.use(
 // Response interceptor to handle token refresh
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    // In dev mode, return mock data for certain endpoints
-    if (isDevMode && response.config.url) {
-      // Mock tasks by date
-      if (
-        response.config.url.includes('/quests') &&
-        response.config.url.includes('date=')
-      ) {
-        const mockTasks = [
-          {
-            taskId: 'mock-task-1',
-            userId: 'mock-user-id',
-            taskName: 'Complete project documentation',
-            description: 'Write comprehensive API documentation',
-            dueDate: new Date().toISOString().split('T')[0],
-            priority: 'high',
-            status: 'pending',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            taskId: 'mock-task-2',
-            userId: 'mock-user-id',
-            taskName: 'Review code changes',
-            description: 'Review pull requests and provide feedback',
-            dueDate: new Date().toISOString().split('T')[0],
-            priority: 'medium',
-            status: 'in-progress',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ];
-        return { ...response, data: mockTasks };
-      }
-      // Mock quest creation
-      if (
-        response.config.url.includes('/quests') &&
-        response.config.method === 'post'
-      ) {
-        const requestData = JSON.parse(response.config.data || '{}');
-        const mockQuest = {
-          ...(requestData.type === 'task'
-            ? {
-              taskId: 'mock-task-' + Date.now(),
-              taskName: requestData.title,
-            }
-            : {
-              goalId: 'mock-goal-' + Date.now(),
-              goalName: requestData.title,
-              targetDate: requestData.dueDate,
-              category: requestData.category,
-            }),
-          userId: 'mock-user-id',
-          description: requestData.description,
-          ...(requestData.type === 'task'
-            ? {
-              dueDate: requestData.dueDate,
-              priority: requestData.priority,
-              status: 'pending',
-            }
-            : {
-              status: 'active',
-            }),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        return { ...response, data: mockQuest };
-      }
-      // Profile endpoints now use real API calls - no mocking
-      // Quest and Goals endpoints now use real API calls - no mocking
-      // Profile endpoints now use real API calls - no mocking
-    }
     return response;
   },
   async (error: any) => {
@@ -158,8 +87,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
+      console.log('Received 401 error, attempting token refresh');
       try {
-        console.log('Attempting to refresh auth token...');
         const newTokens = await cognitoService.refreshSession();
         
         if (newTokens) {
@@ -170,7 +99,7 @@ api.interceptors.response.use(
           return api(originalRequest);
         } else {
           console.log('Token refresh failed, logging out.');
-          // Use the global logout to ensure auth context is updated
+          // Use global logout to ensure auth context is updated
           await triggerGlobalLogout();
           return Promise.reject(new Error('Session expired. Please log in again.'));
         }
@@ -182,19 +111,12 @@ api.interceptors.response.use(
       }
     }
 
-    // In dev mode, only return mock responses for specific cases
-    if (isDevMode && originalRequest?.url) {
-      // All API endpoints now use real backend - no mocking in dev mode
-      // This ensures all requests go to the actual API
-    }
-
     if (error.response?.status === 401) {
-      // Token expired, trigger global logout to update auth context
+      console.log('Received 401 error outside of retry logic, triggering logout');
       await triggerGlobalLogout();
     }
-    return Promise.reject(error);
 
-    // For other errors, just reject
+    // For all errors, reject with the original error
     return Promise.reject(error);
   }
 );
