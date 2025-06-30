@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
-  Alert,
 } from 'react-native';
 import { Send, Mic, CheckCircle, Trash2 } from 'lucide-react-native';
 import Animated, {
@@ -27,6 +26,7 @@ import { LogoImage } from '@/components/onboarding/LogoImage';
 import { ChatBubble } from '@/components/zik/ChatBubble';
 import { ToastContainer, useToast } from '@/components/ui/Toast';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { showAlert } from '../../utils/showAlert';
 
 export default function ZikScreen() {
   const { theme } = useTheme();
@@ -61,8 +61,6 @@ export default function ZikScreen() {
   const toastOpacity = useSharedValue(0);
   const toastTranslateY = useSharedValue(-50);
 
-
-
   useEffect(() => {
     // Load chat history on app start
     loadChatHistory();
@@ -76,7 +74,12 @@ export default function ZikScreen() {
   useEffect(() => {
     // Handle errors
     if (error) {
-      Alert.alert('Error', error);
+      showToast({
+        type: 'error',
+        title: 'Error',
+        message: error,
+        duration: 4000,
+      });
       clearError();
     }
   }, [error, clearError]);
@@ -96,7 +99,11 @@ export default function ZikScreen() {
     let previousRefreshing = false;
 
     const unsubscribe = useChatStore.subscribe((state) => {
-      if (previousRefreshing && !state.isRefreshingQuests && state.questsWereModified) {
+      if (
+        previousRefreshing &&
+        !state.isRefreshingQuests &&
+        state.questsWereModified
+      ) {
         // Quest refresh just completed and quests were actually modified, show success toast
         setShowQuestCreatedToast(true);
         toastOpacity.value = withSpring(1);
@@ -200,31 +207,28 @@ export default function ZikScreen() {
     }
   };
 
-
-
   const handleClearChat = () => {
-    // Simple confirmation - KISS principle
-    Alert.alert(
+    showAlert(
       'Clear Chat',
       'Start fresh? This will clear all messages and begin a new conversation.',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Clear',
           style: 'destructive',
           onPress: async () => {
             try {
               await clearMessages();
-              // Simple feedback - scroll to top smoothly
               setTimeout(() => {
                 scrollViewRef.current?.scrollTo({ y: 0, animated: true });
               }, 200);
             } catch (error) {
-              console.error('Error clearing chat:', error);
-              Alert.alert('Error', 'Failed to clear chat. Please try again.');
+              showToast({
+                type: 'error',
+                title: 'Error',
+                message: 'Failed to clear chat. Please try again.',
+                duration: 4000,
+              });
             }
           },
         },
@@ -242,7 +246,8 @@ export default function ZikScreen() {
 
   // Animated styles
   const sendButtonAnimatedStyle = useAnimatedStyle(() => {
-    const isDisabled = !inputText.trim() || isLoading || isStreaming || !isConnected;
+    const isDisabled =
+      !inputText.trim() || isLoading || isStreaming || !isConnected;
     return {
       transform: [{ scale: sendButtonScale.value }],
       backgroundColor: isDisabled
@@ -325,12 +330,12 @@ export default function ZikScreen() {
                 {isRefreshingQuests
                   ? 'Updating quests...'
                   : isStreaming
-                    ? 'Typing...'
-                    : isLoading
-                      ? 'Thinking...'
-                      : isConnected
-                        ? 'Online • Ready to help'
-                        : 'Offline • Using cached data'}
+                  ? 'Typing...'
+                  : isLoading
+                  ? 'Thinking...'
+                  : isConnected
+                  ? 'Online • Ready to help'
+                  : 'Offline • Using cached data'}
               </Text>
             </View>
           </View>
@@ -338,7 +343,7 @@ export default function ZikScreen() {
           <TouchableOpacity
             style={[
               styles.clearButton,
-              { backgroundColor: theme.colors.inputBackground }
+              { backgroundColor: theme.colors.inputBackground },
             ]}
             onPress={handleClearChat}
             activeOpacity={0.7}
@@ -393,8 +398,6 @@ export default function ZikScreen() {
             },
           ]}
         >
-
-
           {/* Input Row */}
           <View style={styles.inputRow}>
             <Animated.View style={[styles.inputWrapper, inputAnimatedStyle]}>
@@ -429,13 +432,18 @@ export default function ZikScreen() {
               <TouchableOpacity
                 style={styles.sendButtonInner}
                 onPress={() => handleSendMessage(inputText)}
-                disabled={!inputText.trim() || isLoading || isStreaming || !isConnected}
+                disabled={
+                  !inputText.trim() || isLoading || isStreaming || !isConnected
+                }
                 activeOpacity={0.8}
               >
                 <Send
                   size={20}
                   color={
-                    inputText.trim() && !isLoading && !isStreaming && isConnected
+                    inputText.trim() &&
+                    !isLoading &&
+                    !isStreaming &&
+                    isConnected
                       ? '#ffffff'
                       : theme.colors.subtitle
                   }

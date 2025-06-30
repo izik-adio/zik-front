@@ -20,7 +20,8 @@ class ApiService {
   private baseURL: string;
   constructor() {
     // Always use the AWS endpoint - remove localhost dependency for dev mode
-    this.baseURL = process.env.EXPO_PUBLIC_API_URL ||
+    this.baseURL =
+      process.env.EXPO_PUBLIC_API_URL ||
       'https://h5k4oat3hi.execute-api.us-east-1.amazonaws.com';
   }
 
@@ -124,10 +125,7 @@ class ApiService {
         priority: taskData.priority || 'medium',
         goalId: taskData.goalId,
       };
-      const response: AxiosResponse<any> = await api.post(
-        '/tasks',
-        payload
-      );
+      const response: AxiosResponse<any> = await api.post('/tasks', payload);
       return {
         questId: response.data.taskId,
         userId: response.data.userId,
@@ -156,10 +154,7 @@ class ApiService {
         description: goalData.description || '',
         category: goalData.category || 'general',
       };
-      const response: AxiosResponse<any> = await api.post(
-        '/goals',
-        payload
-      );
+      const response: AxiosResponse<any> = await api.post('/goals', payload);
       return {
         questId: response.data.goalId,
         userId: response.data.userId,
@@ -279,12 +274,23 @@ class ApiService {
    */ async postChatMessageSync(message: string): Promise<ChatResponse> {
     try {
       const chatRequest: ChatRequest = { message };
-      const response: AxiosResponse<ChatResponse> = await api.post(
-        '/chat',
-        chatRequest
-      );
-
-      return response.data;
+      // Debug: Log outgoing request
+      console.log('[Chat API] Sending /chat request:', chatRequest);
+      const response: AxiosResponse<any> = await api.post('/chat', chatRequest);
+      // Debug: Log raw response
+      console.log('[Chat API] Received /chat response:', response.data);
+      // Handle both { response, ... } and { data: { response, ... }, ... }
+      let chatResponse: ChatResponse;
+      if (response.data && response.data.data && response.data.data.response) {
+        chatResponse = {
+          response: response.data.data.response,
+          timestamp: response.data.timestamp || new Date().toISOString(),
+          requestId: response.data.requestId || '',
+        };
+      } else {
+        chatResponse = response.data;
+      }
+      return chatResponse;
     } catch (error) {
       console.error('Error sending chat message:', error);
       if (error && typeof error === 'object' && 'response' in error) {
@@ -402,9 +408,7 @@ class ApiService {
    * Fetch all Epic Quests (goals) for the authenticated user
    */ async getGoals(): Promise<EpicQuest[]> {
     try {
-      const response: AxiosResponse<any> = await api.get(
-        '/goals'
-      );
+      const response: AxiosResponse<any> = await api.get('/goals');
 
       if (response.data && response.data.goals) {
         const goalsData = response.data.goals;
@@ -420,8 +424,8 @@ class ApiService {
             goal.status === 'completed'
               ? 'completed'
               : goal.status === 'paused'
-                ? 'paused'
-                : 'active',
+              ? 'paused'
+              : 'active',
           targetDate: goal.targetDate,
           roadmapStatus: goal.roadmapStatus || 'none',
           createdAt: goal.createdAt,
@@ -446,7 +450,9 @@ class ApiService {
    */
   async getChatHistory(): Promise<ChatHistoryResponse> {
     try {
-      const response: AxiosResponse<ChatHistoryResponse> = await api.get('/chat-history');
+      const response: AxiosResponse<ChatHistoryResponse> = await api.get(
+        '/chat-history'
+      );
       return response.data;
     } catch (error) {
       throw this.handleApiError(error);
@@ -459,7 +465,9 @@ class ApiService {
    */
   async clearChatHistory(): Promise<ClearChatResponse> {
     try {
-      const response: AxiosResponse<ClearChatResponse> = await api.delete('/chat-history');
+      const response: AxiosResponse<ClearChatResponse> = await api.delete(
+        '/chat-history'
+      );
       return response.data;
     } catch (error) {
       throw this.handleApiError(error);

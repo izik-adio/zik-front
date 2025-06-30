@@ -6,10 +6,9 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  TextInput,
-  Switch,
   Linking,
   Platform,
+  Switch, // <-- Add this import
 } from 'react-native';
 import { showAlert } from '../../utils/showAlert';
 import { useRouter } from 'expo-router';
@@ -43,6 +42,7 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { profileApi, ProfileApiError } from '@/src/api/profile';
 import { storage } from '@/src/utils/storage';
 import { useToast } from '@/components/ui/Toast';
+import { AppInput } from '@/components/ui/AppInput';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -406,7 +406,7 @@ export default function ProfileScreen() {
                   >
                     First Name
                   </Text>
-                  <TextInput
+                  <AppInput
                     style={[
                       styles.editInput,
                       {
@@ -426,7 +426,7 @@ export default function ProfileScreen() {
                   >
                     Last Name
                   </Text>
-                  <TextInput
+                  <AppInput
                     style={[
                       styles.editInput,
                       {
@@ -461,7 +461,7 @@ export default function ProfileScreen() {
                   >
                     Username
                   </Text>
-                  <TextInput
+                  <AppInput
                     style={[
                       styles.editInput,
                       {
