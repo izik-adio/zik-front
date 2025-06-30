@@ -1,8 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { storage } from '../utils/storage';
 import { AuthTokens } from '../services/cognito';
-import { isTokenExpired } from '../utils/jwt';
-import { cognitoService } from './cognito';
+import api from '../api/axios';
 import {
   EpicQuest,
   DailyQuest,
@@ -18,53 +17,11 @@ import {
 } from '../types/api';
 
 class ApiService {
-  private api: AxiosInstance;
   private baseURL: string;
   constructor() {
     // Always use the AWS endpoint - remove localhost dependency for dev mode
     this.baseURL = process.env.EXPO_PUBLIC_API_URL ||
       'https://h5k4oat3hi.execute-api.us-east-1.amazonaws.com';
-
-    this.api = axios.create({
-      baseURL: this.baseURL,
-      timeout: 30000, // Increased timeout for AI responses
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    this.setupInterceptors();
-  }
-  private setupInterceptors() {
-    // Request interceptor to add auth token
-    this.api.interceptors.request.use(
-      async (config) => {
-        try {
-          const tokens = await storage.getItem<AuthTokens>('authTokens');
-
-          if (tokens?.AccessToken) {
-            config.headers.Authorization = `Bearer ${tokens.AccessToken}`;
-          }
-        } catch (error) {
-          console.error('Error adding auth token to request:', error);
-        }
-
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Response interceptor for error handling
-    this.api.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        if (error.response?.status === 401) {
-          // Token expired, clear storage and let AuthContext handle redirect
-          await storage.clear();
-        }
-        return Promise.reject(error);
-      }
-    );
   }
 
   /**
@@ -94,32 +51,15 @@ class ApiService {
    */
   async getDashboard(date?: string): Promise<GetQuestsResponse> {
     try {
-      // Proactive token expiry check and refresh
-      const tokens = await storage.getItem<AuthTokens>('authTokens');
-      if (
-        tokens?.AccessToken &&
-        isTokenExpired(tokens.AccessToken) &&
-        tokens.RefreshToken
-      ) {
-        try {
-          const { tokens: newTokens, user } =
-            await cognitoService.refreshTokens(tokens.RefreshToken);
-          await storage.setItem('authTokens', newTokens);
-          await storage.setItem('userData', user);
-        } catch (refreshError) {
-          await storage.clear();
-          throw new Error('Session expired. Please log in again.');
-        }
-      }
       // Fetch tasks
       const params = date ? { date } : {};
-      const tasksResponse: AxiosResponse<any> = await this.api.get('/tasks', {
+      const tasksResponse: AxiosResponse<any> = await api.get('/tasks', {
         params,
       });
       // Fetch goals
       let goalsData: EpicQuest[] = [];
       try {
-        const goalsResponse: AxiosResponse<any> = await this.api.get('/goals');
+        const goalsResponse: AxiosResponse<any> = await api.get('/goals');
         if (Array.isArray(goalsResponse.data)) {
           goalsData = goalsResponse.data.map((goal: any) => ({
             questId: goal.goalId,
@@ -184,7 +124,7 @@ class ApiService {
         priority: taskData.priority || 'medium',
         goalId: taskData.goalId,
       };
-      const response: AxiosResponse<any> = await this.api.post(
+      const response: AxiosResponse<any> = await api.post(
         '/tasks',
         payload
       );
@@ -216,7 +156,7 @@ class ApiService {
         description: goalData.description || '',
         category: goalData.category || 'general',
       };
-      const response: AxiosResponse<any> = await this.api.post(
+      const response: AxiosResponse<any> = await api.post(
         '/goals',
         payload
       );
@@ -242,7 +182,7 @@ class ApiService {
    */
   async updateTask(taskId: string, data: any): Promise<DailyQuest> {
     try {
-      const response: AxiosResponse<any> = await this.api.put(
+      const response: AxiosResponse<any> = await api.put(
         `/tasks/${taskId}`,
         data
       );
@@ -268,7 +208,7 @@ class ApiService {
    */
   async updateGoal(goalId: string, data: any): Promise<EpicQuest> {
     try {
-      const response: AxiosResponse<any> = await this.api.put(
+      const response: AxiosResponse<any> = await api.put(
         `/goals/${goalId}`,
         data
       );
@@ -294,7 +234,7 @@ class ApiService {
    */
   async deleteTask(taskId: string): Promise<void> {
     try {
-      await this.api.delete(`/tasks/${taskId}`);
+      await api.delete(`/tasks/${taskId}`);
     } catch (error) {
       throw this.handleApiError(error);
     }
@@ -305,7 +245,7 @@ class ApiService {
    */
   async deleteGoal(goalId: string): Promise<void> {
     try {
-      await this.api.delete(`/goals/${goalId}`);
+      await api.delete(`/goals/${goalId}`);
     } catch (error) {
       throw this.handleApiError(error);
     }
@@ -339,7 +279,7 @@ class ApiService {
    */ async postChatMessageSync(message: string): Promise<ChatResponse> {
     try {
       const chatRequest: ChatRequest = { message };
-      const response: AxiosResponse<ChatResponse> = await this.api.post(
+      const response: AxiosResponse<ChatResponse> = await api.post(
         '/chat',
         chatRequest
       );
@@ -462,7 +402,7 @@ class ApiService {
    * Fetch all Epic Quests (goals) for the authenticated user
    */ async getGoals(): Promise<EpicQuest[]> {
     try {
-      const response: AxiosResponse<any> = await this.api.get(
+      const response: AxiosResponse<any> = await api.get(
         '/goals'
       );
 
@@ -506,7 +446,7 @@ class ApiService {
    */
   async getChatHistory(): Promise<ChatHistoryResponse> {
     try {
-      const response: AxiosResponse<ChatHistoryResponse> = await this.api.get('/chat-history');
+      const response: AxiosResponse<ChatHistoryResponse> = await api.get('/chat-history');
       return response.data;
     } catch (error) {
       throw this.handleApiError(error);
@@ -519,7 +459,7 @@ class ApiService {
    */
   async clearChatHistory(): Promise<ClearChatResponse> {
     try {
-      const response: AxiosResponse<ClearChatResponse> = await this.api.delete('/chat-history');
+      const response: AxiosResponse<ClearChatResponse> = await api.delete('/chat-history');
       return response.data;
     } catch (error) {
       throw this.handleApiError(error);

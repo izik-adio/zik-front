@@ -4,7 +4,7 @@ import {
     ChatHistoryResponse,
     ClearChatResponse
 } from '../types/api';
-import { apiService } from './api';
+import api from '../api/axios';
 
 const CACHE_KEY = 'current-chat-messages';
 const MAX_RETRIES = 3;
@@ -18,7 +18,10 @@ export class ChatHistoryService {
     async loadChatHistory(): Promise<ChatHistoryMessage[]> {
         try {
             // Try to fetch from server first (GET /chat-history - no parameters)
-            const response = await this.apiCallWithRetry(() => apiService.getChatHistory());
+            const response = await this.apiCallWithRetry(async () => {
+                const result = await api.get('/chat-history');
+                return result.data;
+            });
 
             // Cache the messages locally
             await this.cacheMessages(response.messages);
@@ -43,7 +46,10 @@ export class ChatHistoryService {
             await this.clearCachedMessages();
 
             // Clear on server (DELETE /chat-history - no parameters)
-            await this.apiCallWithRetry(() => apiService.clearChatHistory());
+            await this.apiCallWithRetry(async () => {
+                const result = await api.delete('/chat-history');
+                return result.data;
+            });
 
             console.log('Chat history cleared completely');
         } catch (error) {

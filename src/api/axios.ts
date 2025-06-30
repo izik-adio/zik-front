@@ -1,6 +1,7 @@
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { storage } from '../utils/storage';
 import { cognitoService, AuthTokens } from '../services/cognito';
+import { triggerGlobalLogout } from '../utils/authUtils';
 
 const isDevMode = process.env.EXPO_PUBLIC_DEV_MODE === 'true';
 
@@ -160,7 +161,7 @@ api.interceptors.response.use(
       try {
         console.log('Attempting to refresh auth token...');
         const newTokens = await cognitoService.refreshSession();
-
+        
         if (newTokens) {
           console.log('Token refreshed successfully');
           // Update the header for the original request
@@ -169,12 +170,14 @@ api.interceptors.response.use(
           return api(originalRequest);
         } else {
           console.log('Token refresh failed, logging out.');
-          await cognitoService.logout();
+          // Use the global logout to ensure auth context is updated
+          await triggerGlobalLogout();
           return Promise.reject(new Error('Session expired. Please log in again.'));
         }
       } catch (refreshError) {
         console.error('Error during token refresh:', refreshError);
-        await cognitoService.logout();
+        // Use the global logout to ensure auth context is updated
+        await triggerGlobalLogout();
         return Promise.reject(refreshError);
       }
     }
@@ -184,6 +187,12 @@ api.interceptors.response.use(
       // All API endpoints now use real backend - no mocking in dev mode
       // This ensures all requests go to the actual API
     }
+
+    if (error.response?.status === 401) {
+      // Token expired, trigger global logout to update auth context
+      await triggerGlobalLogout();
+    }
+    return Promise.reject(error);
 
     // For other errors, just reject
     return Promise.reject(error);
