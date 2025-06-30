@@ -117,12 +117,12 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
                 );
             } else {
                 // Other error - show alert and redirect to auth
-                Alert.alert(
-                    'Setup Required',
-                    [{
-                        text: 'OK',
-                        onPress: () => router.replace('/auth/login')
-                    }]
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => router.replace('/auth/login')
+                        }
+                    ]
                 );
             }
         } finally {
