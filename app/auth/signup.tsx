@@ -17,7 +17,9 @@ import { LogoImage } from '@/components/onboarding/LogoImage';
 
 export default function SignupScreen() {
   const { theme } = useTheme();
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -29,23 +31,27 @@ export default function SignupScreen() {
   const { signup, confirmSignup } = useAuth();
   const router = useRouter();
   useEffect(() => {
-    // Pre-fill the name from onboarding data
-    const loadPreferredName = async () => {
+    // Pre-fill the firstName from onboarding data
+    const loadPreferredData = async () => {
       try {
         const preferredName = await storage.getItem<string>('preferredName');
         if (preferredName && typeof preferredName === 'string') {
-          setName(preferredName);
+          // Split the preferred name into first and last name
+          const nameParts = preferredName.trim().split(' ');
+          setFirstName(nameParts[0] || '');
+          setLastName(nameParts.slice(1).join(' ') || '');
+          setDisplayName(preferredName);
         }
       } catch (error) {
         console.error('Error loading preferred name:', error);
       }
     };
 
-    loadPreferredName();
+    loadPreferredData();
   }, []);
 
   const handleSignup = async () => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -57,10 +63,14 @@ export default function SignupScreen() {
 
     setIsLoading(true);
     try {
-      // Store the name for auto profile creation
-      await storage.setItem('signupName', name.trim());
+      // Store the profile data for auto profile creation
+      await storage.setItem('signupProfileData', {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        displayName: displayName.trim() || firstName.trim(), // Use firstName if displayName is empty
+      });
 
-      const result = await signup(email.trim(), password, name.trim());
+      const result = await signup(email.trim(), password, firstName.trim());
       if (result.requiresConfirmation) {
         setShowConfirmation(true);
         Alert.alert(
@@ -69,8 +79,8 @@ export default function SignupScreen() {
         );
       }
     } catch (error: any) {
-      // Clear stored name on error
-      await storage.removeItem('signupName');
+      // Clear stored profile data on error
+      await storage.removeItem('signupProfileData');
       Alert.alert(
         'Signup Failed',
         error.message || 'An error occurred during signup'
@@ -216,7 +226,7 @@ export default function SignupScreen() {
               {
                 backgroundColor: theme.colors.inputBackground,
                 borderColor:
-                  focusedField === 'name'
+                  focusedField === 'firstName'
                     ? theme.colors.ctaPrimary
                     : theme.colors.inputBorder,
               },
@@ -229,11 +239,71 @@ export default function SignupScreen() {
             />
             <TextInput
               style={[styles.input, { color: theme.colors.text }]}
-              placeholder="Full Name"
+              placeholder="First Name"
               placeholderTextColor={theme.colors.subtitle}
-              value={name}
-              onChangeText={setName}
-              onFocus={() => setFocusedField('name')}
+              value={firstName}
+              onChangeText={setFirstName}
+              onFocus={() => setFocusedField('firstName')}
+              onBlur={() => setFocusedField(null)}
+              autoCapitalize="words"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                borderColor:
+                  focusedField === 'lastName'
+                    ? theme.colors.ctaPrimary
+                    : theme.colors.inputBorder,
+              },
+            ]}
+          >
+            <User
+              size={20}
+              color={theme.colors.subtitle}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={[styles.input, { color: theme.colors.text }]}
+              placeholder="Last Name"
+              placeholderTextColor={theme.colors.subtitle}
+              value={lastName}
+              onChangeText={setLastName}
+              onFocus={() => setFocusedField('lastName')}
+              onBlur={() => setFocusedField(null)}
+              autoCapitalize="words"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                borderColor:
+                  focusedField === 'displayName'
+                    ? theme.colors.ctaPrimary
+                    : theme.colors.inputBorder,
+              },
+            ]}
+          >
+            <User
+              size={20}
+              color={theme.colors.subtitle}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={[styles.input, { color: theme.colors.text }]}
+              placeholder="Display Name (Optional)"
+              placeholderTextColor={theme.colors.subtitle}
+              value={displayName}
+              onChangeText={setDisplayName}
+              onFocus={() => setFocusedField('displayName')}
               onBlur={() => setFocusedField(null)}
               autoCapitalize="words"
               autoCorrect={false}

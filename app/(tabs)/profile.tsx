@@ -15,7 +15,28 @@ import {
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
-import { User, Mail, CreditCard as Edit, LogOut, Save, X, Moon, Sun, Bell, BellOff, Settings, Shield, CircleHelp as HelpCircle, Star, Info, Database, Trash2, Download, ChevronRight, Calendar } from 'lucide-react-native';
+import {
+  User,
+  Mail,
+  CreditCard as Edit,
+  LogOut,
+  Save,
+  X,
+  Moon,
+  Sun,
+  Bell,
+  BellOff,
+  Settings,
+  Shield,
+  CircleHelp as HelpCircle,
+  Star,
+  Info,
+  Database,
+  Trash2,
+  Download,
+  ChevronRight,
+  Calendar,
+} from 'lucide-react-native';
 import { useAuth } from '@/src/context/AuthContext';
 import { useProfile } from '@/src/context/ProfileContext';
 import { useTheme } from '@/src/context/ThemeContext';
@@ -26,13 +47,22 @@ import { useToast } from '@/components/ui/Toast';
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   // Remove unused needsProfileCreation from destructuring
-  const { profile, loading: profileLoading, refreshProfile } = useProfile();
+  const {
+    profile,
+    loading: profileLoading,
+    refreshProfile,
+    needsProfileCreation,
+    updateProfile,
+    validationErrors,
+    clearError,
+  } = useProfile();
   const { theme, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState('');
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
   const [editUsername, setEditUsername] = useState('');
 
   // Notification settings state
@@ -41,7 +71,8 @@ export default function ProfileScreen() {
   // Initialize form data when profile loads
   useEffect(() => {
     if (profile) {
-      setEditName(profile.displayName || '');
+      setEditFirstName(profile.firstName || '');
+      setEditLastName(profile.lastName || '');
       setEditUsername(profile.username || '');
     }
   }, [profile]);
@@ -60,62 +91,82 @@ export default function ProfileScreen() {
     }
   };
 
-  // Update profile mutation
-  const updateProfileMutation = useMutation({
-    mutationFn: async (data: { displayName?: string; username?: string }) => {
-      return await profileApi.updateProfile(data);
-    },
-    onSuccess: () => {
-      refreshProfile();
-      setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
-    },
-    onError: (error: any) => {
-      if (error instanceof ProfileApiError) {
-        Alert.alert('Error', error.message);
-      } else {
-        Alert.alert('Error', 'Failed to update profile');
-      }
-    },
-  });
-
   const handleSave = async () => {
-    if (!editName.trim()) {
-      Alert.alert('Error', 'Please enter your display name');
+    if (!editFirstName.trim()) {
+      Alert.alert('Error', 'Please enter your first name');
+      return;
+    }
+    if (!editLastName.trim()) {
+      Alert.alert('Error', 'Please enter your last name');
       return;
     }
     if (!editUsername.trim()) {
       Alert.alert('Error', 'Please enter a username');
       return;
     }
-
     try {
-      const updateData: any = {};
-
-      if (editName.trim() !== profile?.displayName) {
-        updateData.displayName = editName.trim();
-      }
-      if (editUsername.trim() !== profile?.username) {
-        updateData.username = editUsername.trim();
-      }
-
-      if (Object.keys(updateData).length > 0) {
-        await updateProfileMutation.mutateAsync(updateData);
-      } else {
-        setIsEditing(false);
-      }
+      await updateProfile({
+        firstName: editFirstName.trim(),
+        lastName: editLastName.trim(),
+        username: editUsername.trim(),
+      });
+      setIsEditing(false);
+      Alert.alert('Success', 'Profile updated successfully');
     } catch (error) {
       console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile');
     }
   };
 
   const handleCancel = () => {
     if (profile) {
-      setEditName(profile.displayName || '');
+      setEditFirstName(profile.firstName || '');
+      setEditLastName(profile.lastName || '');
       setEditUsername(profile.username || '');
     }
+    clearError();
     setIsEditing(false);
   };
+
+  // Show loading state while profile is loading
+  if (profileLoading && !profile) {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: theme.colors.subtitle }]}>
+            Loading profile...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show profile creation needed state
+  if (needsProfileCreation || !profile) {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: theme.colors.subtitle }]}>
+            Setting up your profile...
+          </Text>
+          <TouchableOpacity
+            onPress={refreshProfile}
+            style={[
+              styles.retryButton,
+              { backgroundColor: theme.colors.ctaPrimary },
+            ]}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const handleLogout = async () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
@@ -137,7 +188,7 @@ export default function ProfileScreen() {
           setNotificationsEnabled(true);
           // Save notification preference
           await storage.setItem('appSettings', { notificationsEnabled: true });
-          
+
           if (Platform.OS === 'web') {
             showToast({
               type: 'success',
@@ -153,7 +204,8 @@ export default function ProfileScreen() {
             showToast({
               type: 'warning',
               title: 'Permission Required',
-              message: 'Please enable notifications in your browser settings to receive reminders.',
+              message:
+                'Please enable notifications in your browser settings to receive reminders.',
               duration: 4000,
             });
           } else {
@@ -171,7 +223,7 @@ export default function ProfileScreen() {
         setNotificationsEnabled(false);
         // Save notification preference
         await storage.setItem('appSettings', { notificationsEnabled: false });
-        
+
         if (Platform.OS === 'web') {
           showToast({
             type: 'info',
@@ -189,7 +241,7 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error toggling notifications:', error);
-      
+
       if (Platform.OS === 'web') {
         showToast({
           type: 'error',
@@ -244,7 +296,7 @@ export default function ProfileScreen() {
               }
             } catch (error) {
               console.error('Error clearing cache:', error);
-              
+
               if (Platform.OS === 'web') {
                 showToast({
                   type: 'error',
@@ -253,7 +305,10 @@ export default function ProfileScreen() {
                   duration: 3000,
                 });
               } else {
-                Alert.alert('Error', 'Failed to clear cache. Please try again.');
+                Alert.alert(
+                  'Error',
+                  'Failed to clear cache. Please try again.'
+                );
               }
             }
           },
@@ -348,7 +403,7 @@ export default function ProfileScreen() {
 
   const handleSettings = () => {
     router.push('/(tabs)/profile' as any); // Navigate to dedicated settings screen later
-    
+
     if (Platform.OS === 'web') {
       showToast({
         type: 'info',
@@ -361,19 +416,6 @@ export default function ProfileScreen() {
     }
   };
 
-  if (profileLoading || !profile) {
-    return (
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
-      >
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.colors.subtitle }]}>
-            Loading profile...
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -411,7 +453,10 @@ export default function ProfileScreen() {
               </View>
               {!isEditing && (
                 <TouchableOpacity
-                  style={[styles.editButton, { backgroundColor: theme.colors.ctaPrimary }]}
+                  style={[
+                    styles.editButton,
+                    { backgroundColor: theme.colors.ctaPrimary },
+                  ]}
                   onPress={() => setIsEditing(true)}
                 >
                   <Edit size={16} color="#FFFFFF" />
@@ -426,7 +471,11 @@ export default function ProfileScreen() {
             <View style={styles.profileField}>
               {isEditing ? (
                 <View style={styles.editContainer}>
-                  <Text style={[styles.editLabel, { color: theme.colors.subtitle }]}>Name</Text>
+                  <Text
+                    style={[styles.editLabel, { color: theme.colors.subtitle }]}
+                  >
+                    First Name
+                  </Text>
                   <TextInput
                     style={[
                       styles.editInput,
@@ -436,27 +485,52 @@ export default function ProfileScreen() {
                         color: theme.colors.text,
                       },
                     ]}
-                    value={editName}
-                    onChangeText={setEditName}
-                    placeholder="Enter your name"
+                    value={editFirstName}
+                    onChangeText={setEditFirstName}
+                    placeholder="Enter your first name"
+                    placeholderTextColor={theme.colors.subtitle}
+                    autoCapitalize="words"
+                  />
+                  <Text
+                    style={[styles.editLabel, { color: theme.colors.subtitle }]}
+                  >
+                    Last Name
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.editInput,
+                      {
+                        backgroundColor: theme.colors.inputBackground,
+                        borderColor: theme.colors.inputBorder,
+                        color: theme.colors.text,
+                      },
+                    ]}
+                    value={editLastName}
+                    onChangeText={setEditLastName}
+                    placeholder="Enter your last name"
                     placeholderTextColor={theme.colors.subtitle}
                     autoCapitalize="words"
                   />
                 </View>
               ) : (
                 <View style={styles.infoContainer}>
-                  <Text style={[styles.profileName, { color: theme.colors.text }]}>
-                    {profile?.displayName || 'Not set'}
+                  <Text
+                    style={[styles.profileName, { color: theme.colors.text }]}
+                  >
+                    {profile?.firstName || ''} {profile?.lastName || ''}
                   </Text>
                 </View>
               )}
             </View>
-
             {/* Username */}
             <View style={styles.profileField}>
               {isEditing ? (
                 <View style={styles.editContainer}>
-                  <Text style={[styles.editLabel, { color: theme.colors.subtitle }]}>Username</Text>
+                  <Text
+                    style={[styles.editLabel, { color: theme.colors.subtitle }]}
+                  >
+                    Username
+                  </Text>
                   <TextInput
                     style={[
                       styles.editInput,
@@ -475,7 +549,12 @@ export default function ProfileScreen() {
                 </View>
               ) : (
                 <View style={styles.infoContainer}>
-                  <Text style={[styles.profileUsername, { color: theme.colors.ctaPrimary }]}>
+                  <Text
+                    style={[
+                      styles.profileUsername,
+                      { color: theme.colors.ctaPrimary },
+                    ]}
+                  >
                     @{profile?.username || 'Not set'}
                   </Text>
                 </View>
@@ -487,7 +566,12 @@ export default function ProfileScreen() {
               <View style={styles.infoContainer}>
                 <View style={styles.emailContainer}>
                   <Mail size={16} color={theme.colors.subtitle} />
-                  <Text style={[styles.profileEmail, { color: theme.colors.subtitle }]}>
+                  <Text
+                    style={[
+                      styles.profileEmail,
+                      { color: theme.colors.subtitle },
+                    ]}
+                  >
                     {profile?.email || 'Not set'}
                   </Text>
                 </View>
@@ -498,18 +582,31 @@ export default function ProfileScreen() {
             {isEditing && (
               <View style={styles.editActions}>
                 <TouchableOpacity
-                  style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+                  style={[
+                    styles.cancelButton,
+                    { borderColor: theme.colors.border },
+                  ]}
                   onPress={handleCancel}
                 >
-                  <Text style={[styles.cancelButtonText, { color: theme.colors.text }]}>Cancel</Text>
+                  <Text
+                    style={[
+                      styles.cancelButtonText,
+                      { color: theme.colors.text },
+                    ]}
+                  >
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.saveButton, { backgroundColor: theme.colors.ctaPrimary }]}
+                  style={[
+                    styles.saveButton,
+                    { backgroundColor: theme.colors.ctaPrimary },
+                  ]}
                   onPress={handleSave}
-                  disabled={updateProfileMutation.isPending}
+                  disabled={profileLoading}
                 >
                   <Text style={styles.saveButtonText}>
-                    {updateProfileMutation.isPending ? 'Saving...' : 'Save'}
+                    {profileLoading ? 'Saving...' : 'Save'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1046,5 +1143,16 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
+  },
+  retryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

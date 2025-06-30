@@ -3,6 +3,7 @@ import { cognitoService, AuthTokens, UserAttributes } from '../services/cognito'
 import { storage } from '../utils/storage';
 import { router } from 'expo-router';
 import { setGlobalLogoutCallback } from '../utils/authRedirect';
+import { profileApi } from '../api/profile';
 
 interface AuthContextType {
   user: UserAttributes | null;
@@ -96,7 +97,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const confirmSignup = async (email: string, confirmationCode: string) => {
     try {
-      await cognitoService.confirmSignUp(email, confirmationCode);
+      // First confirm the signup with Cognito
+      const { tokens, user: userData } = await cognitoService.confirmSignUp(email, confirmationCode);
+
+      // Store auth tokens and user data
+      await storage.setItem('authTokens', tokens);
+      await storage.setItem('userData', userData);
+      setUser(userData);
+
+      // Auto-create profile after successful confirmation
+      try {
+        const profileData = await storage.getItem<{
+          firstName: string;
+          lastName: string;
+          displayName: string;
+        }>('signupProfileData');
+
+        if (profileData) {
+          // Create profile using the stored signup data
+          await profileApi.createProfile({
+            username: userData.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase(),
+            firstName: profileData.firstName,
+            lastName: profileData.lastName,
+            displayName: profileData.displayName,
+          });
+
+          // Clean up stored signup data
+          await storage.removeItem('signupProfileData');
+        }
+      } catch (profileError) {
+        console.error('Failed to create profile after signup:', profileError);
+        // Don't throw here - user is signed up successfully, profile can be created later
+      }
+
+      // Clear any stored onboarding data
+      await storage.removeItem('preferredName');
     } catch (error) {
       throw error;
     }

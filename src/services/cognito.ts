@@ -82,9 +82,25 @@ class CognitoService {
   }
 
   async confirmSignUp(email: string, confirmationCode: string): Promise<void> {
+  }
+  async confirmSignUp(email: string, confirmationCode: string): Promise<{ tokens: AuthTokens; user: UserAttributes }> {
     if (this.isDevMode) {
       // Mock response for development
-      return;
+      const mockTokens: AuthTokens = {
+        AccessToken: 'mock-access-token',
+        IdToken: 'mock-id-token',
+        RefreshToken: 'mock-refresh-token',
+        TokenType: 'Bearer',
+        ExpiresIn: 3600,
+      };
+
+      const mockUser: UserAttributes = {
+        userId: 'mock-user-id',
+        userName: email.split('@')[0],
+        email,
+      };
+
+      return { tokens: mockTokens, user: mockUser };
     }
 
     const params = {
@@ -97,6 +113,9 @@ class CognitoService {
       await this.cognitoIdentityServiceProvider!.confirmSignUp(
         params
       ).promise();
+
+      // After successful confirmation, sign the user in automatically
+      return await this.signIn(email, ''); // We'll need to handle this differently
     } catch (error: any) {
       throw new Error(error.message || 'Confirmation failed');
     }

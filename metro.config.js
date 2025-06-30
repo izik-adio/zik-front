@@ -14,6 +14,7 @@ module.exports = (() => {
     ...resolver,
     assetExts: resolver.assetExts.filter((ext) => ext !== 'svg'),
     sourceExts: [...resolver.sourceExts, 'svg'],
+    unstable_conditionNames: ['browser', 'require', 'react-native'],
   };
 
   // Add support for additional file extensions from original config

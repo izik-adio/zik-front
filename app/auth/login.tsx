@@ -13,6 +13,7 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react-native';
 import { LogoImage } from '@/components/onboarding/LogoImage';
+import { useProfile } from '@/src/context/ProfileContext';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -27,6 +28,7 @@ export default function LoginScreen() {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const { login, forgotPassword, confirmForgotPassword } = useAuth();
+  const { refreshProfile } = useProfile();
   const { theme } = useTheme();
   const router = useRouter();
 
@@ -40,6 +42,7 @@ export default function LoginScreen() {
     setLoginError(null);
     try {
       await login(email.trim(), password);
+      await refreshProfile(); // Ensure profile is loaded after login
       router.replace('/(tabs)');
     } catch (error) {
       console.error('Login error:', error);
@@ -275,7 +278,15 @@ export default function LoginScreen() {
         </Text>
 
         {loginError && (
-          <View style={[styles.errorContainer, { backgroundColor: theme.colors.error + '20', borderColor: theme.colors.error }]}>
+          <View
+            style={[
+              styles.errorContainer,
+              {
+                backgroundColor: theme.colors.error + '20',
+                borderColor: theme.colors.error,
+              },
+            ]}
+          >
             <Text style={[styles.errorText, { color: theme.colors.error }]}>
               {loginError}
             </Text>

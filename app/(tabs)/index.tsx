@@ -25,7 +25,7 @@ import {
   useCreateEpicQuest,
   useQuestStore,
   useQuestError,
-  useRefreshAllPages
+  useRefreshAllPages,
 } from '../../src/store/questStore';
 import { DailyQuest } from '../../src/api/quests';
 import { AddTaskModal } from '../../components/today/AddTaskModal';
@@ -98,7 +98,9 @@ export default function TodayScreen() {
   // Calculate completion percentage for today's tasks
   const completionPercentage = useMemo(() => {
     if (!todayTasks || todayTasks.length === 0) return 0;
-    const completedTasks = todayTasks.filter((task: DailyQuest) => task.status === 'completed');
+    const completedTasks = todayTasks.filter(
+      (task: DailyQuest) => task.status === 'completed'
+    );
     return (completedTasks.length / todayTasks.length) * 100;
   }, [todayTasks]);
 
@@ -108,7 +110,7 @@ export default function TodayScreen() {
     return {
       today: todayTasks, // Use consistent data source
       future: availableTasksData.future,
-      showFuture: availableTasksData.showFuture
+      showFuture: availableTasksData.showFuture,
     };
   }, [todayTasks]);
 
@@ -124,10 +126,13 @@ export default function TodayScreen() {
   const handleToggleTask = async (taskId: string) => {
     try {
       // Find the task and toggle its status
-      const taskToUpdate = activeMilestoneTasks.find(task => task.questId === taskId);
+      const taskToUpdate = activeMilestoneTasks.find(
+        (task) => task.questId === taskId
+      );
       if (!taskToUpdate) return;
 
-      const newStatus = taskToUpdate.status === 'completed' ? 'pending' : 'completed';
+      const newStatus =
+        taskToUpdate.status === 'completed' ? 'pending' : 'completed';
 
       await updateDailyQuest(taskId, { status: newStatus });
       questStore.checkTaskAccessRules();
@@ -175,16 +180,22 @@ export default function TodayScreen() {
     } catch (error) {
       Alert.alert(
         'Error',
-        error instanceof Error ? error.message : `Failed to ${questData.type === 'epic' ? 'create Epic Quest' : 'add task'}`
+        error instanceof Error
+          ? error.message
+          : `Failed to ${
+              questData.type === 'epic' ? 'create Epic Quest' : 'add task'
+            }`
       );
     }
   };
 
   return (
-    <View style={[
-      { flex: 1, backgroundColor: theme.colors.background },
-      { paddingTop: insets.top }
-    ]}>
+    <View
+      style={[
+        { flex: 1, backgroundColor: theme.colors.background },
+        { paddingTop: insets.top },
+      ]}
+    >
       {/* Single ScrollView with pull-to-refresh for entire content - KISS principle */}
       <ScrollView
         style={{ flex: 1 }}
@@ -203,21 +214,36 @@ export default function TodayScreen() {
       >
         {/* Simplified Greeting - Clean and personal */}
         <SimpleGreetingHeader
-          userName={profile?.displayName || user?.userName || 'User'}
+          firstName={profile?.firstName || 'User'}
           completionRate={completionPercentage}
         />
 
         {/* Error Display */}
         {questError && (
-          <View style={[styles.errorContainer, {
-            backgroundColor: (theme.colors.error || '#ff4444') + '20',
-            borderColor: theme.colors.error || '#ff4444'
-          }]}>
-            <Text style={[styles.errorText, { color: theme.colors.error || '#ff4444' }]}>
+          <View
+            style={[
+              styles.errorContainer,
+              {
+                backgroundColor: (theme.colors.error || '#ff4444') + '20',
+                borderColor: theme.colors.error || '#ff4444',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.errorText,
+                { color: theme.colors.error || '#ff4444' },
+              ]}
+            >
               {questError}
             </Text>
             <TouchableOpacity onPress={() => questStore.clearError()}>
-              <Text style={[styles.errorDismiss, { color: theme.colors.error || '#ff4444' }]}>
+              <Text
+                style={[
+                  styles.errorDismiss,
+                  { color: theme.colors.error || '#ff4444' },
+                ]}
+              >
                 Dismiss
               </Text>
             </TouchableOpacity>

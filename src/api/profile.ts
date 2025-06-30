@@ -3,10 +3,6 @@ import {
   UserProfile,
   CreateProfileRequest,
   UpdateProfileRequest,
-  ProfileResponse,
-  ProfileCreateResponse,
-  ProfileUpdateResponse,
-  OnboardingCompleteResponse,
   UserPreferences,
 } from '../types/api';
 
@@ -53,15 +49,19 @@ const handleApiError = (error: any): never => {
   if (error.response) {
     // Server responded with error status
     const status = error.response.status;
-    // Extract error message from the nested structure
+    
+    // Handle the error structure from the endpoint documentation
     const errorData = error.response.data;
-    const message = errorData?.error || 
-                   (errorData?.data && errorData.data.message) || 
-                   errorData?.message ||
-                   'Request failed';
-    const details = errorData;
+    let message = 'Request failed';
+    
+    if (errorData?.error) {
+      message = errorData.error;
+    } else if (errorData?.message) {
+      message = errorData.message;
+    }
 
     throw new ProfileApiError(status, message, details);
+    throw new ProfileApiError(status, message, errorData);
   } else if (error.request) {
     // Request was made but no response received
     throw new ProfileApiError(0, 'Unable to connect to the server. Please check your internet connection.');
@@ -84,23 +84,12 @@ export const profileApi = {
     try {
       const response = await api.get('/profile');
 
-      // Check if response has the expected structure
-      if (!response || !response.data) {
-        throw new ProfileApiError(0, 'Invalid response format: no data received');
+      // Handle the response structure from the endpoint documentation
+      if (response.data?.success && response.data?.data?.profile) {
+        return response.data.data.profile;
       }
-
-      // Handle the nested structure from backend
-      const responseData = response.data;
       
-      // Check if the response has the expected structure
-      if (responseData.data && responseData.data.profile) {
-        return responseData.data.profile;
-      } else if (responseData.profile) {
-        // Fallback for simpler response structure
-        return responseData.profile;
-      }
-
-      throw new ProfileApiError(404, 'Profile not found in response');
+      throw new ProfileApiError(404, 'Profile not found');
     } catch (error) {
       return handleApiError(error);
     }
@@ -124,23 +113,12 @@ export const profileApi = {
 
       const response = await api.post('/profile', requestData);
 
-      // Check if response has the expected structure
-      if (!response || !response.data) {
-        throw new ProfileApiError(0, 'Invalid response format: no data received');
+      // Handle the response structure from the endpoint documentation
+      if (response.data?.success && response.data?.data?.profile) {
+        return response.data.data.profile;
       }
-
-      // Handle the nested structure from backend
-      const responseData = response.data;
       
-      // Check if the response has the expected structure
-      if (responseData.data && responseData.data.profile) {
-        return responseData.data.profile;
-      } else if (responseData.profile) {
-        // Fallback for simpler response structure
-        return responseData.profile;
-      }
-
-      throw new ProfileApiError(400, 'Profile not found in create response');
+      throw new ProfileApiError(400, 'Failed to create profile');
     } catch (error) {
       return handleApiError(error);
     }
@@ -156,23 +134,12 @@ export const profileApi = {
     try {
       const response = await api.put('/profile', updatedData);
 
-      // Check if response has the expected structure
-      if (!response || !response.data) {
-        throw new ProfileApiError(0, 'Invalid response format: no data received');
+      // Handle the response structure from the endpoint documentation
+      if (response.data?.success && response.data?.data?.profile) {
+        return response.data.data.profile;
       }
-
-      // Handle the nested structure from backend
-      const responseData = response.data;
       
-      // Check if the response has the expected structure
-      if (responseData.data && responseData.data.profile) {
-        return responseData.data.profile;
-      } else if (responseData.profile) {
-        // Fallback for simpler response structure
-        return responseData.profile;
-      }
-
-      throw new ProfileApiError(400, 'Profile not found in update response');
+      throw new ProfileApiError(400, 'Failed to update profile');
     } catch (error) {
       return handleApiError(error);
     }
@@ -194,7 +161,11 @@ export const profileApi = {
    */
   async completeOnboarding(): Promise<void> {
     try {
-      await api.put('/profile/onboarding/complete');
+      const response = await api.put('/profile/onboarding/complete');
+      
+      if (!response.data?.success) {
+        throw new ProfileApiError(400, 'Failed to complete onboarding');
+      }
     } catch (error) {
       handleApiError(error);
     }
