@@ -119,7 +119,6 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
                 // Other error - show alert and redirect to auth
                 Alert.alert(
                     'Setup Required',
-                    'We need to set up your profile. Please try signing in again.',
                     [{
                         text: 'OK',
                         onPress: () => router.replace('/auth/login')
