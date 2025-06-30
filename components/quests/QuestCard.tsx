@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Trophy, Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Goal } from '@/src/api/quests';
+import { showAlert } from '../../utils/showAlert';
 
 interface GoalCardProps {
   goal: Goal;
@@ -13,7 +14,7 @@ export function GoalCard({ goal, completed = false, onDelete }: GoalCardProps) {
   const { theme } = useTheme();
 
   const handleDelete = () => {
-    Alert.alert(
+    showAlert(
       'Delete Goal',
       `Are you sure you want to delete "${goal.goalName}"?`,
       [

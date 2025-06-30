@@ -6,8 +6,8 @@ import {
   TextInput,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
 } from 'react-native';
+import { showAlert } from '../../utils/showAlert';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/context/AuthContext';
 import { useTheme } from '@/src/context/ThemeContext';
@@ -58,7 +58,7 @@ export default function LoginScreen() {
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email address');
+      showAlert('Error', 'Please enter your email address');
       return;
     }
 
@@ -66,9 +66,9 @@ export default function LoginScreen() {
     try {
       await forgotPassword(email.trim());
       setResetStep('code');
-      Alert.alert('Success', 'Password reset code sent to your email');
+      showAlert('Success', 'Password reset code sent to your email');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send reset code');
+      showAlert('Error', error.message || 'Failed to send reset code');
     } finally {
       setIsLoading(false);
     }
@@ -76,20 +76,20 @@ export default function LoginScreen() {
 
   const handleResetPassword = async () => {
     if (!resetCode.trim() || !newPassword.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
 
     setIsLoading(true);
     try {
       await confirmForgotPassword(email.trim(), resetCode.trim(), newPassword);
-      Alert.alert('Success', 'Password reset successfully');
+      showAlert('Success', 'Password reset successfully');
       setShowForgotPassword(false);
       setResetStep('email');
       setResetCode('');
       setNewPassword('');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to reset password');
+      showAlert('Error', error.message || 'Failed to reset password');
     } finally {
       setIsLoading(false);
     }

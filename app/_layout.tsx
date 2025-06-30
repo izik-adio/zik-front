@@ -17,6 +17,7 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { Analytics } from '@/components/Analytics';
 import { DesktopHandler } from '@/components/ui/DesktopHandler';
 import { ToastContainer } from '@/components/ui/Toast';
+import { AlertProvider } from '../components/ui/AlertProvider';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -49,17 +50,19 @@ export default function RootLayout() {
       <AuthProvider>
         <QueryProvider>
           <ProfileProvider>
-            <DesktopHandler>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="auth" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              <StatusBar style="auto" />
-              <Analytics />
-              <ToastContainer />
-            </DesktopHandler>
+            <AlertProvider>
+              <DesktopHandler>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="auth" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
+                <StatusBar style="auto" />
+                <Analytics />
+                <ToastContainer />
+              </DesktopHandler>
+            </AlertProvider>
           </ProfileProvider>
         </QueryProvider>
       </AuthProvider>

@@ -7,11 +7,11 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   Switch,
   Linking,
   Platform,
 } from 'react-native';
+import { showAlert } from '../../utils/showAlert';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
@@ -93,15 +93,15 @@ export default function ProfileScreen() {
 
   const handleSave = async () => {
     if (!editFirstName.trim()) {
-      Alert.alert('Error', 'Please enter your first name');
+      showAlert('Error', 'Please enter your first name');
       return;
     }
     if (!editLastName.trim()) {
-      Alert.alert('Error', 'Please enter your last name');
+      showAlert('Error', 'Please enter your last name');
       return;
     }
     if (!editUsername.trim()) {
-      Alert.alert('Error', 'Please enter a username');
+      showAlert('Error', 'Please enter a username');
       return;
     }
     try {
@@ -111,10 +111,10 @@ export default function ProfileScreen() {
         username: editUsername.trim(),
       });
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      showAlert('Success', 'Profile updated successfully');
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile');
+      showAlert('Error', 'Failed to update profile');
     }
   };
 
@@ -168,7 +168,7 @@ export default function ProfileScreen() {
   }
 
   const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
+    showAlert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout',
@@ -189,73 +189,38 @@ export default function ProfileScreen() {
           // Save notification preference
           await storage.setItem('appSettings', { notificationsEnabled: true });
 
-          if (Platform.OS === 'web') {
-            showToast({
-              type: 'success',
-              title: 'Success',
-              message: 'Notifications enabled successfully!',
-              duration: 3000,
-            });
-          } else {
-            Alert.alert('Success', 'Notifications enabled successfully!');
-          }
+          showAlert('Success', 'Notifications enabled successfully!');
         } else {
-          if (Platform.OS === 'web') {
-            showToast({
-              type: 'warning',
-              title: 'Permission Required',
-              message:
-                'Please enable notifications in your browser settings to receive reminders.',
-              duration: 4000,
-            });
-          } else {
-            Alert.alert(
-              'Permission Required',
-              'Please enable notifications in your device settings to receive reminders.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Settings', onPress: () => Linking.openSettings() },
-              ]
-            );
-          }
+          showAlert(
+            'Permission Required',
+            'Please enable notifications in your device/browser settings to receive reminders.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Settings',
+                onPress: () => Linking.openSettings && Linking.openSettings(),
+              },
+            ]
+          );
         }
       } else {
         setNotificationsEnabled(false);
         // Save notification preference
         await storage.setItem('appSettings', { notificationsEnabled: false });
 
-        if (Platform.OS === 'web') {
-          showToast({
-            type: 'info',
-            title: 'Notifications Disabled',
-            message: 'You can re-enable notifications anytime in settings.',
-            duration: 3000,
-          });
-        } else {
-          Alert.alert(
-            'Notifications Disabled',
-            'You can re-enable notifications anytime in settings.',
-            [{ text: 'OK' }]
-          );
-        }
+        showAlert(
+          'Notifications Disabled',
+          'You can re-enable notifications anytime in settings.',
+          [{ text: 'OK' }]
+        );
       }
     } catch (error) {
       console.error('Error toggling notifications:', error);
-
-      if (Platform.OS === 'web') {
-        showToast({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to update notification settings',
-          duration: 3000,
-        });
-      } else {
-        Alert.alert('Error', 'Failed to update notification settings');
-      }
+      showAlert('Error', 'Failed to update notification settings');
     }
   };
   const handleClearCache = async () => {
-    Alert.alert(
+    showAlert(
       'Clear Cache',
       'This will clear temporary data and may improve app performance. Continue?',
       [
@@ -292,7 +257,7 @@ export default function ProfileScreen() {
                   duration: 3000,
                 });
               } else {
-                Alert.alert('Success', 'Cache cleared successfully!');
+                showAlert('Success', 'Cache cleared successfully!');
               }
             } catch (error) {
               console.error('Error clearing cache:', error);
@@ -305,10 +270,7 @@ export default function ProfileScreen() {
                   duration: 3000,
                 });
               } else {
-                Alert.alert(
-                  'Error',
-                  'Failed to clear cache. Please try again.'
-                );
+                showAlert('Error', 'Failed to clear cache. Please try again.');
               }
             }
           },
@@ -318,87 +280,55 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
-    if (Platform.OS === 'web') {
-      showToast({
-        type: 'warning',
-        title: 'Delete Account',
-        message: 'This feature will be available in a future update.',
-        duration: 4000,
-      });
-    } else {
-      Alert.alert(
-        'Delete Account',
-        'This action cannot be undone. All your data will be permanently deleted.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => {
-              Alert.alert(
-                'Feature Coming Soon',
-                'Account deletion will be available in a future update.'
-              );
-            },
+    showAlert(
+      'Delete Account',
+      'This action cannot be undone. All your data will be permanently deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            showAlert(
+              'Feature Coming Soon',
+              'Account deletion will be available in a future update.'
+            );
           },
-        ]
-      );
-    }
+        },
+      ]
+    );
   };
 
   const handleExportData = () => {
-    if (Platform.OS === 'web') {
-      showToast({
-        type: 'info',
-        title: 'Feature Coming Soon',
-        message: 'Data export will be available in a future update.',
-        duration: 3000,
-      });
-    } else {
-      Alert.alert(
-        'Feature Coming Soon',
-        'Data export will be available in a future update.'
-      );
-    }
+    showAlert(
+      'Feature Coming Soon',
+      'Data export will be available in a future update.'
+    );
   };
 
   const handleRateApp = () => {
-    if (Platform.OS === 'web') {
-      showToast({
-        type: 'info',
-        title: 'Rate Zik',
-        message: 'App store rating is available on mobile devices.',
-        duration: 3000,
-      });
-    } else {
-      Alert.alert('Rate Zik', 'Would you like to rate our app in the store?', [
-        { text: 'Not Now', style: 'cancel' },
-        {
-          text: 'Rate App',
-          onPress: () => {
-            Alert.alert('Thank You!', 'Redirecting to app store...');
-          },
+    showAlert('Rate Zik', 'Would you like to rate our app in the store?', [
+      { text: 'Not Now', style: 'cancel' },
+      {
+        text: 'Rate App',
+        onPress: () => {
+          showAlert('Thank You!', 'Redirecting to app store...');
         },
-      ]);
-    }
+      },
+    ]);
   };
   const handleSupport = () => {
-    if (Platform.OS === 'web') {
-      // On web, directly open the support website
-      Linking.openURL('https://dynofx.com/about');
-    } else {
-      Alert.alert('Help & Support', 'How can we help you?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Visit Website',
-          onPress: () => Linking.openURL('https://dynofx.com/about'),
-        },
-        {
-          text: 'Contact Us',
-          onPress: () => Linking.openURL('https://dynofx.com/contact'),
-        },
-      ]);
-    }
+    showAlert('Help & Support', 'How can we help you?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Visit Website',
+        onPress: () => Linking.openURL('https://dynofx.com/about'),
+      },
+      {
+        text: 'Contact Us',
+        onPress: () => Linking.openURL('https://dynofx.com/contact'),
+      },
+    ]);
   };
 
   const handleSettings = () => {
@@ -412,7 +342,7 @@ export default function ProfileScreen() {
         duration: 3000,
       });
     } else {
-      Alert.alert('Settings', 'Advanced settings coming soon!');
+      showAlert('Settings', 'Advanced settings coming soon!');
     }
   };
 
@@ -867,7 +797,7 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.settingItem}
             onPress={() =>
-              Alert.alert(
+              showAlert(
                 'About Zik',
                 'Version 1.0.0\n\nZik is your personal wellness companion, helping you achieve your goals through mindful practices and AI-powered guidance.'
               )

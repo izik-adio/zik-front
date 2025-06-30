@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
 import { useTheme } from '../context/ThemeContext';
+import { showAlert } from '../../utils/showAlert';
 
 interface ProfileGuardProps {
   children: React.ReactNode;
@@ -11,23 +12,51 @@ interface ProfileGuardProps {
 
 export function ProfileGuard({ children }: ProfileGuardProps) {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { profile, loading: profileLoading, needsProfileCreation, refreshProfile } = useProfile();
+  const {
+    profile,
+    loading: profileLoading,
+    needsProfileCreation,
+    refreshProfile,
+  } = useProfile();
   const { theme } = useTheme();
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load profile when authenticated
   useEffect(() => {
-    if (isAuthenticated && user && !profileLoading && !profile && !needsProfileCreation) {
+    if (
+      isAuthenticated &&
+      user &&
+      !profileLoading &&
+      !profile &&
+      !needsProfileCreation
+    ) {
       refreshProfile();
     }
-  }, [isAuthenticated, user, profile, needsProfileCreation, profileLoading, refreshProfile]);
+  }, [
+    isAuthenticated,
+    user,
+    profile,
+    needsProfileCreation,
+    profileLoading,
+    refreshProfile,
+  ]);
 
   useEffect(() => {
     // Mark as initialized when auth and profile states are resolved
-    if (!authLoading && isAuthenticated && (!profileLoading || profile || needsProfileCreation)) {
+    if (
+      !authLoading &&
+      isAuthenticated &&
+      (!profileLoading || profile || needsProfileCreation)
+    ) {
       setIsInitialized(true);
     }
-  }, [authLoading, isAuthenticated, profileLoading, profile, needsProfileCreation]);
+  }, [
+    authLoading,
+    isAuthenticated,
+    profileLoading,
+    profile,
+    needsProfileCreation,
+  ]);
 
   if (authLoading || profileLoading || !isInitialized) {
     return (
@@ -37,7 +66,9 @@ export function ProfileGuard({ children }: ProfileGuardProps) {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text style={styles.loadingText}>
-            {authLoading ? 'Loading your account...' : 'Setting up your profile...'}
+            {authLoading
+              ? 'Loading your account...'
+              : 'Setting up your profile...'}
           </Text>
         </View>
       </SafeAreaView>

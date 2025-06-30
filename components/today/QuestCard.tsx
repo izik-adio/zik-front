@@ -1,4 +1,4 @@
-import { TouchableOpacity, View, Text, StyleSheet, Alert } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   withSpring,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Task } from '@/src/api/quests';
+import { showAlert } from '../../utils/showAlert';
 
 interface QuestCardProps {
   quest: Task;
@@ -45,7 +46,7 @@ export function QuestCard({
   };
 
   const handleDelete = () => {
-    Alert.alert(
+    showAlert(
       'Delete Task',
       `Are you sure you want to delete "${quest.taskName}"?`,
       [

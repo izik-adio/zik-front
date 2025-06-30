@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { Plus, Target } from 'lucide-react-native';
@@ -39,6 +38,7 @@ import { MilestoneFocusCard } from '../../components/today/MilestoneFocusCard';
 import { SimpleGreetingHeader } from '../../components/today/SimpleGreetingHeader';
 import { SimpleWellnessCard } from '../../components/today/SimpleWellnessCard';
 import { GoalsOverviewCard } from '../../components/today/GoalsOverviewCard';
+import { showAlert } from '../../utils/showAlert';
 
 export default function TodayScreen() {
   const { user } = useAuth();
@@ -140,7 +140,7 @@ export default function TodayScreen() {
       // Note: Removed milestone completion checking logic as it's not implemented
       // This simplifies the task toggling and prevents unnecessary complexity
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Error',
         error instanceof Error ? error.message : 'Failed to complete task'
       );
@@ -151,7 +151,7 @@ export default function TodayScreen() {
     try {
       await questStore.deleteDailyQuest(taskId);
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Error',
         error instanceof Error ? error.message : 'Failed to delete task'
       );
@@ -178,7 +178,7 @@ export default function TodayScreen() {
       await refreshAllPages();
       setShowAddModal(false);
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Error',
         error instanceof Error
           ? error.message

@@ -110,6 +110,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
           username: storedData.username,
           firstName: storedData.firstName,
           lastName: storedData.lastName,
+          displayName: storedData.username, // TEMP: use username as displayName
         });
         return;
       }
@@ -122,6 +123,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
           username: 'user', // fallback
           firstName: nameParts[0] || 'User',
           lastName: nameParts.slice(1).join(' ') || '',
+          displayName: 'user', // TEMP: use username as displayName
         });
         return;
       }
@@ -131,6 +133,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
         username: 'user',
         firstName: 'User',
         lastName: 'Account',
+        displayName: 'user', // TEMP: use username as displayName
       });
     } catch (error) {
       console.error('Failed to auto-create profile:', error);
