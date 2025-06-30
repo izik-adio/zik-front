@@ -207,6 +207,12 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
 
             return profileData;
         } catch (error) {
+            // Handle 401 errors silently - let AuthContext handle the logout
+            if (error instanceof ProfileApiError && error.status === 401) {
+                // Don't set error state for auth errors - AuthContext will handle logout
+                return null;
+            }
+            
             const errorMessage = handleProfileError(error, 'profile fetch');
             setError(errorMessage);
             logProfileState('After fetchProfile (error):');
