@@ -274,27 +274,34 @@ export const profileApi = {
   async getProfileWithRetry(maxRetries: number = 2): Promise<UserProfile | null> {
     let lastError: Error | null = null;
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
+        console.log(`Attempting to get profile (attempt ${attempt + 1}/${maxRetries})`);
         return await this.getProfile();
       } catch (error) {
         lastError = error as Error;
+        console.error(`Profile fetch attempt ${attempt + 1} failed:`, error);
 
         // Don't retry on 404 (profile doesn't exist) or 401 (unauthorized)
         if (error instanceof ProfileApiError && (error.status === 404 || error.status === 401)) {
           if (error.status === 404) {
+            console.log('Profile not found (404), returning null');
             return null; // Profile doesn't exist
           }
+          console.log('Authentication error (401), re-throwing');
           throw error; // Re-throw auth errors
         }
 
         // Wait before retrying (exponential backoff)
         if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`Waiting ${delay}ms before retry`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
 
+    console.error('All profile fetch attempts failed, throwing last error');
     throw lastError;
   },
 };

@@ -33,7 +33,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
     const [creatingProfile, setCreatingProfile] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
     const hasAttemptedAutoProfileCreation = useRef(false);
-    const MAX_RETRIES = 2;
+    const MAX_RETRIES = 1;
 
     /**
      * Auto-create profile for new users to reduce friction
@@ -153,7 +153,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
     // Split effects to handle different concerns
     useEffect(() => {
         // Only handle authentication state
-        if (!authLoading && !isAuthenticated) {
+        if (!authLoading && !isAuthenticated && !creatingProfile) {
             console.log('User not authenticated, redirecting to login');
             router.replace('/auth/login');
         }
@@ -171,7 +171,7 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
 
     useEffect(() => {
         // Only handle profile creation and onboarding
-        if (!authLoading && !profileLoading && isAuthenticated) {
+        if (!authLoading && !profileLoading && isAuthenticated && user) {
             if (needsProfileCreation && user && !creatingProfile && !hasAttemptedAutoProfileCreation.current) {
                 console.log('Profile creation needed, starting auto-creation');
                 hasAttemptedAutoProfileCreation.current = true;
@@ -203,16 +203,12 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
     
     // Add effect to handle max retries exceeded
     useEffect(() => {
-        if (retryCount >= MAX_RETRIES && !profile && isAuthenticated && !profileLoading && !creatingProfile) {
+        if (retryCount >= MAX_RETRIES && !profile && isAuthenticated && user && !profileLoading && !creatingProfile && !needsProfileCreation) {
             console.log('Max profile fetch retries exceeded, forcing profile creation');
             // After max retries, force profile creation
-            if (user) {
-                // Reset the attempt flag before forcing profile creation
-                hasAttemptedAutoProfileCreation.current = false;
-                setNeedsProfileCreation(true);
-            } else {
-                router.replace('/auth/login');
-            }
+            // Reset the attempt flag before forcing profile creation
+            hasAttemptedAutoProfileCreation.current = false;
+            setNeedsProfileCreation(true);
         }
     }, [retryCount, profile, isAuthenticated, profileLoading, creatingProfile, user, router, setNeedsProfileCreation]);
 

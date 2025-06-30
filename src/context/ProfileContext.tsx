@@ -165,6 +165,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
     }, []);
     const fetchProfile = async (): Promise<UserProfile | null> => {
         if (!isAuthenticated) {
+            console.log('fetchProfile: Not authenticated, returning null');
             return null;
         }
 
@@ -188,6 +189,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
         try {
             console.log('Fetching profile from API...');
             const profileData = await profileApi.getProfileWithRetry();
+            console.log('Profile API response:', profileData ? 'Profile found' : 'No profile found');
 
             if (profileData) {
                 setProfile(profileData);
@@ -207,11 +209,20 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
 
             return profileData;
         } catch (error) {
+            console.error('Error in fetchProfile:', error);
+            
             // Handle 401 errors silently - let AuthContext handle the logout
             if (error instanceof ProfileApiError && error.status === 401) {
+                console.log('401 error in fetchProfile - letting AuthContext handle logout');
                 // Don't set error state for auth errors - AuthContext will handle logout
                 return null;
             }
+            
+            // For all other errors, we should set needsProfileCreation to true
+            // This ensures the user can proceed with profile creation
+            setProfile(null);
+            setProfileExists(false);
+            setNeedsProfileCreation(true);
             
             const errorMessage = handleProfileError(error, 'profile fetch');
             setError(errorMessage);

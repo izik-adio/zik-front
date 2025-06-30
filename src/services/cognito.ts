@@ -105,9 +105,10 @@ class CognitoService {
   async signIn(
     email: string,
     password: string
-  ): Promise<{ tokens: AuthTokens; user: UserAttributes }> {
+  ): Promise<{ tokens: AuthTokens; user: UserAttributes }> {    
     if (this.isDevMode) {
       // Mock response for development
+      console.log('DEV MODE: Using mock authentication');
       const mockTokens: AuthTokens = {
         AccessToken: 'mock-access-token',
         IdToken: 'mock-id-token',
@@ -117,9 +118,9 @@ class CognitoService {
       };
 
       const mockUser: UserAttributes = {
-        userId: 'mock-user-id',
-        userName: email.split('@')[0], // Use email prefix as username
-        email: email,
+        userId: 'mock-user-id', 
+        userName: email.split('@')[0],
+        email,
       };
 
       return { tokens: mockTokens, user: mockUser };
@@ -310,8 +311,26 @@ class CognitoService {
 
   async refreshSession(): Promise<AuthTokens | null> {
     if (this.isDevMode) {
-      // In dev mode, we can't refresh, so we'll just return the existing tokens
-      return await storage.getItem<AuthTokens>('authTokens');
+      // In dev mode, generate new mock tokens with a new timestamp
+      console.log('DEV MODE: Generating new mock tokens for refresh');
+      const existingTokens = await storage.getItem<AuthTokens>('authTokens');
+      
+      if (!existingTokens) {
+        console.log('No existing tokens found for refresh');
+        return null;
+      }
+      
+      const refreshedTokens: AuthTokens = {
+        AccessToken: `mock-access-token-${Date.now()}`,
+        IdToken: `mock-id-token-${Date.now()}`,
+        RefreshToken: existingTokens.RefreshToken,
+        TokenType: 'Bearer',
+        ExpiresIn: 3600,
+      };
+      
+      // Store the new tokens
+      await storage.setItem('authTokens', refreshedTokens);
+      return refreshedTokens;
     }
 
     try {

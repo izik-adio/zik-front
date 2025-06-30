@@ -41,7 +41,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setLoginError('Please fill in all fields');
       return;
     }
 
@@ -50,9 +50,13 @@ export default function LoginScreen() {
     try {
       await login(email.trim(), password);
       router.replace('/(tabs)');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
-      setLoginError(error.message || 'An error occurred during login');
+      if (error instanceof Error) {
+        setLoginError(error.message);
+      } else {
+        setLoginError('An error occurred during login');
+      }
     } finally {
       setIsLoading(false);
     }
