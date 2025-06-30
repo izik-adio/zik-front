@@ -12,6 +12,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider } from '@/src/context/AuthContext';
 import { QueryProvider } from '@/src/context/QueryProvider';
 import { ThemeProvider } from '@/src/context/ThemeContext';
+import { ProfileProvider } from '@/src/context/ProfileContext';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { Analytics } from '@/components/Analytics';
 import { DesktopHandler } from '@/components/ui/DesktopHandler';
@@ -46,16 +47,18 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthProvider>
         <QueryProvider>
-          <DesktopHandler>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="auth" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="auto" />
-            <Analytics />
-          </DesktopHandler>
+          <ProfileProvider>
+            <DesktopHandler>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="auth" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <StatusBar style="auto" />
+              <Analytics />
+            </DesktopHandler>
+          </ProfileProvider>
         </QueryProvider>
       </AuthProvider>
     </ThemeProvider>
