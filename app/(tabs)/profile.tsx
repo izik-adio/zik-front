@@ -15,28 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
-import {
-  User,
-  Mail,
-  Edit,
-  LogOut,
-  Save,
-  X,
-  Moon,
-  Sun,
-  Bell,
-  BellOff,
-  Settings,
-  Shield,
-  HelpCircle,
-  Star,
-  Info,
-  Database,
-  Trash2,
-  Download,
-  ChevronRight,
-  Calendar,
-} from 'lucide-react-native';
+import { User, Mail, CreditCard as Edit, LogOut, Save, X, Moon, Sun, Bell, BellOff, Settings, Shield, CircleHelp as HelpCircle, Star, Info, Database, Trash2, Download, ChevronRight, Calendar } from 'lucide-react-native';
 import { useAuth } from '@/src/context/AuthContext';
 import { useProfile } from '@/src/context/ProfileContext';
 import { useTheme } from '@/src/context/ThemeContext';
