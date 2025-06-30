@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 
 // Define a simple profile interface
 interface Profile {
@@ -46,7 +46,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
   const [onboardingCompleted] = useState(true);
 
   // Refresh profile function (simplified for now)
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     setLoading(true);
     try {
       // In a real app, this would fetch profile data from an API
@@ -65,7 +65,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Context value
   const value: ProfileContextType = {

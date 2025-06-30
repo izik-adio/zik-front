@@ -1,6 +1,7 @@
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { storage } from '../utils/storage';
 import { cognitoService, AuthTokens } from '../services/cognito';
+import { triggerGlobalLogout } from '../utils/authRedirect';
 
 const isDevMode = process.env.EXPO_PUBLIC_DEV_MODE === 'true';
 
@@ -73,16 +74,19 @@ api.interceptors.response.use(
           return api(originalRequest);
         } else {
           await storage.clear();
+          await triggerGlobalLogout();
           return Promise.reject(new Error('Session expired. Please log in again.'));
         }
       } catch (refreshError) {
         await storage.clear();
+        await triggerGlobalLogout();
         return Promise.reject(refreshError);
       }
     }
 
     if (error.response?.status === 401) {
       await storage.clear();
+      await triggerGlobalLogout();
     }
 
     // For all errors, reject with the original error

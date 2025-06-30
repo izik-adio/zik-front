@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { cognitoService, AuthTokens, UserAttributes } from '../services/cognito';
 import { storage } from '../utils/storage';
 import { router } from 'expo-router';
+import { setGlobalLogoutCallback } from '../utils/authRedirect';
 
 interface AuthContextType {
   user: UserAttributes | null;
@@ -54,6 +55,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const logout = async () => {
+    try {
+      await storage.clear();
+      await cognitoService.logout();
+      setUser(null);
+      
+      // Force navigation to login screen
+      router.replace('/auth/login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
+  // Register global logout callback
+  useEffect(() => {
+    setGlobalLogoutCallback(logout);
+  }, []);
+
   const login = async (email: string, password: string) => {
     try {
       const { tokens, user: userData } = await cognitoService.signIn(email, password);
@@ -96,19 +115,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await cognitoService.confirmForgotPassword(email, confirmationCode, newPassword);
     } catch (error) {
       throw error;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await storage.clear();
-      await cognitoService.logout();
-      setUser(null);
-      
-      // Force navigation to login screen
-      router.replace('/auth/login');
-    } catch (error) {
-      console.error('Error during logout:', error);
     }
   };
 

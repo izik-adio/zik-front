@@ -42,6 +42,7 @@ import { useProfile } from '@/src/context/ProfileContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { profileApi, ProfileApiError } from '@/src/api/profile';
 import { storage } from '@/src/utils/storage';
+import { useToast } from '@/components/ui/Toast';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -50,6 +51,7 @@ export default function ProfileScreen() {
   const { theme, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editUsername, setEditUsername] = useState('');
@@ -156,30 +158,69 @@ export default function ProfileScreen() {
           setNotificationsEnabled(true);
           // Save notification preference
           await storage.setItem('appSettings', { notificationsEnabled: true });
-          Alert.alert('Success', 'Notifications enabled successfully!');
+          
+          if (Platform.OS === 'web') {
+            showToast({
+              type: 'success',
+              title: 'Success',
+              message: 'Notifications enabled successfully!',
+              duration: 3000,
+            });
+          } else {
+            Alert.alert('Success', 'Notifications enabled successfully!');
+          }
         } else {
-          Alert.alert(
-            'Permission Required',
-            'Please enable notifications in your device settings to receive reminders.',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Settings', onPress: () => Linking.openSettings() },
-            ]
-          );
+          if (Platform.OS === 'web') {
+            showToast({
+              type: 'warning',
+              title: 'Permission Required',
+              message: 'Please enable notifications in your browser settings to receive reminders.',
+              duration: 4000,
+            });
+          } else {
+            Alert.alert(
+              'Permission Required',
+              'Please enable notifications in your device settings to receive reminders.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Settings', onPress: () => Linking.openSettings() },
+              ]
+            );
+          }
         }
       } else {
         setNotificationsEnabled(false);
         // Save notification preference
         await storage.setItem('appSettings', { notificationsEnabled: false });
-        Alert.alert(
-          'Notifications Disabled',
-          'You can re-enable notifications anytime in settings.',
-          [{ text: 'OK' }]
-        );
+        
+        if (Platform.OS === 'web') {
+          showToast({
+            type: 'info',
+            title: 'Notifications Disabled',
+            message: 'You can re-enable notifications anytime in settings.',
+            duration: 3000,
+          });
+        } else {
+          Alert.alert(
+            'Notifications Disabled',
+            'You can re-enable notifications anytime in settings.',
+            [{ text: 'OK' }]
+          );
+        }
       }
     } catch (error) {
       console.error('Error toggling notifications:', error);
-      Alert.alert('Error', 'Failed to update notification settings');
+      
+      if (Platform.OS === 'web') {
+        showToast({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to update notification settings',
+          duration: 3000,
+        });
+      } else {
+        Alert.alert('Error', 'Failed to update notification settings');
+      }
     }
   };
   const handleClearCache = async () => {
@@ -212,10 +253,29 @@ export default function ProfileScreen() {
               await storage.removeItem('cachedQuests');
               await storage.removeItem('userPreferences');
 
-              Alert.alert('Success', 'Cache cleared successfully!');
+              if (Platform.OS === 'web') {
+                showToast({
+                  type: 'success',
+                  title: 'Success',
+                  message: 'Cache cleared successfully!',
+                  duration: 3000,
+                });
+              } else {
+                Alert.alert('Success', 'Cache cleared successfully!');
+              }
             } catch (error) {
               console.error('Error clearing cache:', error);
-              Alert.alert('Error', 'Failed to clear cache. Please try again.');
+              
+              if (Platform.OS === 'web') {
+                showToast({
+                  type: 'error',
+                  title: 'Error',
+                  message: 'Failed to clear cache. Please try again.',
+                  duration: 3000,
+                });
+              } else {
+                Alert.alert('Error', 'Failed to clear cache. Please try again.');
+              }
             }
           },
         },
@@ -224,62 +284,102 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This action cannot be undone. All your data will be permanently deleted.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            // Delete account logic here
-            Alert.alert(
-              'Feature Coming Soon',
-              'Account deletion will be available in a future update.'
-            );
+    if (Platform.OS === 'web') {
+      showToast({
+        type: 'warning',
+        title: 'Delete Account',
+        message: 'This feature will be available in a future update.',
+        duration: 4000,
+      });
+    } else {
+      Alert.alert(
+        'Delete Account',
+        'This action cannot be undone. All your data will be permanently deleted.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              Alert.alert(
+                'Feature Coming Soon',
+                'Account deletion will be available in a future update.'
+              );
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleExportData = () => {
-    Alert.alert(
-      'Feature Coming Soon',
-      'Data export will be available in a future update.'
-    );
+    if (Platform.OS === 'web') {
+      showToast({
+        type: 'info',
+        title: 'Feature Coming Soon',
+        message: 'Data export will be available in a future update.',
+        duration: 3000,
+      });
+    } else {
+      Alert.alert(
+        'Feature Coming Soon',
+        'Data export will be available in a future update.'
+      );
+    }
   };
 
   const handleRateApp = () => {
-    Alert.alert('Rate Zik', 'Would you like to rate our app in the store?', [
-      { text: 'Not Now', style: 'cancel' },
-      {
-        text: 'Rate App',
-        onPress: () => {
-          // Open app store rating
-          Alert.alert('Thank You!', 'Redirecting to app store...');
+    if (Platform.OS === 'web') {
+      showToast({
+        type: 'info',
+        title: 'Rate Zik',
+        message: 'App store rating is available on mobile devices.',
+        duration: 3000,
+      });
+    } else {
+      Alert.alert('Rate Zik', 'Would you like to rate our app in the store?', [
+        { text: 'Not Now', style: 'cancel' },
+        {
+          text: 'Rate App',
+          onPress: () => {
+            Alert.alert('Thank You!', 'Redirecting to app store...');
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
   const handleSupport = () => {
-    Alert.alert('Help & Support', 'How can we help you?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Visit Website',
-        onPress: () => Linking.openURL('https://dynofx.com/about'),
-      },
-      {
-        text: 'Contact Us',
-        onPress: () => Linking.openURL('https://dynofx.com/contact'),
-      },
-    ]);
+    if (Platform.OS === 'web') {
+      // On web, directly open the support website
+      Linking.openURL('https://dynofx.com/about');
+    } else {
+      Alert.alert('Help & Support', 'How can we help you?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Visit Website',
+          onPress: () => Linking.openURL('https://dynofx.com/about'),
+        },
+        {
+          text: 'Contact Us',
+          onPress: () => Linking.openURL('https://dynofx.com/contact'),
+        },
+      ]);
+    }
   };
 
   const handleSettings = () => {
     router.push('/(tabs)/profile' as any); // Navigate to dedicated settings screen later
-    Alert.alert('Settings', 'Advanced settings coming soon!');
+    
+    if (Platform.OS === 'web') {
+      showToast({
+        type: 'info',
+        title: 'Settings',
+        message: 'Advanced settings coming soon!',
+        duration: 3000,
+      });
+    } else {
+      Alert.alert('Settings', 'Advanced settings coming soon!');
+    }
   };
 
   if (profileLoading || !profile) {
