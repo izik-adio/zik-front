@@ -121,11 +121,9 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
                     'Setup Required',
                     'We need to set up your profile. Please try signing in again.',
                     [{
-                        {
-                            text: 'OK',
-                            onPress: () => router.replace('/auth/login')
-                        }
-                    ]
+                        text: 'OK',
+                        onPress: () => router.replace('/auth/login')
+                    }]
                 );
             }
         } finally {
