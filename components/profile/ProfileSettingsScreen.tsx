@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
-    Alert,
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { profileApi, ProfileApiError } from '../../src/api/profile';
 import { UpdateProfileRequest, UserPreferences } from '../../src/types/api';
 import { useProfile } from '../../src/context/ProfileContext';
+import { showAlert } from '../../utils/showAlert';
 
 const ProfileSettingsScreen: React.FC = () => {
     const router = useRouter();
@@ -21,7 +21,6 @@ const ProfileSettingsScreen: React.FC = () => {
         profile,
         loading: profileLoading,
         updateProfile,
-        updatePreferences,
         refreshProfile,
         validationErrors,
         clearError
@@ -95,14 +94,12 @@ const ProfileSettingsScreen: React.FC = () => {
                 changedData.displayName = formData.displayName;
             }
 
-            const result = await updateProfile(changedData);
-            if (result) {
-                await refreshProfile();
-                Alert.alert('Success', 'Profile updated successfully');
-            }
+            await updateProfile(changedData);
+            await refreshProfile();
+            showAlert('Success', 'Profile updated successfully');
         } catch (error) {
             console.error('Profile update error:', error);
-            Alert.alert('Error', 'Failed to update profile. Please try again.');
+            showAlert('Error', 'Failed to update profile. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -112,12 +109,11 @@ const ProfileSettingsScreen: React.FC = () => {
         setLoading(true);
 
         try {
-            const result = await updatePreferences(preferences);
-            if (result) {
-                Alert.alert('Success', 'Preferences updated successfully');
-            }
+            await profileApi.updatePreferences(preferences);
+            await refreshProfile(); // Refresh to get updated profile
+            showAlert('Success', 'Preferences updated successfully');
         } catch (error) {
-            Alert.alert('Error', 'Failed to update preferences. Please try again.');
+            showAlert('Error', 'Failed to update preferences. Please try again.');
         } finally {
             setLoading(false);
         }

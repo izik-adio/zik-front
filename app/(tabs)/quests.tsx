@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { Plus, Map, Sparkles } from 'lucide-react-native';
@@ -26,6 +25,7 @@ import {
 import { EpicQuest, CreateEpicQuestData, CreateDailyQuestData } from '../../src/api/quests';
 import { EpicQuestCard } from '../../components/quests/EpicQuestCard';
 import { AddTaskModal } from '../../components/today/AddTaskModal';
+import { showAlert } from '../../utils/showAlert';
 
 export default function EpicQuestsScreen() {
   const { user } = useAuth();
@@ -35,6 +35,13 @@ export default function EpicQuestsScreen() {
 
   const epicQuests = useEpicQuests();
   const isRefreshing = useIsRefreshing();
+
+  // Debug logging for Goals screen
+  console.log('GoalsScreen: Epic quests data:', {
+    epicQuests: epicQuests,
+    epicQuestsLength: epicQuests?.length || 0,
+    isRefreshing: isRefreshing
+  });
 
   // Get individual actions from store to prevent re-renders
   const fetchEpicQuests = useFetchEpicQuests();
@@ -60,7 +67,7 @@ export default function EpicQuestsScreen() {
     try {
       // Only process epic quests in this screen
       if (questData.type !== 'epic') {
-        Alert.alert('Error', 'Only epic quests can be created from this screen');
+        showAlert('Error', 'Only epic quests can be created from this screen');
         return;
       }
 
@@ -73,7 +80,7 @@ export default function EpicQuestsScreen() {
       // Check if this is a complex goal that needs a roadmap
       const isComplexGoal = questData.description && questData.description.length > 50;
       if (isComplexGoal) {
-        Alert.alert(
+        showAlert(
           'Generating Your Journey',
           'AI is creating a personalized roadmap for your Epic Quest. This may take a few moments.',
           [{ text: 'OK' }]
@@ -83,7 +90,7 @@ export default function EpicQuestsScreen() {
         await generateRoadmap(epic.questId);
       }
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Error',
         error instanceof Error ? error.message : 'Failed to create Epic Quest'
       );

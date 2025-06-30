@@ -107,6 +107,16 @@ export default function TodayScreen() {
   // Get available tasks for the UI - use consistent data source
   const availableTasks = useMemo(() => {
     const availableTasksData = questStore.getAvailableTasks();
+
+    // Debug logging for UI consumption
+    console.log('TodayScreen: Available tasks data:', {
+      todayTasks: todayTasks,
+      todayTasksLength: todayTasks?.length || 0,
+      availableTasksData: availableTasksData,
+      allEpicQuests: allEpicQuests,
+      allEpicQuestsLength: allEpicQuests?.length || 0
+    });
+
     return {
       today: todayTasks, // Use consistent data source
       future: availableTasksData.future,
@@ -182,9 +192,8 @@ export default function TodayScreen() {
         'Error',
         error instanceof Error
           ? error.message
-          : `Failed to ${
-              questData.type === 'epic' ? 'create Epic Quest' : 'add task'
-            }`
+          : `Failed to ${questData.type === 'epic' ? 'create Epic Quest' : 'add task'
+          }`
       );
     }
   };

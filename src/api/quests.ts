@@ -239,6 +239,18 @@ export const dailyQuestsApi = {
           data: response.data
         });
 
+        // More detailed logging to inspect the actual structure
+        if (response.data && typeof response.data === 'object') {
+          console.log('Detailed tasks response structure:');
+          Object.entries(response.data).forEach(([key, value]) => {
+            console.log(`  ${key}:`, {
+              type: typeof value,
+              isArray: Array.isArray(value),
+              value: Array.isArray(value) ? `Array(${value.length})` : value
+            });
+          });
+        }
+
         // Handle different response structures
         let tasks: Task[];
         if (Array.isArray(response.data)) {
@@ -247,6 +259,10 @@ export const dailyQuestsApi = {
           tasks = response.data.tasks;
         } else if (response.data && Array.isArray(response.data.data)) {
           tasks = response.data.data;
+        } else if (response.data && response.data.data && Array.isArray(response.data.data.tasks)) {
+          tasks = response.data.data.tasks;
+        } else if (response.data && response.data.data && Array.isArray(response.data.data.data)) {
+          tasks = response.data.data.data;
         } else {
           // If no tasks found, return empty array
           console.warn('No tasks found in response. Response structure:', {
@@ -466,6 +482,18 @@ export const epicQuestsApi = {
           data: response.data
         });
 
+        // More detailed logging to inspect the actual structure
+        if (response.data && typeof response.data === 'object') {
+          console.log('Detailed goals response structure:');
+          Object.entries(response.data).forEach(([key, value]) => {
+            console.log(`  ${key}:`, {
+              type: typeof value,
+              isArray: Array.isArray(value),
+              value: Array.isArray(value) ? `Array(${value.length})` : value
+            });
+          });
+        }
+
         // Handle different response structures
         let goals: Goal[];
         if (Array.isArray(response.data)) {
@@ -474,6 +502,10 @@ export const epicQuestsApi = {
           goals = response.data.goals;
         } else if (response.data && Array.isArray(response.data.data)) {
           goals = response.data.data;
+        } else if (response.data && response.data.data && Array.isArray(response.data.data.goals)) {
+          goals = response.data.data.goals;
+        } else if (response.data && response.data.data && Array.isArray(response.data.data.data)) {
+          goals = response.data.data.data;
         } else {
           // If no goals found, return empty array
           console.warn('No goals found in response. Response structure:', {
@@ -717,15 +749,34 @@ export const roadmapApi = {
       try {
         const response = await api.get(`/goals/${epicQuestId}/milestones`);
 
-        // Handle the API response structure
+        console.log('🗺️ Roadmap API Response:', {
+          epicQuestId,
+          status: response.status,
+          data: response.data,
+          dataType: typeof response.data,
+          isArray: Array.isArray(response.data),
+          keys: response.data ? Object.keys(response.data) : null
+        });
+
+        // Handle the API response structure - more robust parsing
         let milestones: any[];
         if (response.data && Array.isArray(response.data.milestones)) {
           milestones = response.data.milestones;
+        } else if (response.data && response.data.data && Array.isArray(response.data.data.milestones)) {
+          milestones = response.data.data.milestones;
+        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          milestones = response.data.data;
         } else if (Array.isArray(response.data)) {
           milestones = response.data;
         } else {
+          console.warn('🗺️ Roadmap API: No milestones found in response structure');
           milestones = [];
         }
+
+        console.log('🗺️ Parsed milestones:', {
+          count: milestones.length,
+          milestones: milestones.map(m => ({ id: m.id, title: m.title, status: m.status }))
+        });
 
         // Transform legacy response to new format
         return milestones.map(milestone => ({

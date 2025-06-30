@@ -6,7 +6,6 @@ import {
     SafeAreaView,
     ScrollView,
     TouchableOpacity,
-    Alert,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeft, Sparkles, Trash2 } from 'lucide-react-native';
@@ -16,6 +15,7 @@ import { EpicQuest, Milestone } from '../../src/api/quests';
 import { useEpicQuests, getTaskGoalStoreActions, useActiveRoadmap } from '../../src/store/questStore';
 import { RoadmapVisualizer } from '../../components/quests/RoadmapVisualizer';
 import { RoadmapStatusIndicator } from '../../components/ui/RoadmapStatusIndicator';
+import { showAlert } from '../../utils/showAlert';
 
 export default function EpicRoadmapScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -66,7 +66,7 @@ export default function EpicRoadmapScreen() {
 
         try {
             await generateRoadmap(id);
-            Alert.alert(
+            showAlert(
                 'Roadmap Generation Started',
                 'AI is creating your personalized journey plan. This may take a few moments.',
                 [{ text: 'OK' }]
@@ -75,7 +75,7 @@ export default function EpicRoadmapScreen() {
             // Start polling for completion
             actions.pollRoadmapGeneration(id);
         } catch (error) {
-            Alert.alert(
+            showAlert(
                 'Error',
                 error instanceof Error ? error.message : 'Failed to generate roadmap'
             );
@@ -89,7 +89,7 @@ export default function EpicRoadmapScreen() {
     const handleDeleteEpic = async () => {
         if (!id || !epic) return;
 
-        Alert.alert(
+        showAlert(
             'Delete Epic Quest',
             `Are you sure you want to delete "${epic.title}"? This will permanently remove this goal and all its roadmap data.`,
             [
@@ -103,13 +103,13 @@ export default function EpicRoadmapScreen() {
                     onPress: async () => {
                         try {
                             await actions.deleteEpicQuest(id);
-                            Alert.alert(
+                            showAlert(
                                 'Epic Quest Deleted',
                                 'Your epic quest has been successfully deleted.',
                                 [{ text: 'OK', onPress: () => router.back() }]
                             );
                         } catch (error) {
-                            Alert.alert(
+                            showAlert(
                                 'Error',
                                 error instanceof Error ? error.message : 'Failed to delete epic quest'
                             );

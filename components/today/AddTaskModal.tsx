@@ -9,7 +9,6 @@ import {
   SafeAreaView,
   Switch,
   ScrollView,
-  Alert,
   Platform,
   KeyboardAvoidingView,
   Dimensions,
@@ -19,6 +18,7 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { useChatStore } from '@/src/store/chatStore';
 import { CreateDailyQuestData, CreateEpicQuestData } from '@/src/api/quests';
 import { router } from 'expo-router';
+import { showAlert } from '@/utils/showAlert';
 
 interface AddTaskModalProps {
   visible: boolean;
@@ -113,7 +113,7 @@ export function AddTaskModal({
 
   const handleAiGenerate = () => {
     if (!aiPrompt.trim()) {
-      Alert.alert('Error', 'Please describe what you want to create');
+      showAlert('Error', 'Please describe what you want to create');
       return;
     }
 
@@ -131,17 +131,17 @@ export function AddTaskModal({
   const handleManualCreate = () => {
     // Validate required fields
     if (!title.trim()) {
-      Alert.alert('Error', 'Please enter a title');
+      showAlert('Error', 'Please enter a title');
       return;
     }
 
     if (!description.trim()) {
-      Alert.alert('Error', 'Please enter a description');
+      showAlert('Error', 'Please enter a description');
       return;
     }
 
     if (isEpic && !category.trim()) {
-      Alert.alert('Error', 'Please select a category for epic quests');
+      showAlert('Error', 'Please select a category for epic quests');
       return;
     }
 

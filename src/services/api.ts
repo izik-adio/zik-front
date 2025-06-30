@@ -57,43 +57,60 @@ class ApiService {
       const tasksResponse: AxiosResponse<any> = await api.get('/tasks', {
         params,
       });
+      console.log('Tasks API response:', tasksResponse.data); // Log actual response
+      // Support both array and nested object structure
+      let tasksArr: any[] = [];
+      if (Array.isArray(tasksResponse.data)) {
+        tasksArr = tasksResponse.data;
+      } else if (Array.isArray(tasksResponse.data?.data?.tasks)) {
+        tasksArr = tasksResponse.data.data.tasks;
+      } else if (Array.isArray(tasksResponse.data?.data?.data?.tasks)) {
+        tasksArr = tasksResponse.data.data.data.tasks;
+      }
+      // Transform tasks
+      let dailyQuests: DailyQuest[] = [];
+      dailyQuests = tasksArr.map((task: any) => ({
+        questId: task.taskId,
+        userId: task.userId,
+        epicQuestId: task.goalId,
+        title: task.taskName,
+        status: task.status,
+        dueDate: task.dueDate,
+        priority: task.priority || 'medium',
+        description: task.description || '',
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+      }));
       // Fetch goals
       let goalsData: EpicQuest[] = [];
       try {
         const goalsResponse: AxiosResponse<any> = await api.get('/goals');
+        console.log('Goals API response:', goalsResponse.data); // Log actual response
+        // Support both array and nested object structure
+        let goalsArr: any[] = [];
         if (Array.isArray(goalsResponse.data)) {
-          goalsData = goalsResponse.data.map((goal: any) => ({
-            questId: goal.goalId,
-            userId: goal.userId,
-            title: goal.goalName,
-            description: goal.description || '',
-            category: goal.category || 'general',
-            status: goal.status,
-            targetDate: goal.targetDate,
-            roadmapStatus: goal.roadmapStatus || 'none',
-            createdAt: goal.createdAt,
-            updatedAt: goal.updatedAt,
-          }));
+          goalsArr = goalsResponse.data;
+        } else if (Array.isArray(goalsResponse.data?.data?.goals)) {
+          goalsArr = goalsResponse.data.data.goals;
+        } else if (Array.isArray(goalsResponse.data?.data?.data?.goals)) {
+          goalsArr = goalsResponse.data.data.data.goals;
         }
+        goalsData = goalsArr.map((goal: any) => ({
+          questId: goal.goalId,
+          userId: goal.userId,
+          title: goal.goalName,
+          description: goal.description || '',
+          category: goal.category || 'general',
+          status: goal.status,
+          targetDate: goal.targetDate,
+          roadmapStatus: goal.roadmapStatus || 'none',
+          createdAt: goal.createdAt,
+          updatedAt: goal.updatedAt,
+        }));
       } catch (goalsError) {
         console.warn('Could not fetch goals:', goalsError);
       }
-      // Transform tasks
-      let dailyQuests: DailyQuest[] = [];
-      if (Array.isArray(tasksResponse.data)) {
-        dailyQuests = tasksResponse.data.map((task: any) => ({
-          questId: task.taskId,
-          userId: task.userId,
-          epicQuestId: task.goalId,
-          title: task.taskName,
-          status: task.status,
-          dueDate: task.dueDate,
-          priority: task.priority || 'medium',
-          description: task.description || '',
-          createdAt: task.createdAt,
-          updatedAt: task.updatedAt,
-        }));
-      }
+
       return { epicQuests: goalsData, dailyQuests };
     } catch (error) {
       console.error('Error fetching quests:', error);

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Platform,
   ScrollView,
 } from 'react-native';
@@ -26,6 +25,7 @@ import {
   Settings,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
+import { showAlert } from '@/utils/showAlert';
 
 interface PermissionsScreenProps {
   onNext: () => void;
@@ -74,7 +74,7 @@ export function PermissionsScreen({ onNext }: PermissionsScreenProps) {
     try {
       // Handle web platform limitation
       if (Platform.OS === 'web') {
-        Alert.alert(
+        showAlert(
           'Notifications',
           "Web notifications aren't supported in the same way as mobile apps. You can still enjoy all other features of your wellness journey!",
           [{ text: 'Continue', onPress: onNext }]
@@ -102,7 +102,7 @@ export function PermissionsScreen({ onNext }: PermissionsScreenProps) {
       }
     } catch (error) {
       console.error('Permission request failed:', error);
-      Alert.alert(
+      showAlert(
         'Permission Error',
         'Unable to request notification permission. You can enable this later in Settings.',
         [{ text: 'OK', onPress: onNext }]
@@ -111,7 +111,7 @@ export function PermissionsScreen({ onNext }: PermissionsScreenProps) {
   };
 
   const openSettings = () => {
-    Alert.alert(
+    showAlert(
       'Enable in Settings',
       'You can enable notifications anytime in your device Settings > Notifications > Zik.',
       [

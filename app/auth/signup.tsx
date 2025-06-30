@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/context/AuthContext';
@@ -14,6 +13,7 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react-native';
 import { storage } from '@/src/utils/storage';
 import { LogoImage } from '@/components/onboarding/LogoImage';
+import { showAlert } from '@/utils/showAlert';
 
 export default function SignupScreen() {
   const { theme } = useTheme();
@@ -52,12 +52,12 @@ export default function SignupScreen() {
 
   const handleSignup = async () => {
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
 
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
+      showAlert('Error', 'Password must be at least 8 characters long');
       return;
     }
 
@@ -73,7 +73,7 @@ export default function SignupScreen() {
       const result = await signup(email.trim(), password, firstName.trim());
       if (result.requiresConfirmation) {
         setShowConfirmation(true);
-        Alert.alert(
+        showAlert(
           'Success',
           'Please check your email for a confirmation code'
         );
@@ -81,7 +81,7 @@ export default function SignupScreen() {
     } catch (error: any) {
       // Clear stored profile data on error
       await storage.removeItem('signupProfileData');
-      Alert.alert(
+      showAlert(
         'Signup Failed',
         error.message || 'An error occurred during signup'
       );
@@ -92,7 +92,7 @@ export default function SignupScreen() {
 
   const handleConfirmSignup = async () => {
     if (!confirmationCode.trim()) {
-      Alert.alert('Error', 'Please enter the confirmation code');
+      showAlert('Error', 'Please enter the confirmation code');
       return;
     }
 
@@ -107,7 +107,7 @@ export default function SignupScreen() {
       // Clear any stored onboarding data
       await storage.removeItem('preferredName');
 
-      Alert.alert(
+      showAlert(
         'Welcome to Zik!',
         'Your account has been confirmed successfully!',
         [
@@ -121,7 +121,7 @@ export default function SignupScreen() {
         ]
       );
     } catch (error: any) {
-      Alert.alert(
+      showAlert(
         'Confirmation Failed',
         error.message || 'Invalid confirmation code'
       );

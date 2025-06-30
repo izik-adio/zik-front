@@ -148,6 +148,7 @@ export const useQuestStore = create<QuestStoreState>()(
         set({ isLoading: true, error: null });
         try {
           const epicQuests = await epicQuestsApi.fetchEpicQuests();
+
           set({
             epicQuests,
             isLoading: false,
@@ -166,7 +167,7 @@ export const useQuestStore = create<QuestStoreState>()(
                 console.warn('Failed to set active roadmap for quest:', questWithRoadmap.questId, error);
               }
             } else {
-              console.log('No epic quests with ready roadmaps found, skipping auto-selection');
+              // No epic quests with ready roadmaps found
             }
           }
         } catch (error: any) {
@@ -260,8 +261,13 @@ export const useQuestStore = create<QuestStoreState>()(
         const now = Date.now();
         const lastFetchTime = state.lastFetch ? new Date(state.lastFetch).getTime() : 0;
 
-        // Skip fetch if data is fresh and not forcing refresh
-        if (!forceRefresh && state.dailyQuests.length > 0 && (now - lastFetchTime) < state.cacheExpiryTime) {
+        // Always fetch if no tasks exist or if it's a different date, otherwise use cache logic
+        const shouldFetch = forceRefresh ||
+          state.dailyQuests.length === 0 ||
+          state.taskAccess.todayTasks.length === 0 ||
+          (now - lastFetchTime) >= state.cacheExpiryTime;
+
+        if (!shouldFetch) {
           return;
         }
 
@@ -518,7 +524,6 @@ export const useQuestStore = create<QuestStoreState>()(
 
         // Check if the epic quest has a ready roadmap
         if (epicQuest.roadmapStatus !== 'ready') {
-          console.warn(`Epic quest ${epicQuestId} does not have a ready roadmap (status: ${epicQuest.roadmapStatus})`);
           // Set a basic active roadmap without milestones
           set({
             activeRoadmap: {
