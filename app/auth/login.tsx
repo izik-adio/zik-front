@@ -303,6 +303,8 @@ export default function LoginScreen() {
               onChangeText={setEmail}
               onFocus={() => {
                 setFocusedField('email');
+                setLoginError(null);
+              }}
               onBlur={() => setFocusedField(null)}
               keyboardType="email-address"
               autoCorrect={false}
