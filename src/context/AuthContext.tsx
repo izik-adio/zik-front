@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { cognitoService, AuthTokens, UserAttributes } from '../services/cognito';
 import { storage } from '../utils/storage';
+import { setGlobalLogout } from '../utils/authUtils';
 
 interface AuthContextType {
   user: UserAttributes | null;
@@ -33,6 +34,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const isAuthenticated = !!user;
+  
+  // Register the logout function with the global auth utils
+  useEffect(() => {
+    setGlobalLogout(logout);
+  }, []);
 
   useEffect(() => {
     checkAuthState();
@@ -101,6 +107,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       await storage.clear();
+      await cognitoService.logout();
       setUser(null);
     } catch (error) {
       console.error('Error during logout:', error);
