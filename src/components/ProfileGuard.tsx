@@ -117,6 +117,9 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
                 );
             } else {
                 // Other error - show alert and redirect to auth
+                Alert.alert(
+                    'Profile Creation Failed',
+                    'There was an error creating your profile. Please try logging in again.',
                     [
                         {
                             text: 'OK',
