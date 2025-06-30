@@ -28,7 +28,7 @@ export const storage = {
       }
 
       const jsonValue = JSON.stringify(safeValue);
-      await AsyncStorage.setItem(key, jsonValue);      
+      await AsyncStorage.setItem(key, jsonValue);
     } catch (error) {
       console.error('Error storing data:', error);
       throw error;
@@ -61,5 +61,5 @@ export const storage = {
       console.error('Error clearing storage:', error);
       throw error;
     }
-  }
+  },
 };
