@@ -305,8 +305,6 @@ export default function LoginScreen() {
                 setFocusedField('email');
                 setLoginError(null);
               }}
-                setLoginError(null);
-              }}
               onBlur={() => setFocusedField(null)}
               keyboardType="email-address"
               autoCorrect={false}
@@ -338,8 +336,6 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               onFocus={() => {
                 setFocusedField('password');
-                setLoginError(null);
-              }}
                 setLoginError(null);
               }}
               onBlur={() => setFocusedField(null)}
