@@ -45,34 +45,37 @@ export function DesktopBlocker({ children }: DesktopBlockerProps) {
 
     if (isDesktop) {
         return (
-            <View style={styles.container}>
-                <LinearGradient
-                    colors={['#667eea', '#764ba2']}
-                    style={styles.gradient}
-                >
-                    <View style={styles.content}>
-                        <Text style={styles.icon}>📱</Text>
-                        <Text style={styles.title}>Mobile Experience Only</Text>
-                        <Text style={styles.subtitle}>
-                            Zik is optimized exclusively for mobile devices
-                        </Text>
-                        <Text style={styles.description}>
-                            For the best experience, please access Zik using one of the options below:
-                        </Text>
-                        <View style={styles.instructionsContainer}>
-                            <Text style={styles.instructionsTitle}>Access Options:</Text>
-                            <Text style={styles.instruction}>📱 Open this link on your phone browser</Text>
-                            <Text style={styles.instruction}>🔗 Copy the URL and paste it on your mobile device</Text>
-                            <Text style={styles.instruction}>📏 Resize your browser window to mobile size</Text>
-                            <Text style={styles.instruction}>📲 Download from App Store/Play Store (Coming Soon!)</Text>
-                        </View>
-                        <View style={styles.comingSoonContainer}>
-                            <Text style={styles.comingSoonText}>
-                                🚀 Native mobile app launching very soon on App Store and Google Play Store!
+            <View style={styles.rootContainer}>
+                {children}
+                <View style={styles.overlay}>
+                    <LinearGradient
+                        colors={['#667eea', '#764ba2']}
+                        style={styles.gradient}
+                    >
+                        <View style={styles.content}>
+                            <Text style={styles.icon}>📱</Text>
+                            <Text style={styles.title}>Mobile Experience Only</Text>
+                            <Text style={styles.subtitle}>
+                                Zik is optimized exclusively for mobile devices
                             </Text>
+                            <Text style={styles.description}>
+                                For the best experience, please access Zik using one of the options below:
+                            </Text>
+                            <View style={styles.instructionsContainer}>
+                                <Text style={styles.instructionsTitle}>Access Options:</Text>
+                                <Text style={styles.instruction}>📱 Open this link on your phone browser</Text>
+                                <Text style={styles.instruction}>🔗 Copy the URL and paste it on your mobile device</Text>
+                                <Text style={styles.instruction}>📏 Resize your browser window to mobile size</Text>
+                                <Text style={styles.instruction}>📲 Download from App Store/Play Store (Coming Soon!)</Text>
+                            </View>
+                            <View style={styles.comingSoonContainer}>
+                                <Text style={styles.comingSoonText}>
+                                    🚀 Native mobile app launching very soon on App Store and Google Play Store!
+                                </Text>
+                            </View>
                         </View>
-                    </View>
-                </LinearGradient>
+                    </LinearGradient>
+                </View>
             </View>
         );
     }
@@ -81,6 +84,19 @@ export function DesktopBlocker({ children }: DesktopBlockerProps) {
 }
 
 const styles = StyleSheet.create({
+    rootContainer: {
+        flex: 1,
+        width: '100%',
+        ...(Platform.OS === 'web' && { height: '100vh' as any }),
+    } as ViewStyle,
+    overlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+    } as ViewStyle,
     container: {
         flex: 1,
         width: '100%',
