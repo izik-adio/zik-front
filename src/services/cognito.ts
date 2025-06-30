@@ -28,8 +28,7 @@ class CognitoService {
   private isDevMode: boolean;
   constructor() {
     this.isDevMode =
-      process.env.EXPO_PUBLIC_DEV_MODE === 'true' ||
-      !process.env.EXPO_PUBLIC_USER_POOL_ID;
+      process.env.EXPO_PUBLIC_DEV_MODE === 'true';
 
     this.config = {
       region: process.env.EXPO_PUBLIC_AWS_REGION || 'us-east-1',
