@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { createAutoProfile, ProfileApiError } from '../api/profile';
 import { storage } from '../utils/storage';
 import { UserProfile } from '../types/api';
+import { triggerGlobalLogout } from '../utils/authUtils';
 
 interface ProfileGuardProps {
     children: React.ReactNode;
@@ -25,11 +27,13 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
         needsProfileCreation,
         onboardingCompleted,
         fetchProfile,
-        setProfileCreated
+        setProfileCreated,
+        setNeedsProfileCreation
     } = useProfile();
     const router = useRouter();
     const [creatingProfile, setCreatingProfile] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
+    const hasAttemptedAutoProfileCreation = useRef(false);
     const MAX_RETRIES = 2;
 
     /**
@@ -58,6 +62,9 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
 
             // Update context with the new profile
             setProfileCreated(newProfile);
+
+            // Reset the attempt flag on successful creation
+            hasAttemptedAutoProfileCreation.current = false;
 
             console.log('✅ Profile auto-created successfully:', newProfile.userId);
 
@@ -109,6 +116,9 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
 
                 // Set this as the current profile
                 setProfileCreated(tempProfile);
+
+                // Reset the attempt flag even for temporary profiles
+                hasAttemptedAutoProfileCreation.current = false;
 
                 Alert.alert(
                     'Offline Mode',
@@ -163,8 +173,9 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
     useEffect(() => {
         // Only handle profile creation and onboarding
         if (!authLoading && !profileLoading && isAuthenticated) {
-            if (needsProfileCreation && user && !creatingProfile) {
+            if (needsProfileCreation && user && !creatingProfile && !hasAttemptedAutoProfileCreation.current) {
                 console.log('Profile creation needed, starting auto-creation');
+                hasAttemptedAutoProfileCreation.current = true;
                 handleAutoProfileCreation();
             } else if (profile && !onboardingCompleted) {
                 console.log('Profile exists but onboarding incomplete, redirecting to onboarding');
@@ -197,12 +208,14 @@ export const ProfileGuard: React.FC<ProfileGuardProps> = ({ children }) => {
             console.log('Max profile fetch retries exceeded, forcing profile creation');
             // After max retries, force profile creation
             if (user) {
+                // Reset the attempt flag before forcing profile creation
+                hasAttemptedAutoProfileCreation.current = false;
                 setNeedsProfileCreation(true);
             } else {
                 router.replace('/auth/login');
             }
         }
-    }, [retryCount, profile, isAuthenticated, profileLoading, creatingProfile, user, router]);
+    }, [retryCount, profile, isAuthenticated, profileLoading, creatingProfile, user, router, setNeedsProfileCreation]);
 
     // Show loading state
     if (authLoading || profileLoading || needsProfileCreation || creatingProfile || (profile && !onboardingCompleted)) {
