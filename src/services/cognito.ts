@@ -312,11 +312,9 @@ class CognitoService {
   async refreshSession(): Promise<AuthTokens | null> {
     if (this.isDevMode) {
       // In dev mode, generate new mock tokens with a new timestamp
-      console.log('DEV MODE: Generating new mock tokens for refresh');
       const existingTokens = await storage.getItem<AuthTokens>('authTokens');
       
       if (!existingTokens) {
-        console.log('No existing tokens found for refresh');
         return null;
       }
       
@@ -371,9 +369,7 @@ class CognitoService {
   }
 
   async logout(): Promise<void> {
-    console.log('Logging out user, clearing auth tokens');
     await storage.removeItem('authTokens');
-    await storage.removeItem('userProfile');
     await storage.removeItem('userData');
   }
 

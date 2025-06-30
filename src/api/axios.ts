@@ -1,7 +1,6 @@
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { storage } from '../utils/storage';
 import { cognitoService, AuthTokens } from '../services/cognito';
-import { triggerGlobalLogout } from '../utils/authUtils';
 
 const isDevMode = process.env.EXPO_PUBLIC_DEV_MODE === 'true';
 
@@ -18,19 +17,10 @@ const api = axios.create({
 
 // Add request logging
 api.interceptors.request.use(
-  (config) => {
-    console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
-      params: config.params,
-      data: config.data,
-      headers: {
-        ...config.headers,
-        Authorization: config.headers.Authorization ? 'Bearer ***' : undefined,
-      },
-    });
+  (config) => {    
     return config;
   },
   (error) => {
-    console.error('🌐 API Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -38,22 +28,9 @@ api.interceptors.request.use(
 // Add response logging
 api.interceptors.response.use(
   (response) => {
-    console.log(`🌐 API Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-      data: response.data,
-      headers: response.headers,
-    });
     return response;
   },
   (error) => {
-    console.error('🌐 API Response Error:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      config: {
-        url: error.config?.url,
-        method: error.config?.method,
-      },
-    });
     return Promise.reject(error);
   }
 );
@@ -86,34 +63,26 @@ api.interceptors.response.use(
     // Check if the error is 401 and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-
-      console.log('Received 401 error, attempting token refresh');
       try {
         const newTokens = await cognitoService.refreshSession();
         
         if (newTokens) {
-          console.log('Token refreshed successfully');
           // Update the header for the original request
           originalRequest.headers.Authorization = `Bearer ${newTokens.AccessToken}`;
           // Retry the original request
           return api(originalRequest);
         } else {
-          console.log('Token refresh failed, logging out.');
-          // Use global logout to ensure auth context is updated
-          await triggerGlobalLogout();
+          await storage.clear();
           return Promise.reject(new Error('Session expired. Please log in again.'));
         }
       } catch (refreshError) {
-        console.error('Error during token refresh:', refreshError);
-        // Use the global logout to ensure auth context is updated
-        await triggerGlobalLogout();
+        await storage.clear();
         return Promise.reject(refreshError);
       }
     }
 
     if (error.response?.status === 401) {
-      console.log('Received 401 error outside of retry logic, triggering logout');
-      await triggerGlobalLogout();
+      await storage.clear();
     }
 
     // For all errors, reject with the original error

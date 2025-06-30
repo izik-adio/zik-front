@@ -25,19 +25,10 @@ export default function LoginScreen() {
   const [resetStep, setResetStep] = useState<'email' | 'code'>('email');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const { login, forgotPassword, confirmForgotPassword } = useAuth();
   const { theme } = useTheme();
   const router = useRouter();
-
-  // Clear any previous errors on component mount
-  useEffect(() => {
-    if (isInitialLoad) {
-      setLoginError(null);
-      setIsInitialLoad(false);
-    }
-  }, [isInitialLoad]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {

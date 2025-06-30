@@ -7,8 +7,8 @@ import {
   Mountain,
   User,
 } from 'lucide-react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/context/ThemeContext';
-import { ProfileGuard } from '@/src/components/ProfileGuard';
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -35,7 +35,7 @@ export default function TabLayout() {
   }, []);
 
   return (
-    <ProfileGuard>
+    <SafeAreaProvider>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -92,6 +92,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    </ProfileGuard>
+    </SafeAreaProvider>
   );
 }
