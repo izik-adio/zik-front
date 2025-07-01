@@ -76,16 +76,25 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
     setLoading(true);
     setError(null);
     try {
+      console.log('Attempting to fetch user profile...');
       const profileData = await profileApi.getProfile();
+      console.log('Profile fetched successfully:', profileData);
       setProfile(profileData);
       setNeedsProfileCreation(false);
       // Cache the profile after successful fetch
       await storage.setItem('cachedProfile', profileData);
     } catch (err) {
+      console.error('Error refreshing profile:', err);
       if (err instanceof ProfileApiError && err.status === 404) {
+        console.log(
+          'Profile not found (404), setting needsProfileCreation to true'
+        );
         setProfile(null);
         setNeedsProfileCreation(true);
         await tryAutoCreateProfile();
+      } else if (err instanceof ProfileApiError && err.status === 401) {
+        console.log('Unauthorized (401) - auth tokens may be invalid');
+        setError('Authentication required. Please log in again.');
       } else {
         setError(err instanceof Error ? err.message : 'Failed to load profile');
         console.error('Error refreshing profile:', err);
@@ -98,6 +107,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
   // Try to auto-create profile for existing users
   const tryAutoCreateProfile = useCallback(async () => {
     try {
+      console.log('Attempting to auto-create profile...');
       // Check if we have stored signup data
       const storedData = await storage.getItem<{
         firstName: string;
@@ -106,6 +116,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       }>('signupProfileData');
 
       if (storedData) {
+        console.log('Found stored signup data:', storedData);
         await createProfile({
           username: storedData.username,
           firstName: storedData.firstName,
@@ -118,6 +129,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       // Check if we have stored name from onboarding
       const preferredName = await storage.getItem<string>('preferredName');
       if (preferredName) {
+        console.log('Found preferred name:', preferredName);
         const nameParts = preferredName.trim().split(' ');
         await createProfile({
           username: 'user', // fallback
@@ -129,6 +141,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       }
 
       // Last resort - create with minimal data
+      console.log('No stored data found, creating minimal profile');
       await createProfile({
         username: 'user',
         firstName: 'User',
@@ -147,13 +160,19 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
     setError(null);
     setValidationErrors({});
     try {
+      console.log('Creating profile with data:', data);
       const newProfile = await profileApi.createProfile(data);
+      console.log('Profile created successfully:', newProfile);
       setProfile(newProfile);
       setNeedsProfileCreation(false);
+      // Cache the profile after successful creation
+      await storage.setItem('cachedProfile', newProfile);
     } catch (err) {
+      console.error('Error creating profile:', err);
       if (err instanceof ProfileApiError) {
         if (err.status === 400) {
           // Validation error
+          console.log('Profile creation validation error:', err.message);
           setValidationErrors({ general: err.message });
         } else {
           setError(err.message);
@@ -181,8 +200,56 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
     } catch (err) {
       if (err instanceof ProfileApiError) {
         if (err.status === 400) {
-          // Validation error
-          setValidationErrors({ general: err.message });
+          // Parse validation errors from the response
+          const errorMessage = err.message;
+          const errors: Record<string, string> = {};
+
+          // Parse specific field errors from the error message
+          if (errorMessage.toLowerCase().includes('username')) {
+            if (
+              errorMessage.toLowerCase().includes('3-30') ||
+              errorMessage.toLowerCase().includes('characters')
+            ) {
+              errors.username = 'Username must be 3-30 characters long';
+            } else if (
+              errorMessage
+                .toLowerCase()
+                .includes('letters, numbers, and underscores') ||
+              errorMessage.toLowerCase().includes('contain only')
+            ) {
+              errors.username =
+                'Username must contain only letters, numbers, and underscores';
+            } else if (
+              errorMessage.toLowerCase().includes('already exists') ||
+              errorMessage.toLowerCase().includes('taken')
+            ) {
+              errors.username = 'This username is already taken';
+            } else {
+              errors.username = errorMessage;
+            }
+          } else if (
+            errorMessage.toLowerCase().includes('firstname') ||
+            errorMessage.toLowerCase().includes('first name')
+          ) {
+            errors.firstName =
+              'First name is required and must be less than 50 characters';
+          } else if (
+            errorMessage.toLowerCase().includes('lastname') ||
+            errorMessage.toLowerCase().includes('last name')
+          ) {
+            errors.lastName =
+              'Last name is required and must be less than 50 characters';
+          } else if (
+            errorMessage.toLowerCase().includes('displayname') ||
+            errorMessage.toLowerCase().includes('display name')
+          ) {
+            errors.displayName =
+              'Display name must be less than 100 characters';
+          } else {
+            errors.general = errorMessage;
+          }
+
+          setValidationErrors(errors);
         } else {
           setError(err.message);
         }

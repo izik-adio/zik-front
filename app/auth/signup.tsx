@@ -51,7 +51,12 @@ export default function SignupScreen() {
   }, []);
 
   const handleSignup = async () => {
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
+    if (
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !email.trim() ||
+      !password.trim()
+    ) {
       showAlert('Error', 'Please fill in all fields');
       return;
     }
@@ -69,14 +74,13 @@ export default function SignupScreen() {
         lastName: lastName.trim(),
         displayName: displayName.trim() || firstName.trim(), // Use firstName if displayName is empty
       });
+      // Store the password for auto-login after confirmation
+      await storage.setItem('signupPassword', password);
 
       const result = await signup(email.trim(), password, firstName.trim());
       if (result.requiresConfirmation) {
         setShowConfirmation(true);
-        showAlert(
-          'Success',
-          'Please check your email for a confirmation code'
-        );
+        showAlert('Success', 'Please check your email for a confirmation code');
       }
     } catch (error: any) {
       // Clear stored profile data on error
@@ -116,8 +120,8 @@ export default function SignupScreen() {
             onPress: () => {
               // The ProfileGuard will handle profile creation and routing
               router.replace('/');
-            }
-          }
+            },
+          },
         ]
       );
     } catch (error: any) {

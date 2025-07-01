@@ -7,8 +7,8 @@ import {
 } from '../types/api';
 
 // Re-export types for backwards compatibility
-export interface Profile extends UserProfile { }
-export interface UpdateProfileData extends UpdateProfileRequest { }
+export interface Profile extends UserProfile {}
+export interface UpdateProfileData extends UpdateProfileRequest {}
 
 /**
  * Profile API Service
@@ -49,25 +49,30 @@ const handleApiError = (error: any): never => {
   if (error.response) {
     // Server responded with error status
     const status = error.response.status;
-    
+
     // Handle the error structure from the endpoint documentation
     const errorData = error.response.data;
     let message = 'Request failed';
-    
+
     if (errorData?.error) {
       message = errorData.error;
     } else if (errorData?.message) {
       message = errorData.message;
     }
 
-    throw new ProfileApiError(status, message, details);
     throw new ProfileApiError(status, message, errorData);
   } else if (error.request) {
     // Request was made but no response received
-    throw new ProfileApiError(0, 'Unable to connect to the server. Please check your internet connection.');
+    throw new ProfileApiError(
+      0,
+      'Unable to connect to the server. Please check your internet connection.'
+    );
   } else {
     // Something else happened
-    throw new ProfileApiError(0, error.message || 'An unexpected error occurred');
+    throw new ProfileApiError(
+      0,
+      error.message || 'An unexpected error occurred'
+    );
   }
 };
 
@@ -88,7 +93,7 @@ export const profileApi = {
       if (response.data?.success && response.data?.data?.profile) {
         return response.data.data.profile;
       }
-      
+
       throw new ProfileApiError(404, 'Profile not found');
     } catch (error) {
       return handleApiError(error);
@@ -117,7 +122,7 @@ export const profileApi = {
       if (response.data?.success && response.data?.data?.profile) {
         return response.data.data.profile;
       }
-      
+
       throw new ProfileApiError(400, 'Failed to create profile');
     } catch (error) {
       return handleApiError(error);
@@ -138,7 +143,7 @@ export const profileApi = {
       if (response.data?.success && response.data?.data?.profile) {
         return response.data.data.profile;
       }
-      
+
       throw new ProfileApiError(400, 'Failed to update profile');
     } catch (error) {
       return handleApiError(error);
@@ -150,7 +155,9 @@ export const profileApi = {
    * @param preferences Partial preferences to update
    * @returns Promise<UserProfile> The updated profile
    */
-  async updatePreferences(preferences: Partial<UserPreferences>): Promise<UserProfile> {
+  async updatePreferences(
+    preferences: Partial<UserPreferences>
+  ): Promise<UserProfile> {
     return this.updateProfile({ preferences });
   },
 
@@ -162,9 +169,26 @@ export const profileApi = {
   async completeOnboarding(): Promise<void> {
     try {
       const response = await api.put('/profile/onboarding/complete');
-      
+
       if (!response.data?.success) {
         throw new ProfileApiError(400, 'Failed to complete onboarding');
+      }
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
+  /**
+   * Delete the current user's account and all associated data
+   * @returns Promise<void>
+   * @throws ProfileApiError If deletion fails or user is not authenticated
+   */
+  async deleteAccount(): Promise<void> {
+    try {
+      const response = await api.delete('/profile');
+
+      if (!response.data?.message) {
+        throw new ProfileApiError(400, 'Failed to delete account');
       }
     } catch (error) {
       handleApiError(error);
@@ -184,10 +208,15 @@ export const profileApi = {
 
     // Username validation (if provided)
     if (data.username !== undefined) {
-      if (!data.username || data.username.length < 3 || data.username.length > 30) {
-        errors.username = 'Username must be between 3 and 30 characters';
+      if (
+        !data.username ||
+        data.username.length < 3 ||
+        data.username.length > 30
+      ) {
+        errors.username = 'Username must be 3-30 characters long';
       } else if (!/^[a-zA-Z0-9_]+$/.test(data.username)) {
-        errors.username = 'Username can only contain letters, numbers, and underscores';
+        errors.username =
+          'Username must contain only letters, numbers, and underscores';
       }
     }
 
@@ -227,7 +256,11 @@ export const profileApi = {
     }
 
     // Avatar URL validation (basic) - only for update requests
-    if ('avatarUrl' in data && data.avatarUrl && !data.avatarUrl.startsWith('http')) {
+    if (
+      'avatarUrl' in data &&
+      data.avatarUrl &&
+      !data.avatarUrl.startsWith('http')
+    ) {
       errors.avatarUrl = 'Avatar URL must be a valid HTTP/HTTPS URL';
     }
 
@@ -242,19 +275,26 @@ export const profileApi = {
    * @param maxRetries Maximum number of retry attempts
    * @returns Promise<UserProfile | null> Profile or null if not found
    */
-  async getProfileWithRetry(maxRetries: number = 2): Promise<UserProfile | null> {
+  async getProfileWithRetry(
+    maxRetries: number = 2
+  ): Promise<UserProfile | null> {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        console.log(`Attempting to get profile (attempt ${attempt + 1}/${maxRetries})`);
+        console.log(
+          `Attempting to get profile (attempt ${attempt + 1}/${maxRetries})`
+        );
         return await this.getProfile();
       } catch (error) {
         lastError = error as Error;
         console.error(`Profile fetch attempt ${attempt + 1} failed:`, error);
 
         // Don't retry on 404 (profile doesn't exist) or 401 (unauthorized)
-        if (error instanceof ProfileApiError && (error.status === 404 || error.status === 401)) {
+        if (
+          error instanceof ProfileApiError &&
+          (error.status === 404 || error.status === 401)
+        ) {
           if (error.status === 404) {
             console.log('Profile not found (404), returning null');
             return null; // Profile doesn't exist
@@ -267,7 +307,7 @@ export const profileApi = {
         if (attempt < maxRetries) {
           const delay = Math.pow(2, attempt) * 1000;
           console.log(`Waiting ${delay}ms before retry`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
@@ -281,7 +321,10 @@ export const profileApi = {
  * Auto-create profile with smart defaults from user's name and email
  * This is used after signup to create a basic profile without user friction
  */
-export const createAutoProfile = async (fullName: string, email: string): Promise<UserProfile> => {
+export const createAutoProfile = async (
+  fullName: string,
+  email: string
+): Promise<UserProfile> => {
   // Parse the full name into first and last name
   const nameParts = fullName.trim().split(' ');
   const firstName = nameParts[0] || email.split('@')[0];
@@ -311,22 +354,24 @@ export const createAutoProfile = async (fullName: string, email: string): Promis
   // Try to create profile with retries for common issues
   let attempts = 0;
   const maxAttempts = 3;
-  
+
   while (attempts < maxAttempts) {
     try {
       return await profileApi.createProfile(profileData);
     } catch (error) {
       attempts++;
-      
+
       // Handle username conflicts
-      if (error instanceof ProfileApiError && 
-          (error.message.includes('username') || 
-           error.message.toLowerCase().includes('already exists'))) {
+      if (
+        error instanceof ProfileApiError &&
+        (error.message.includes('username') ||
+          error.message.toLowerCase().includes('already exists'))
+      ) {
         const timestamp = Date.now().toString().slice(-4);
         profileData.username = `${baseUsername}${timestamp}`;
         // Continue to retry with new username
         console.log(`Username conflict, trying with: ${profileData.username}`);
-      } 
+      }
       // Handle validation errors
       else if (error instanceof ProfileApiError && error.status === 400) {
         // Try to fix validation issues
@@ -341,12 +386,15 @@ export const createAutoProfile = async (fullName: string, email: string): Promis
       }
       // If last attempt or other error, throw
       else if (attempts >= maxAttempts) {
-        console.error('Failed to create profile after multiple attempts:', error);
+        console.error(
+          'Failed to create profile after multiple attempts:',
+          error
+        );
         throw error;
       }
     }
   }
-  
+
   throw new Error('Failed to create profile after multiple attempts');
 };
 

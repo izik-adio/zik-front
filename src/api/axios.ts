@@ -18,7 +18,7 @@ const api = axios.create({
 
 // Add request logging
 api.interceptors.request.use(
-  (config) => {    
+  (config) => {
     return config;
   },
   (error) => {
@@ -41,7 +41,10 @@ api.interceptors.request.use(
     try {
       const tokens = await storage.getItem<AuthTokens>('authTokens');
       if (tokens?.AccessToken) {
+        console.log('Adding auth token to request:', config.url);
         config.headers.Authorization = `Bearer ${tokens.AccessToken}`;
+      } else {
+        console.log('No auth token found for request:', config.url);
       }
     } catch (error) {
       console.error('Error adding auth token to request:', error);
@@ -66,7 +69,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       try {
         const newTokens = await cognitoService.refreshSession();
-        
+
         if (newTokens) {
           // Update the header for the original request
           originalRequest.headers.Authorization = `Bearer ${newTokens.AccessToken}`;
@@ -75,7 +78,9 @@ api.interceptors.response.use(
         } else {
           await storage.clear();
           await triggerGlobalLogout();
-          return Promise.reject(new Error('Session expired. Please log in again.'));
+          return Promise.reject(
+            new Error('Session expired. Please log in again.')
+          );
         }
       } catch (refreshError) {
         await storage.clear();
@@ -120,7 +125,8 @@ function getMockResponse(method: string, url: string, data?: any) {
           taskId: 'mock-task-1',
           userId: 'mock-user-id',
           taskName: 'Complete project documentation',
-          taskDescription: 'Finish writing the documentation for the new feature',
+          taskDescription:
+            'Finish writing the documentation for the new feature',
           category: 'work',
           isCompleted: false,
           dueDate: new Date().toISOString(),

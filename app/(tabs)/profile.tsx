@@ -43,6 +43,7 @@ import { profileApi, ProfileApiError } from '@/src/api/profile';
 import { storage } from '@/src/utils/storage';
 import { useToast } from '@/components/ui/Toast';
 import { AppInput } from '@/components/ui/AppInput';
+import { AccountDeletionModal } from '@/components/profile/AccountDeletionModal';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -68,6 +69,9 @@ export default function ProfileScreen() {
   // Notification settings state
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
+  // Account deletion modal state
+  const [showDeletionModal, setShowDeletionModal] = useState(false);
+
   // Initialize form data when profile loads
   useEffect(() => {
     if (profile) {
@@ -92,29 +96,37 @@ export default function ProfileScreen() {
   };
 
   const handleSave = async () => {
-    if (!editFirstName.trim()) {
-      showAlert('Error', 'Please enter your first name');
+    // Prepare the update data
+    const updateData = {
+      firstName: editFirstName.trim(),
+      lastName: editLastName.trim(),
+      username: editUsername.trim(),
+    };
+
+    // Validate using the API validation function
+    const validation = profileApi.validateProfile(updateData);
+    if (!validation.isValid) {
+      const firstError = Object.values(validation.errors)[0];
+      showAlert('Validation Error', firstError);
       return;
     }
-    if (!editLastName.trim()) {
-      showAlert('Error', 'Please enter your last name');
-      return;
-    }
-    if (!editUsername.trim()) {
-      showAlert('Error', 'Please enter a username');
-      return;
-    }
+
     try {
-      await updateProfile({
-        firstName: editFirstName.trim(),
-        lastName: editLastName.trim(),
-        username: editUsername.trim(),
-      });
+      await updateProfile(updateData);
       setIsEditing(false);
       showAlert('Success', 'Profile updated successfully');
     } catch (error) {
       console.error('Error updating profile:', error);
-      showAlert('Error', 'Failed to update profile');
+      // Check if there are specific validation errors to show
+      if (Object.keys(validationErrors).length > 0) {
+        const errorMessage =
+          validationErrors.general || Object.values(validationErrors)[0];
+        showAlert('Validation Error', errorMessage);
+      } else if (error instanceof Error) {
+        showAlert('Error', error.message);
+      } else {
+        showAlert('Error', 'Failed to update profile');
+      }
     }
   };
 
@@ -280,23 +292,7 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
-    showAlert(
-      'Delete Account',
-      'This action cannot be undone. All your data will be permanently deleted.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            showAlert(
-              'Feature Coming Soon',
-              'Account deletion will be available in a future update.'
-            );
-          },
-        },
-      ]
-    );
+    setShowDeletionModal(true);
   };
 
   const handleExportData = () => {
@@ -847,6 +843,11 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <AccountDeletionModal
+        visible={showDeletionModal}
+        onClose={() => setShowDeletionModal(false)}
+      />
     </SafeAreaView>
   );
 }

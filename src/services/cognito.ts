@@ -27,13 +27,13 @@ class CognitoService {
   private config: CognitoConfig;
   private isDevMode: boolean;
   constructor() {
-    this.isDevMode =
-      process.env.EXPO_PUBLIC_DEV_MODE === 'true';
+    this.isDevMode = process.env.EXPO_PUBLIC_DEV_MODE === 'true';
 
     this.config = {
       region: process.env.EXPO_PUBLIC_AWS_REGION || 'us-east-1',
       userPoolId: process.env.EXPO_PUBLIC_USER_POOL_ID || 'us-east-1_O2rQF4dnw',
-      clientId: process.env.EXPO_PUBLIC_CLIENT_ID || '5h8ivvlrv2odgou8ultdbims5j',
+      clientId:
+        process.env.EXPO_PUBLIC_CLIENT_ID || '5h8ivvlrv2odgou8ultdbims5j',
     };
 
     // Initialize AWS for all platforms except when in dev mode
@@ -81,9 +81,11 @@ class CognitoService {
     }
   }
 
-  async confirmSignUp(email: string, confirmationCode: string): Promise<void> {
-  }
-  async confirmSignUp(email: string, confirmationCode: string): Promise<{ tokens: AuthTokens; user: UserAttributes }> {
+  async confirmSignUp(
+    email: string,
+    confirmationCode: string,
+    password: string
+  ): Promise<{ tokens: AuthTokens; user: UserAttributes }> {
     if (this.isDevMode) {
       // Mock response for development
       const mockTokens: AuthTokens = {
@@ -114,8 +116,8 @@ class CognitoService {
         params
       ).promise();
 
-      // After successful confirmation, sign the user in automatically
-      return await this.signIn(email, ''); // We'll need to handle this differently
+      // After successful confirmation, sign the user in automatically with the provided password
+      return await this.signIn(email, password);
     } catch (error: any) {
       throw new Error(error.message || 'Confirmation failed');
     }
@@ -123,7 +125,7 @@ class CognitoService {
   async signIn(
     email: string,
     password: string
-  ): Promise<{ tokens: AuthTokens; user: UserAttributes }> {    
+  ): Promise<{ tokens: AuthTokens; user: UserAttributes }> {
     if (this.isDevMode) {
       // Mock response for development
       console.log('DEV MODE: Using mock authentication');
@@ -136,7 +138,7 @@ class CognitoService {
       };
 
       const mockUser: UserAttributes = {
-        userId: 'mock-user-id', 
+        userId: 'mock-user-id',
         userName: email.split('@')[0],
         email,
       };
@@ -331,11 +333,11 @@ class CognitoService {
     if (this.isDevMode) {
       // In dev mode, generate new mock tokens with a new timestamp
       const existingTokens = await storage.getItem<AuthTokens>('authTokens');
-      
+
       if (!existingTokens) {
         return null;
       }
-      
+
       const refreshedTokens: AuthTokens = {
         AccessToken: `mock-access-token-${Date.now()}`,
         IdToken: `mock-id-token-${Date.now()}`,
@@ -343,7 +345,7 @@ class CognitoService {
         TokenType: 'Bearer',
         ExpiresIn: 3600,
       };
-      
+
       // Store the new tokens
       await storage.setItem('authTokens', refreshedTokens);
       return refreshedTokens;
@@ -364,7 +366,9 @@ class CognitoService {
       };
 
       this.ensureServiceInitialized();
-      const result = await this.cognitoIdentityServiceProvider!.initiateAuth(params).promise();
+      const result = await this.cognitoIdentityServiceProvider!.initiateAuth(
+        params
+      ).promise();
 
       if (result.AuthenticationResult) {
         const newTokens: AuthTokens = {
