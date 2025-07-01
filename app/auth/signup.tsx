@@ -118,7 +118,7 @@ export default function SignupScreen() {
           {
             text: 'Continue',
             onPress: () => {
-              // The ProfileGuard will handle profile creation and routing
+              // Route to main app, which will handle onboarding flow
               router.replace('/');
             },
           },

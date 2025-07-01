@@ -9,6 +9,7 @@ import {
 } from 'lucide-react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/context/ThemeContext';
+import { ProfileGuard } from '@/src/components/ProfileGuard';
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -36,62 +37,66 @@ export default function TabLayout() {
 
   return (
     <SafeAreaProvider>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarStyle: {
-            backgroundColor: theme.colors.card,
-            borderTopWidth: 1,
-            borderTopColor: theme.colors.border,
-            paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-            paddingTop: 8,
-            height: Platform.OS === 'ios' ? 90 : 80,
-            display: keyboardVisible ? 'none' : 'flex',
-          },
-          tabBarLabelStyle: {
-            fontFamily: 'Inter-Medium',
-            fontSize: 12,
-            marginTop: 4,
-          },
-          tabBarActiveTintColor: theme.colors.ctaPrimary,
-          tabBarInactiveTintColor: theme.colors.tabIconDefault,
-        }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Today',
-            tabBarIcon: ({ size, color }) => (
-              <CheckSquare size={size} color={color} />
-            ),
+      <ProfileGuard>
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            tabBarStyle: {
+              backgroundColor: theme.colors.card,
+              borderTopWidth: 1,
+              borderTopColor: theme.colors.border,
+              paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+              paddingTop: 8,
+              height: Platform.OS === 'ios' ? 90 : 80,
+              display: keyboardVisible ? 'none' : 'flex',
+            },
+            tabBarLabelStyle: {
+              fontFamily: 'Inter-Medium',
+              fontSize: 12,
+              marginTop: 4,
+            },
+            tabBarActiveTintColor: theme.colors.ctaPrimary,
+            tabBarInactiveTintColor: theme.colors.tabIconDefault,
           }}
-        />
-        <Tabs.Screen
-          name="zik"
-          options={{
-            title: 'Zik',
-            tabBarIcon: ({ size, color }) => (
-              <Sparkles size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="quests"
-          options={{
-            title: 'Goals', // Changed from 'Quests'
-            tabBarIcon: ({ size, color }) => (
-              <Mountain size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: 'Profile',
-            tabBarIcon: ({ size, color }) => <User size={size} color={color} />,
-          }}
-        />
-      </Tabs>
+        >
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: 'Today',
+              tabBarIcon: ({ size, color }) => (
+                <CheckSquare size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="zik"
+            options={{
+              title: 'Zik',
+              tabBarIcon: ({ size, color }) => (
+                <Sparkles size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="quests"
+            options={{
+              title: 'Goals', // Changed from 'Quests'
+              tabBarIcon: ({ size, color }) => (
+                <Mountain size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="profile"
+            options={{
+              title: 'Profile',
+              tabBarIcon: ({ size, color }) => (
+                <User size={size} color={color} />
+              ),
+            }}
+          />
+        </Tabs>
+      </ProfileGuard>
     </SafeAreaProvider>
   );
 }

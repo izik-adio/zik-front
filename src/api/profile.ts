@@ -185,12 +185,30 @@ export const profileApi = {
    */
   async deleteAccount(): Promise<void> {
     try {
+      console.log('Calling delete account API...');
       const response = await api.delete('/profile');
+      console.log('Delete account API response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+      });
 
-      if (!response.data?.message) {
-        throw new ProfileApiError(400, 'Failed to delete account');
+      // Check if the response indicates success
+      // Accept any 2xx status code as success, regardless of response body
+      if (response.status >= 200 && response.status < 300) {
+        console.log('Account successfully deleted');
+        return;
       }
+
+      // If we get here, it means non-2xx status which should have been caught by axios
+      throw new ProfileApiError(response.status, 'Failed to delete account');
     } catch (error) {
+      console.error('Delete account API error:', error);
+      // Only call handleApiError if it's actually an error response from the server
+      // Don't throw error for successful deletions
+      if (error instanceof ProfileApiError) {
+        throw error;
+      }
       handleApiError(error);
     }
   },

@@ -9,6 +9,7 @@ import React, {
 import { profileApi, ProfileApiError } from '../api/profile';
 import { UserProfile } from '../types/api';
 import { storage } from '../utils/storage';
+import { useAuth } from './AuthContext';
 
 // Define the context type
 interface ProfileContextType {
@@ -44,6 +45,7 @@ interface ProfileProviderProps {
 export const ProfileProvider: React.FC<ProfileProviderProps> = ({
   children,
 }) => {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -263,6 +265,14 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({
       setLoading(false);
     }
   }, []);
+
+  // Auto-refresh profile when user becomes authenticated
+  useEffect(() => {
+    if (isAuthenticated && !authLoading && !profile && !loading) {
+      console.log('User authenticated, loading profile...');
+      refreshProfile();
+    }
+  }, [isAuthenticated, authLoading, profile, loading, refreshProfile]);
 
   // Context value
   const value: ProfileContextType = {

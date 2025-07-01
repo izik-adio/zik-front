@@ -28,7 +28,7 @@ export function AccountDeletionModal({
   onClose,
 }: AccountDeletionModalProps) {
   const { theme } = useTheme();
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
 
   const [currentStep, setCurrentStep] = useState<DeletionStep>('warning');
@@ -71,12 +71,20 @@ export function AccountDeletionModal({
 
     try {
       // First verify the password by attempting login
+      // We'll use cognito service directly to avoid updating auth state
       console.log('Verifying password...');
-      await login(user.email, password);
+      const { cognitoService } = await import('@/src/services/cognito');
+      await cognitoService.signIn(user.email, password);
 
       // If login succeeds, proceed with account deletion
       console.log('Password verified, deleting account...');
-      await profileApi.deleteAccount();
+      try {
+        await profileApi.deleteAccount();
+        console.log('Account deletion API call completed successfully');
+      } catch (deleteError: any) {
+        console.error('Account deletion API error:', deleteError);
+        throw deleteError;
+      }
 
       // Clear all local data
       await storage.clear();
@@ -92,6 +100,7 @@ export function AccountDeletionModal({
         router.replace('/auth/login');
       }, 3000);
     } catch (error: any) {
+      console.error('Account deletion error:', error);
       setIsLoading(false);
       setCurrentStep('password');
 
@@ -100,13 +109,26 @@ export function AccountDeletionModal({
         error.message?.includes('password') ||
         error.message?.includes('credentials') ||
         error.message?.includes('Incorrect') ||
+        error.message?.includes('Sign in failed') ||
+        error.message?.includes('Authentication failed') ||
         error.name === 'NotAuthorizedException'
       ) {
         setError('Unable to delete account: Incorrect password');
-      } else {
-        setError(
-          error.message || 'Failed to delete account. Please try again.'
+      } else if (
+        error.name === 'ProfileApiError' &&
+        error.message?.includes('Failed to delete account')
+      ) {
+        // This specific error from the API might be a false positive
+        // Log it but show a more user-friendly message
+        console.warn(
+          'API returned delete failure but deletion may have succeeded'
         );
+        setError(
+          'Account deletion completed but verification failed. Please try logging in to confirm.'
+        );
+      } else {
+        // For any other errors, show a generic message
+        setError('An unexpected error occurred. Please try again.');
       }
     }
   };
