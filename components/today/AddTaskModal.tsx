@@ -13,7 +13,18 @@ import {
   KeyboardAvoidingView,
   Dimensions,
 } from 'react-native';
-import { X, Sparkles, Edit3, Calendar, Clock, Flag, Tag, Target, ChevronDown, ChevronUp } from 'lucide-react-native';
+import {
+  X,
+  Sparkles,
+  Edit3,
+  Calendar,
+  Clock,
+  Flag,
+  Tag,
+  Target,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react-native';
 import { useTheme } from '@/src/context/ThemeContext';
 import { useChatStore } from '@/src/store/chatStore';
 import { CreateDailyQuestData, CreateEpicQuestData } from '@/src/api/quests';
@@ -53,7 +64,7 @@ export function AddTaskModal({
   visible,
   onClose,
   onAdd,
-  defaultEpicMode = false
+  defaultEpicMode = false,
 }: AddTaskModalProps) {
   const { theme } = useTheme();
   const { setPrefilledInput } = useChatStore();
@@ -85,7 +96,9 @@ export function AddTaskModal({
       setDueDate(todayStr);
 
       // Default target date for epic quests (3 months from now)
-      const threeMonthsLater = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
+      const threeMonthsLater = new Date(
+        today.getTime() + 90 * 24 * 60 * 60 * 1000
+      );
       setTargetDate(threeMonthsLater.toISOString().split('T')[0]);
 
       // Set epic mode based on defaultEpicMode prop
@@ -146,28 +159,38 @@ export function AddTaskModal({
     }
 
     // Create quest data based on type
-    const questData = isEpic ? {
-      title: title.trim(),
-      description: description.trim(),
-      targetDate: targetDate,
-      category: category,
-      priority,
-      type: 'epic' as const,
-    } : {
-      title: title.trim(),
-      description: description.trim(),
-      dueDate: dueDate,
-      priority,
-      category: category || undefined,
-      type: 'daily' as const,
-    };
+    const questData = isEpic
+      ? {
+          title: title.trim(),
+          description: description.trim(),
+          targetDate: targetDate,
+          category: category,
+          priority,
+          type: 'epic' as const,
+        }
+      : {
+          title: title.trim(),
+          description: description.trim(),
+          dueDate: dueDate,
+          priority,
+          category: category || undefined,
+          type: 'daily' as const,
+        };
 
     onAdd(questData);
     handleClose();
   };
 
   const renderCompactHeader = () => (
-    <View style={[styles.compactHeader, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+    <View
+      style={[
+        styles.compactHeader,
+        {
+          backgroundColor: theme.colors.card,
+          borderBottomColor: theme.colors.border,
+        },
+      ]}
+    >
       {/* Top row with title and close */}
       <View style={styles.headerTop}>
         <View style={styles.headerLeft}>
@@ -175,16 +198,22 @@ export function AddTaskModal({
             Create Quest
           </Text>
           <TouchableOpacity
-            style={[styles.modeToggle, { backgroundColor: theme.colors.background }]}
+            style={[
+              styles.modeToggle,
+              { backgroundColor: theme.colors.background },
+            ]}
             onPress={() => setShowModeSelector(!showModeSelector)}
           >
-            <Text style={[styles.modeToggleText, { color: theme.colors.primary }]}>
+            <Text
+              style={[styles.modeToggleText, { color: theme.colors.primary }]}
+            >
               {creationMode === 'manual' ? 'Manual' : 'AI'}
             </Text>
-            {showModeSelector ?
-              <ChevronUp size={16} color={theme.colors.primary} /> :
+            {showModeSelector ? (
+              <ChevronUp size={16} color={theme.colors.primary} />
+            ) : (
               <ChevronDown size={16} color={theme.colors.primary} />
-            }
+            )}
           </TouchableOpacity>
         </View>
         <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
@@ -197,7 +226,14 @@ export function AddTaskModal({
         <View style={styles.epicToggleCompact}>
           <Text style={[styles.epicLabel, { color: theme.colors.text }]}>
             Epic Quest
-            {defaultEpicMode && <Text style={[styles.lockIndicator, { color: theme.colors.primary }]}> 🔒</Text>}
+            {defaultEpicMode && (
+              <Text
+                style={[styles.lockIndicator, { color: theme.colors.primary }]}
+              >
+                {' '}
+                🔒
+              </Text>
+            )}
           </Text>
           <Switch
             value={isEpic}
@@ -211,30 +247,52 @@ export function AddTaskModal({
             style={styles.compactSwitch}
           />
         </View>
-        <Text style={[styles.epicDescription, { color: theme.colors.subtitle }]}>
+        <Text
+          style={[styles.epicDescription, { color: theme.colors.subtitle }]}
+        >
           {isEpic ? 'Long-term goal' : 'Daily task'}
         </Text>
       </View>
 
       {/* Expandable mode selector */}
       {showModeSelector && (
-        <View style={[styles.expandedModeSelector, { backgroundColor: theme.colors.background }]}>
+        <View
+          style={[
+            styles.expandedModeSelector,
+            { backgroundColor: theme.colors.background },
+          ]}
+        >
           <TouchableOpacity
             style={[
               styles.modeOptionCompact,
-              creationMode === 'manual' && [styles.modeOptionActive, { backgroundColor: theme.colors.primary }],
-              { borderColor: theme.colors.border }
+              creationMode === 'manual' && [
+                styles.modeOptionActive,
+                { backgroundColor: theme.colors.primary },
+              ],
+              { borderColor: theme.colors.border },
             ]}
             onPress={() => {
               setCreationMode('manual');
               setShowModeSelector(false);
             }}
           >
-            <Edit3 size={16} color={creationMode === 'manual' ? '#ffffff' : theme.colors.subtitle} />
-            <Text style={[
-              styles.modeOptionText,
-              { color: creationMode === 'manual' ? '#ffffff' : theme.colors.subtitle }
-            ]}>
+            <Edit3
+              size={16}
+              color={
+                creationMode === 'manual' ? '#ffffff' : theme.colors.subtitle
+              }
+            />
+            <Text
+              style={[
+                styles.modeOptionText,
+                {
+                  color:
+                    creationMode === 'manual'
+                      ? '#ffffff'
+                      : theme.colors.subtitle,
+                },
+              ]}
+            >
               Manual Entry
             </Text>
           </TouchableOpacity>
@@ -242,19 +300,30 @@ export function AddTaskModal({
           <TouchableOpacity
             style={[
               styles.modeOptionCompact,
-              creationMode === 'ai' && [styles.modeOptionActive, { backgroundColor: theme.colors.primary }],
-              { borderColor: theme.colors.border }
+              creationMode === 'ai' && [
+                styles.modeOptionActive,
+                { backgroundColor: theme.colors.primary },
+              ],
+              { borderColor: theme.colors.border },
             ]}
             onPress={() => {
               setCreationMode('ai');
               setShowModeSelector(false);
             }}
           >
-            <Sparkles size={16} color={creationMode === 'ai' ? '#ffffff' : theme.colors.subtitle} />
-            <Text style={[
-              styles.modeOptionText,
-              { color: creationMode === 'ai' ? '#ffffff' : theme.colors.subtitle }
-            ]}>
+            <Sparkles
+              size={16}
+              color={creationMode === 'ai' ? '#ffffff' : theme.colors.subtitle}
+            />
+            <Text
+              style={[
+                styles.modeOptionText,
+                {
+                  color:
+                    creationMode === 'ai' ? '#ffffff' : theme.colors.subtitle,
+                },
+              ]}
+            >
               AI Generate
             </Text>
           </TouchableOpacity>
@@ -265,7 +334,15 @@ export function AddTaskModal({
 
   const renderAiMode = () => (
     <View style={styles.content}>
-      <View style={[styles.aiCardCompact, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+      <View
+        style={[
+          styles.aiCardCompact,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+          },
+        ]}
+      >
         <View style={styles.aiHeaderCompact}>
           <Sparkles size={20} color={theme.colors.primary} />
           <Text style={[styles.aiTitleCompact, { color: theme.colors.text }]}>
@@ -278,13 +355,17 @@ export function AddTaskModal({
             styles.aiInputCompact,
             {
               backgroundColor: theme.colors.inputBackground,
-              borderColor: focusedField === 'aiPrompt' ? theme.colors.primary : theme.colors.inputBorder,
+              borderColor:
+                focusedField === 'aiPrompt'
+                  ? theme.colors.primary
+                  : theme.colors.inputBorder,
               color: theme.colors.text,
             },
           ]}
-          placeholder={isEpic
-            ? 'What goal do you want to achieve?'
-            : 'What task do you need to complete?'
+          placeholder={
+            isEpic
+              ? 'What goal do you want to achieve?'
+              : 'What task do you need to complete?'
           }
           placeholderTextColor={theme.colors.subtitle}
           value={aiPrompt}
@@ -301,7 +382,7 @@ export function AddTaskModal({
           style={[
             styles.aiGenerateButtonCompact,
             { backgroundColor: theme.colors.primary },
-            !aiPrompt.trim() && { backgroundColor: theme.colors.border }
+            !aiPrompt.trim() && { backgroundColor: theme.colors.border },
           ]}
           onPress={handleAiGenerate}
           disabled={!aiPrompt.trim()}
@@ -313,26 +394,57 @@ export function AddTaskModal({
         </TouchableOpacity>
 
         <Text style={[styles.aiNoteCompact, { color: theme.colors.subtitle }]}>
-          💡 Opens Zik chat with: "Help me create a {isEpic ? 'goal' : 'task'}: [your input]"
+          💡 Opens Zik chat with: "Help me create a {isEpic ? 'goal' : 'task'}:
+          [your input]"
         </Text>
       </View>
 
       {/* Quick examples */}
-      <View style={[styles.examplesCardCompact, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <Text style={[styles.examplesTitleCompact, { color: theme.colors.text }]}>
+      <View
+        style={[
+          styles.examplesCardCompact,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+          },
+        ]}
+      >
+        <Text
+          style={[styles.examplesTitleCompact, { color: theme.colors.text }]}
+        >
           Quick examples:
         </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.examplesScrollCompact}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.examplesScrollCompact}
+        >
           {(isEpic
             ? ['Learn Spanish', 'Get fit', 'Build an app', 'Start a business']
-            : ['Organize office', 'Plan meals', 'Review proposal', 'Exercise 30min']
+            : [
+                'Organize office',
+                'Plan meals',
+                'Review proposal',
+                'Exercise 30min',
+              ]
           ).map((example, index) => (
             <TouchableOpacity
               key={`example-${example}-${index}`}
-              style={[styles.exampleChipCompact, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}
+              style={[
+                styles.exampleChipCompact,
+                {
+                  backgroundColor: theme.colors.background,
+                  borderColor: theme.colors.border,
+                },
+              ]}
               onPress={() => setAiPrompt(example)}
             >
-              <Text style={[styles.exampleChipTextCompact, { color: theme.colors.subtitle }]}>
+              <Text
+                style={[
+                  styles.exampleChipTextCompact,
+                  { color: theme.colors.subtitle },
+                ]}
+              >
                 {example}
               </Text>
             </TouchableOpacity>
@@ -343,9 +455,21 @@ export function AddTaskModal({
   );
 
   const renderManualMode = () => (
-    <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.content}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* Primary Fields */}
-      <View style={[styles.fieldCardCompact, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+      <View
+        style={[
+          styles.fieldCardCompact,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+          },
+        ]}
+      >
         <View style={styles.fieldCompact}>
           <Text style={[styles.labelCompact, { color: theme.colors.text }]}>
             <Target size={14} color={theme.colors.primary} /> Title *
@@ -355,13 +479,17 @@ export function AddTaskModal({
               styles.inputCompact,
               {
                 backgroundColor: theme.colors.inputBackground,
-                borderColor: focusedField === 'title' ? theme.colors.primary : theme.colors.inputBorder,
+                borderColor:
+                  focusedField === 'title'
+                    ? theme.colors.primary
+                    : theme.colors.inputBorder,
                 color: theme.colors.text,
               },
             ]}
-            placeholder={isEpic
-              ? 'e.g., Learn to play guitar, Get in shape'
-              : 'What do you want to accomplish?'
+            placeholder={
+              isEpic
+                ? 'e.g., Learn to play guitar, Get in shape'
+                : 'What do you want to accomplish?'
             }
             placeholderTextColor={theme.colors.subtitle}
             value={title}
@@ -382,13 +510,17 @@ export function AddTaskModal({
               styles.textAreaCompact,
               {
                 backgroundColor: theme.colors.inputBackground,
-                borderColor: focusedField === 'description' ? theme.colors.primary : theme.colors.inputBorder,
+                borderColor:
+                  focusedField === 'description'
+                    ? theme.colors.primary
+                    : theme.colors.inputBorder,
                 color: theme.colors.text,
               },
             ]}
-            placeholder={isEpic
-              ? 'Describe your long-term goal and what success looks like'
-              : 'Describe what you need to do'
+            placeholder={
+              isEpic
+                ? 'Describe your long-term goal and what success looks like'
+                : 'Describe what you need to do'
             }
             placeholderTextColor={theme.colors.subtitle}
             value={description}
@@ -416,16 +548,28 @@ export function AddTaskModal({
                     { borderColor: theme.colors.border },
                     priority === option.value && {
                       backgroundColor: option.color + '20',
-                      borderColor: option.color
-                    }
+                      borderColor: option.color,
+                    },
                   ]}
                   onPress={() => setPriority(option.value)}
                 >
-                  <View style={[styles.priorityDotCompact, { backgroundColor: option.color }]} />
-                  <Text style={[
-                    styles.priorityTextCompact,
-                    { color: priority === option.value ? theme.colors.text : theme.colors.subtitle }
-                  ]}>
+                  <View
+                    style={[
+                      styles.priorityDotCompact,
+                      { backgroundColor: option.color },
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.priorityTextCompact,
+                      {
+                        color:
+                          priority === option.value
+                            ? theme.colors.text
+                            : theme.colors.subtitle,
+                      },
+                    ]}
+                  >
                     {option.label.charAt(0)}
                   </Text>
                 </TouchableOpacity>
@@ -435,14 +579,18 @@ export function AddTaskModal({
 
           <View style={[styles.fieldCompact, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.labelCompact, { color: theme.colors.text }]}>
-              <Calendar size={14} color={theme.colors.primary} /> {isEpic ? 'Target' : 'Due'} *
+              <Calendar size={14} color={theme.colors.primary} />{' '}
+              {isEpic ? 'Target' : 'Due'} *
             </Text>
             <TextInput
               style={[
                 styles.inputCompact,
                 {
                   backgroundColor: theme.colors.inputBackground,
-                  borderColor: focusedField === 'date' ? theme.colors.primary : theme.colors.inputBorder,
+                  borderColor:
+                    focusedField === 'date'
+                      ? theme.colors.primary
+                      : theme.colors.inputBorder,
                   color: theme.colors.text,
                 },
               ]}
@@ -459,20 +607,36 @@ export function AddTaskModal({
 
       {/* Optional Fields */}
       <TouchableOpacity
-        style={[styles.advancedToggle, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+        style={[
+          styles.advancedToggle,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+          },
+        ]}
         onPress={() => setShowAdvanced(!showAdvanced)}
       >
         <Text style={[styles.advancedToggleText, { color: theme.colors.text }]}>
-          <Tag size={14} color={theme.colors.primary} /> Category {isEpic && '*'} {!isEpic && '(optional)'}
+          <Tag size={14} color={theme.colors.primary} /> Category{' '}
+          {isEpic && '*'} {!isEpic && '(optional)'}
         </Text>
-        {showAdvanced ?
-          <ChevronUp size={16} color={theme.colors.subtitle} /> :
+        {showAdvanced ? (
+          <ChevronUp size={16} color={theme.colors.subtitle} />
+        ) : (
           <ChevronDown size={16} color={theme.colors.subtitle} />
-        }
+        )}
       </TouchableOpacity>
 
       {showAdvanced && (
-        <View style={[styles.fieldCardCompact, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View
+          style={[
+            styles.fieldCardCompact,
+            {
+              backgroundColor: theme.colors.card,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
           <View style={styles.fieldCompact}>
             <TouchableOpacity
               style={[
@@ -480,23 +644,40 @@ export function AddTaskModal({
                 styles.categorySelectorCompact,
                 {
                   backgroundColor: theme.colors.inputBackground,
-                  borderColor: showCategoryPicker ? theme.colors.primary : theme.colors.inputBorder,
+                  borderColor: showCategoryPicker
+                    ? theme.colors.primary
+                    : theme.colors.inputBorder,
                 },
               ]}
               onPress={() => setShowCategoryPicker(!showCategoryPicker)}
             >
-              <Text style={[
-                styles.categoryTextCompact,
-                { color: category ? theme.colors.text : theme.colors.subtitle }
-              ]}>
+              <Text
+                style={[
+                  styles.categoryTextCompact,
+                  {
+                    color: category ? theme.colors.text : theme.colors.subtitle,
+                  },
+                ]}
+              >
                 {category || 'Select a category'}
               </Text>
               <ChevronDown size={16} color={theme.colors.subtitle} />
             </TouchableOpacity>
 
             {showCategoryPicker && (
-              <View style={[styles.categoryPickerCompact, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                <ScrollView style={styles.categoryScrollCompact} nestedScrollEnabled={true}>
+              <View
+                style={[
+                  styles.categoryPickerCompact,
+                  {
+                    backgroundColor: theme.colors.card,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+              >
+                <ScrollView
+                  style={styles.categoryScrollCompact}
+                  nestedScrollEnabled={true}
+                >
                   {CATEGORY_OPTIONS.map((option) => (
                     <TouchableOpacity
                       key={option}
@@ -506,7 +687,12 @@ export function AddTaskModal({
                         setShowCategoryPicker(false);
                       }}
                     >
-                      <Text style={[styles.categoryOptionTextCompact, { color: theme.colors.text }]}>
+                      <Text
+                        style={[
+                          styles.categoryOptionTextCompact,
+                          { color: theme.colors.text },
+                        ]}
+                      >
                         {option}
                       </Text>
                     </TouchableOpacity>
@@ -543,12 +729,25 @@ export function AddTaskModal({
           {creationMode === 'ai' ? renderAiMode() : renderManualMode()}
 
           {/* Footer */}
-          <View style={[styles.footer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
+          <View
+            style={[
+              styles.footer,
+              {
+                backgroundColor: theme.colors.card,
+                borderTopColor: theme.colors.border,
+              },
+            ]}
+          >
             <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+              style={[
+                styles.cancelButton,
+                { borderColor: theme.colors.border },
+              ]}
               onPress={handleClose}
             >
-              <Text style={[styles.cancelButtonText, { color: theme.colors.text }]}>
+              <Text
+                style={[styles.cancelButtonText, { color: theme.colors.text }]}
+              >
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -558,19 +757,29 @@ export function AddTaskModal({
                 style={[
                   styles.createButton,
                   { backgroundColor: theme.colors.primary },
-                  (!title.trim() || !description.trim() || (isEpic && !category.trim())) && {
-                    backgroundColor: theme.colors.border
-                  }
+                  (!title.trim() ||
+                    !description.trim() ||
+                    (isEpic && !category.trim())) && {
+                    backgroundColor: theme.colors.border,
+                  },
                 ]}
                 onPress={handleManualCreate}
-                disabled={!title.trim() || !description.trim() || (isEpic && !category.trim())}
+                disabled={
+                  !title.trim() ||
+                  !description.trim() ||
+                  (isEpic && !category.trim())
+                }
               >
-                <Text style={[
-                  styles.createButtonText,
-                  (!title.trim() || !description.trim() || (isEpic && !category.trim())) && {
-                    color: theme.colors.subtitle
-                  }
-                ]}>
+                <Text
+                  style={[
+                    styles.createButtonText,
+                    (!title.trim() ||
+                      !description.trim() ||
+                      (isEpic && !category.trim())) && {
+                      color: theme.colors.subtitle,
+                    },
+                  ]}
+                >
                   Create {isEpic ? 'Epic Quest' : 'Daily Quest'}
                 </Text>
               </TouchableOpacity>

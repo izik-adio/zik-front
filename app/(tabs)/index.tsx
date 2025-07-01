@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Plus, Target } from 'lucide-react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
 import { useProfile } from '../../src/context/ProfileContext';
@@ -25,6 +26,7 @@ import {
   useQuestStore,
   useQuestError,
   useRefreshAllPages,
+  useFetchDailyQuests,
 } from '../../src/store/questStore';
 import { DailyQuest } from '../../src/api/quests';
 import { AddTaskModal } from '../../components/today/AddTaskModal';
@@ -57,6 +59,7 @@ export default function TodayScreen() {
 
   // Get individual actions from store to prevent re-renders
   const refreshTodayData = useRefreshTodayData();
+  const fetchDailyQuests = useFetchDailyQuests();
   const updateDailyQuest = useUpdateDailyQuest();
   const createDailyQuest = useCreateDailyQuest();
   const createEpicQuest = useCreateEpicQuest();
@@ -95,6 +98,26 @@ export default function TodayScreen() {
     }
   }, [questError]);
 
+  // Refresh tasks when screen comes into focus (e.g., after coming back from AI chat)
+  useFocusEffect(
+    useCallback(() => {
+      const refreshTasks = async () => {
+        try {
+          // Get today's date and refresh just today's tasks
+          const today = new Date().toISOString().split('T')[0];
+          await fetchDailyQuests(today, true); // Force refresh
+
+          // Also check task access rules to update any progressive logic
+          questStore.checkTaskAccessRules();
+        } catch (error) {
+          console.warn('Failed to refresh tasks on focus:', error);
+        }
+      };
+
+      refreshTasks();
+    }, [fetchDailyQuests])
+  );
+
   // Calculate completion percentage for today's tasks
   const completionPercentage = useMemo(() => {
     if (!todayTasks || todayTasks.length === 0) return 0;
@@ -114,7 +137,7 @@ export default function TodayScreen() {
       todayTasksLength: todayTasks?.length || 0,
       availableTasksData: availableTasksData,
       allEpicQuests: allEpicQuests,
-      allEpicQuestsLength: allEpicQuests?.length || 0
+      allEpicQuestsLength: allEpicQuests?.length || 0,
     });
 
     return {
@@ -135,6 +158,9 @@ export default function TodayScreen() {
 
   const handleToggleTask = async (taskId: string) => {
     try {
+      // Set loading state to show immediate feedback
+      setIsLocalRefreshing(true);
+
       // Find the task and toggle its status
       const taskToUpdate = activeMilestoneTasks.find(
         (task) => task.questId === taskId
@@ -147,6 +173,10 @@ export default function TodayScreen() {
       await updateDailyQuest(taskId, { status: newStatus });
       questStore.checkTaskAccessRules();
 
+      // Refresh today's tasks to ensure the UI reflects the change
+      const today = new Date().toISOString().split('T')[0];
+      await fetchDailyQuests(today, true); // Force refresh
+
       // Note: Removed milestone completion checking logic as it's not implemented
       // This simplifies the task toggling and prevents unnecessary complexity
     } catch (error) {
@@ -154,6 +184,9 @@ export default function TodayScreen() {
         'Error',
         error instanceof Error ? error.message : 'Failed to complete task'
       );
+    } finally {
+      // Clear loading state
+      setIsLocalRefreshing(false);
     }
   };
 
@@ -167,7 +200,6 @@ export default function TodayScreen() {
       );
     }
   };
-
   const handleAddTask = async (
     questData: CreateDailyQuestData | CreateEpicQuestData
   ) => {
@@ -192,8 +224,9 @@ export default function TodayScreen() {
         'Error',
         error instanceof Error
           ? error.message
-          : `Failed to ${questData.type === 'epic' ? 'create Epic Quest' : 'add task'
-          }`
+          : `Failed to ${
+              questData.type === 'epic' ? 'create Epic Quest' : 'add task'
+            }`
       );
     }
   };

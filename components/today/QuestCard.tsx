@@ -1,8 +1,10 @@
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
 import Animated, {
   useSharedValue,
   withSpring,
   useAnimatedStyle,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import {
   CheckCircle,
@@ -38,11 +40,21 @@ export function QuestCard({
     transform: [{ scale: scale.value }],
   }));
 
+  // Cleanup animations on unmount
+  useEffect(() => {
+    return () => {
+      cancelAnimation(scale);
+    };
+  }, [scale]);
+
   const handlePress = () => {
+    // Call onToggle immediately instead of in animation callback
+    onToggle();
+
+    // Run animation without callback to avoid DOM issues
     scale.value = withSpring(0.95, {}, () => {
       scale.value = withSpring(1);
     });
-    onToggle();
   };
 
   const handleDelete = () => {

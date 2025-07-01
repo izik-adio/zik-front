@@ -1,8 +1,10 @@
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import { useTheme } from '@/src/context/ThemeContext';
 
@@ -23,6 +25,13 @@ export function SuggestionChip({ text, onPress }: SuggestionChipProps) {
       transform: [{ scale: scale.value }],
     };
   });
+
+  // Cleanup animations on unmount
+  useEffect(() => {
+    return () => {
+      cancelAnimation(scale);
+    };
+  }, [scale]);
 
   const handlePressIn = () => {
     scale.value = withSpring(0.95);

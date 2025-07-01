@@ -46,7 +46,8 @@ export interface EpicQuest {
 
 // Legacy interfaces for backward compatibility
 /** @deprecated Use DailyQuest instead */
-export interface Task extends Omit<DailyQuest, 'questId' | 'title' | 'epicQuestId'> {
+export interface Task
+  extends Omit<DailyQuest, 'questId' | 'title' | 'epicQuestId'> {
   taskId: string;
   taskName: string;
   goalId?: string;
@@ -137,24 +138,27 @@ export type UpdateQuestData = UpdateDailyQuestData | UpdateEpicQuestData;
 
 // Legacy types for backward compatibility
 /** @deprecated Use CreateDailyQuestData instead */
-export interface CreateTaskData extends Omit<CreateDailyQuestData, 'type' | 'epicQuestId'> {
+export interface CreateTaskData
+  extends Omit<CreateDailyQuestData, 'type' | 'epicQuestId'> {
   type: 'task';
   goalId?: string;
 }
 
 /** @deprecated Use CreateEpicQuestData instead */
-export interface CreateGoalData extends Omit<CreateEpicQuestData, 'type' | 'targetDate'> {
+export interface CreateGoalData
+  extends Omit<CreateEpicQuestData, 'type' | 'targetDate'> {
   type: 'goal';
   dueDate: string;
 }
 
 /** @deprecated Use UpdateDailyQuestData instead */
-export interface UpdateTaskData extends Omit<UpdateDailyQuestData, 'epicQuestId'> {
+export interface UpdateTaskData
+  extends Omit<UpdateDailyQuestData, 'epicQuestId'> {
   goalId?: string;
 }
 
 /** @deprecated Use UpdateEpicQuestData instead */
-export interface UpdateGoalData extends UpdateEpicQuestData { }
+export interface UpdateGoalData extends UpdateEpicQuestData {}
 
 /**
  * Helper function to handle authentication errors
@@ -230,27 +234,6 @@ export const dailyQuestsApi = {
       try {
         const response = await api.get(`/tasks`, { params: { date } });
 
-        // Debug logging to understand response structure
-        console.log('Tasks API response:', {
-          status: response.status,
-          dataType: typeof response.data,
-          isArray: Array.isArray(response.data),
-          dataKeys: response.data ? Object.keys(response.data) : 'null',
-          data: response.data
-        });
-
-        // More detailed logging to inspect the actual structure
-        if (response.data && typeof response.data === 'object') {
-          console.log('Detailed tasks response structure:');
-          Object.entries(response.data).forEach(([key, value]) => {
-            console.log(`  ${key}:`, {
-              type: typeof value,
-              isArray: Array.isArray(value),
-              value: Array.isArray(value) ? `Array(${value.length})` : value
-            });
-          });
-        }
-
         // Handle different response structures
         let tasks: Task[];
         if (Array.isArray(response.data)) {
@@ -259,26 +242,29 @@ export const dailyQuestsApi = {
           tasks = response.data.tasks;
         } else if (response.data && Array.isArray(response.data.data)) {
           tasks = response.data.data;
-        } else if (response.data && response.data.data && Array.isArray(response.data.data.tasks)) {
+        } else if (
+          response.data &&
+          response.data.data &&
+          Array.isArray(response.data.data.tasks)
+        ) {
           tasks = response.data.data.tasks;
-        } else if (response.data && response.data.data && Array.isArray(response.data.data.data)) {
+        } else if (
+          response.data &&
+          response.data.data &&
+          Array.isArray(response.data.data.data)
+        ) {
           tasks = response.data.data.data;
         } else {
           // If no tasks found, return empty array
-          console.warn('No tasks found in response. Response structure:', {
-            type: typeof response.data,
-            keys: response.data ? Object.keys(response.data) : null,
-            value: response.data
-          });
           return [];
         }
 
         // Transform legacy response to new format
-        return tasks.map(task => ({
+        return tasks.map((task) => ({
           questId: task.taskId,
           userId: task.userId,
-          title: task.taskName,
-          description: task.description,
+          title: task.taskName || (task as any).title, // Handle both legacy and new format
+          description: task.description || '', // Backend currently doesn't return description field
           dueDate: task.dueDate,
           priority: task.priority,
           status: task.status,
@@ -310,10 +296,15 @@ export const dailyQuestsApi = {
    * @param questData - DailyQuest creation data
    * @returns Promise<DailyQuest>
    */
-  async createDailyQuest(questData: Omit<CreateDailyQuestData, 'type'>): Promise<DailyQuest> {
+  async createDailyQuest(
+    questData: Omit<CreateDailyQuestData, 'type'>
+  ): Promise<DailyQuest> {
     // Validate required fields
     if (!questData.title?.trim()) {
       throw new ApiError(400, 'Title is required');
+    }
+    if (!questData.description?.trim()) {
+      throw new ApiError(400, 'Description is required');
     }
     if (!questData.dueDate) {
       throw new ApiError(400, 'Due date is required');
@@ -326,13 +317,23 @@ export const dailyQuestsApi = {
       try {
         // Transform the data to match backend expectations
         const payload = {
-          taskName: questData.title.trim(),
+          title: questData.title.trim(),
           dueDate: questData.dueDate,
-          description: questData.description || '',
+          description: questData.description?.trim() || '',
           priority: questData.priority || 'medium',
-          goalId: questData.epicQuestId,
-          milestoneId: questData.milestoneId,
+          goalId: questData.epicQuestId || null,
+          milestoneId: questData.milestoneId || null,
         };
+
+        // Remove undefined/null values to avoid backend issues
+        Object.keys(payload).forEach((key) => {
+          if (
+            (payload as any)[key] === undefined ||
+            (payload as any)[key] === null
+          ) {
+            delete (payload as any)[key];
+          }
+        });
 
         const response = await api.post('/tasks', payload);
         const task = response.data as Task;
@@ -340,7 +341,7 @@ export const dailyQuestsApi = {
         return {
           questId: task.taskId,
           userId: task.userId,
-          title: task.taskName,
+          title: task.taskName || (task as any).title, // Handle both legacy and new format
           description: task.description,
           dueDate: task.dueDate,
           priority: task.priority,
@@ -355,8 +356,20 @@ export const dailyQuestsApi = {
           await handleUnauthorized();
         }
 
+        // Enhanced error logging
+        console.error('CreateDailyQuest API Error:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message,
+          url: error.config?.url,
+          method: error.config?.method,
+          payload: error.config?.data,
+        });
+
         const message =
           error.response?.data?.message ||
+          error.response?.data?.error ||
           error.message ||
           'Failed to create daily quest';
         throw new ApiError(
@@ -374,7 +387,10 @@ export const dailyQuestsApi = {
    * @param updateData - Partial update data
    * @returns Promise<DailyQuest>
    */
-  async updateDailyQuest(questId: string, updateData: UpdateDailyQuestData): Promise<DailyQuest> {
+  async updateDailyQuest(
+    questId: string,
+    updateData: UpdateDailyQuestData
+  ): Promise<DailyQuest> {
     if (!questId?.trim()) {
       throw new ApiError(400, 'Quest ID is required');
     }
@@ -479,7 +495,7 @@ export const epicQuestsApi = {
           dataType: typeof response.data,
           isArray: Array.isArray(response.data),
           dataKeys: response.data ? Object.keys(response.data) : 'null',
-          data: response.data
+          data: response.data,
         });
 
         // More detailed logging to inspect the actual structure
@@ -489,7 +505,7 @@ export const epicQuestsApi = {
             console.log(`  ${key}:`, {
               type: typeof value,
               isArray: Array.isArray(value),
-              value: Array.isArray(value) ? `Array(${value.length})` : value
+              value: Array.isArray(value) ? `Array(${value.length})` : value,
             });
           });
         }
@@ -502,22 +518,30 @@ export const epicQuestsApi = {
           goals = response.data.goals;
         } else if (response.data && Array.isArray(response.data.data)) {
           goals = response.data.data;
-        } else if (response.data && response.data.data && Array.isArray(response.data.data.goals)) {
+        } else if (
+          response.data &&
+          response.data.data &&
+          Array.isArray(response.data.data.goals)
+        ) {
           goals = response.data.data.goals;
-        } else if (response.data && response.data.data && Array.isArray(response.data.data.data)) {
+        } else if (
+          response.data &&
+          response.data.data &&
+          Array.isArray(response.data.data.data)
+        ) {
           goals = response.data.data.data;
         } else {
           // If no goals found, return empty array
           console.warn('No goals found in response. Response structure:', {
             type: typeof response.data,
             keys: response.data ? Object.keys(response.data) : null,
-            value: response.data
+            value: response.data,
           });
           return [];
         }
 
         // Transform legacy response to new format
-        return goals.map(goal => ({
+        return goals.map((goal) => ({
           questId: goal.goalId,
           userId: goal.userId,
           title: goal.goalName,
@@ -552,7 +576,9 @@ export const epicQuestsApi = {
    * @param questData - EpicQuest creation data
    * @returns Promise<EpicQuest>
    */
-  async createEpicQuest(questData: Omit<CreateEpicQuestData, 'type'>): Promise<EpicQuest> {
+  async createEpicQuest(
+    questData: Omit<CreateEpicQuestData, 'type'>
+  ): Promise<EpicQuest> {
     // Validate required fields
     if (!questData.title?.trim()) {
       throw new ApiError(400, 'Title is required');
@@ -613,7 +639,10 @@ export const epicQuestsApi = {
    * @param updateData - Partial update data
    * @returns Promise<EpicQuest>
    */
-  async updateEpicQuest(questId: string, updateData: UpdateEpicQuestData): Promise<EpicQuest> {
+  async updateEpicQuest(
+    questId: string,
+    updateData: UpdateEpicQuestData
+  ): Promise<EpicQuest> {
     if (!questId?.trim()) {
       throw new ApiError(400, 'Quest ID is required');
     }
@@ -755,31 +784,45 @@ export const roadmapApi = {
           data: response.data,
           dataType: typeof response.data,
           isArray: Array.isArray(response.data),
-          keys: response.data ? Object.keys(response.data) : null
+          keys: response.data ? Object.keys(response.data) : null,
         });
 
         // Handle the API response structure - more robust parsing
         let milestones: any[];
         if (response.data && Array.isArray(response.data.milestones)) {
           milestones = response.data.milestones;
-        } else if (response.data && response.data.data && Array.isArray(response.data.data.milestones)) {
+        } else if (
+          response.data &&
+          response.data.data &&
+          Array.isArray(response.data.data.milestones)
+        ) {
           milestones = response.data.data.milestones;
-        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        } else if (
+          response.data &&
+          response.data.data &&
+          Array.isArray(response.data.data)
+        ) {
           milestones = response.data.data;
         } else if (Array.isArray(response.data)) {
           milestones = response.data;
         } else {
-          console.warn('🗺️ Roadmap API: No milestones found in response structure');
+          console.warn(
+            '🗺️ Roadmap API: No milestones found in response structure'
+          );
           milestones = [];
         }
 
         console.log('🗺️ Parsed milestones:', {
           count: milestones.length,
-          milestones: milestones.map(m => ({ id: m.id, title: m.title, status: m.status }))
+          milestones: milestones.map((m) => ({
+            id: m.id,
+            title: m.title,
+            status: m.status,
+          })),
         });
 
         // Transform legacy response to new format
-        return milestones.map(milestone => ({
+        return milestones.map((milestone) => ({
           ...milestone,
           epicQuestId: milestone.epicId || epicQuestId,
         }));
@@ -842,13 +885,16 @@ export const roadmapApi = {
    * @param date - Date to fetch tasks for (defaults to today)
    * @returns Promise<DailyQuest[]>
    */
-  async fetchMilestoneQuests(milestoneId: string, date?: string): Promise<DailyQuest[]> {
+  async fetchMilestoneQuests(
+    milestoneId: string,
+    date?: string
+  ): Promise<DailyQuest[]> {
     try {
       const targetDate = date || new Date().toISOString().split('T')[0];
       const allTasks = await dailyQuestsApi.fetchDailyQuestsByDate(targetDate);
 
       // Filter tasks that belong to the specified milestone
-      return allTasks.filter(task => task.milestoneId === milestoneId);
+      return allTasks.filter((task) => task.milestoneId === milestoneId);
     } catch (error: any) {
       console.error('Failed to fetch milestone quests:', error);
       throw new ApiError(
@@ -866,11 +912,15 @@ export const roadmapApi = {
    * @param status - New status
    * @returns Promise<Milestone>
    */
-  async updateMilestoneStatus(epicQuestId: string, milestoneId: string, status: 'locked' | 'active' | 'completed'): Promise<Milestone> {
+  async updateMilestoneStatus(
+    epicQuestId: string,
+    milestoneId: string,
+    status: 'locked' | 'active' | 'completed'
+  ): Promise<Milestone> {
     return retryRequest(async () => {
       try {
         const response = await api.patch(`/milestones/${milestoneId}`, {
-          status
+          status,
         });
         const milestone = response.data;
         // Transform response to new format
@@ -908,7 +958,7 @@ export const roadmapApi = {
     return retryRequest(async () => {
       try {
         const response = await api.patch(`/milestones/${milestoneId}`, {
-          status: 'completed'
+          status: 'completed',
         });
         const milestone = response.data;
         // Transform response to new format

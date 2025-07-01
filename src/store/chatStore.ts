@@ -65,7 +65,8 @@ export const useChatStore = create<ChatState>()(
         // Check if user is online before sending message
         if (!isOnline) {
           set({
-            error: 'No network connection. Please check your internet and try again.',
+            error:
+              'No network connection. Please check your internet and try again.',
           });
           return;
         }
@@ -98,19 +99,46 @@ export const useChatStore = create<ChatState>()(
               try {
                 const parsed = JSON.parse(chunk);
                 if (parsed.response) {
+                  // Check if the response suggests quest creation/modification during streaming
+                  const responseText = parsed.response.toLowerCase();
+                  const containsQuestCreation =
+                    responseText.includes('created') ||
+                    responseText.includes('added') ||
+                    responseText.includes('new task') ||
+                    responseText.includes('new quest') ||
+                    responseText.includes('new goal');
+
+                  // If we detect quest creation, trigger an early refresh
+                  if (containsQuestCreation && !get().isRefreshingQuests) {
+                    set({ questsWereModified: true });
+                  }
+
                   set((state) => ({
                     messages: state.messages.map((msg) =>
                       msg.id === aiMessageId
                         ? {
-                          ...msg,
-                          content: parsed.response,
-                          isStreaming: true,
-                        }
+                            ...msg,
+                            content: parsed.response,
+                            isStreaming: true,
+                          }
                         : msg
                     ),
                   }));
                 }
               } catch (parseError) {
+                // Check for quest creation keywords in raw chunk too
+                const chunkText = chunk.toLowerCase();
+                const containsQuestCreation =
+                  chunkText.includes('created') ||
+                  chunkText.includes('added') ||
+                  chunkText.includes('new task') ||
+                  chunkText.includes('new quest') ||
+                  chunkText.includes('new goal');
+
+                if (containsQuestCreation && !get().isRefreshingQuests) {
+                  set({ questsWereModified: true });
+                }
+
                 set((state) => ({
                   messages: state.messages.map((msg) =>
                     msg.id === aiMessageId
@@ -144,13 +172,16 @@ export const useChatStore = create<ChatState>()(
               }
 
               // Refresh quests after chat completion only if the response suggests quest modifications
-              const responseContainsQuestUpdates = fullResponse.toLowerCase().includes('quest') ||
+              const responseContainsQuestUpdates =
+                fullResponse.toLowerCase().includes('quest') ||
                 fullResponse.toLowerCase().includes('task') ||
                 fullResponse.toLowerCase().includes('goal') ||
                 fullResponse.toLowerCase().includes('created') ||
                 fullResponse.toLowerCase().includes('updated') ||
                 fullResponse.toLowerCase().includes('completed') ||
-                fullResponse.toLowerCase().includes('milestone');
+                fullResponse.toLowerCase().includes('milestone') ||
+                fullResponse.toLowerCase().includes('added') ||
+                fullResponse.toLowerCase().includes('new');
 
               if (responseContainsQuestUpdates) {
                 set({ isRefreshingQuests: true, questsWereModified: true });
@@ -243,7 +274,8 @@ export const useChatStore = create<ChatState>()(
             messages: [
               {
                 id: `welcome_${Date.now()}`,
-                content: "Hi! I'm Zik, your personal growth companion. How are you feeling today?",
+                content:
+                  "Hi! I'm Zik, your personal growth companion. How are you feeling today?",
                 sender: 'zik',
                 timestamp: new Date().toISOString(),
               },
@@ -295,7 +327,8 @@ export const useChatStore = create<ChatState>()(
               messages: [
                 {
                   id: `welcome_${Date.now()}`,
-                  content: "Hi! I'm Zik, your personal growth companion. How are you feeling today?",
+                  content:
+                    "Hi! I'm Zik, your personal growth companion. How are you feeling today?",
                   sender: 'zik',
                   timestamp: new Date().toISOString(),
                 },
@@ -312,7 +345,8 @@ export const useChatStore = create<ChatState>()(
             messages: [
               {
                 id: `welcome_${Date.now()}`,
-                content: "Hi! I'm Zik, your personal growth companion. How are you feeling today?",
+                content:
+                  "Hi! I'm Zik, your personal growth companion. How are you feeling today?",
                 sender: 'zik',
                 timestamp: new Date().toISOString(),
               },
@@ -344,10 +378,15 @@ export const useChatStore = create<ChatState>()(
 // Selectors
 export const useChatMessages = () => useChatStore((state) => state.messages);
 export const useChatLoading = () => useChatStore((state) => state.isLoading);
-export const useChatStreaming = () => useChatStore((state) => state.isStreaming);
-export const useChatRefreshingQuests = () => useChatStore((state) => state.isRefreshingQuests);
+export const useChatStreaming = () =>
+  useChatStore((state) => state.isStreaming);
+export const useChatRefreshingQuests = () =>
+  useChatStore((state) => state.isRefreshingQuests);
 export const useChatError = () => useChatStore((state) => state.error);
-export const useChatPrefilledInput = () => useChatStore((state) => state.prefilledInput);
+export const useChatPrefilledInput = () =>
+  useChatStore((state) => state.prefilledInput);
 export const useOnlineStatus = () => useChatStore((state) => state.isOnline);
-export const useLastSyncTime = () => useChatStore((state) => state.lastSyncTime);
-export const useIsLoadingHistory = () => useChatStore((state) => state.isLoadingHistory);
+export const useLastSyncTime = () =>
+  useChatStore((state) => state.lastSyncTime);
+export const useIsLoadingHistory = () =>
+  useChatStore((state) => state.isLoadingHistory);

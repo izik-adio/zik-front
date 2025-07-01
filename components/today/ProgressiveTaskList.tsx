@@ -87,7 +87,7 @@ export function ProgressiveTaskList({
             },
           ]}
         >
-          {task.title}
+          {task.title || 'Untitled Task'}
         </Text>
 
         {task.description && (
@@ -111,7 +111,7 @@ export function ProgressiveTaskList({
 
         <View style={styles.taskMeta}>
           <Text style={[styles.taskDueDate, { color: theme.colors.subtitle }]}>
-            Due: {task.dueDate}
+            {task.dueDate ? `Due: ${task.dueDate}` : 'No due date'}
           </Text>
           <View
             style={[
@@ -139,7 +139,7 @@ export function ProgressiveTaskList({
                 },
               ]}
             >
-              {task.priority}
+              {task.priority || 'normal'}
             </Text>
           </View>
         </View>
@@ -167,9 +167,9 @@ export function ProgressiveTaskList({
           </Text>
         </View>
       ) : (
-        <>
+        <View>
           {todayTasks.map((task) => (
-            <TaskItem key={task.questId} task={task} />
+            <TaskItem key={`today-${task.questId}`} task={task} />
           ))}
 
           {/* Future Tasks (shown when showFuture is true) */}
@@ -186,11 +186,15 @@ export function ProgressiveTaskList({
                 </Text>
               )}
               {futureTasks.map((task) => (
-                <TaskItem key={task.questId} task={task} isFuture={true} />
+                <TaskItem
+                  key={`future-${task.questId}`}
+                  task={task}
+                  isFuture={true}
+                />
               ))}
             </View>
           )}
-        </>
+        </View>
       )}
     </View>
   );
